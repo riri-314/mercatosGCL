@@ -1,21 +1,24 @@
-import { useState } from 'react';
+import { useState } from "react";
 
-import Box from '@mui/material/Box';
-import Avatar from '@mui/material/Avatar';
-import Divider from '@mui/material/Divider';
-import Popover from '@mui/material/Popover';
-import { alpha } from '@mui/material/styles';
-import MenuItem from '@mui/material/MenuItem';
-import Typography from '@mui/material/Typography';
-import IconButton from '@mui/material/IconButton';
-
-import { account } from 'src/_mock/account';
+import Box from "@mui/material/Box";
+import Avatar from "@mui/material/Avatar";
+import Divider from "@mui/material/Divider";
+import Popover from "@mui/material/Popover";
+import { alpha } from "@mui/material/styles";
+import Typography from "@mui/material/Typography";
+import IconButton from "@mui/material/IconButton";
+import { signOut } from "@firebase/auth";
+import { auth } from "src/firebase_config";
+import LoadingButton from "@mui/lab/LoadingButton";
+import { useAuth } from "src/auth/AuthProvider";
 
 // ----------------------------------------------------------------------
 
-
 export default function AccountPopover() {
   const [open, setOpen] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const user = useAuth();
 
   const handleOpen = (event) => {
     setOpen(event.currentTarget);
@@ -24,6 +27,19 @@ export default function AccountPopover() {
   const handleClose = () => {
     setOpen(null);
   };
+
+  const logout = async () => {
+    setLoading(true);
+    try {
+      await signOut(auth);
+      console.log("logout succes, user: ", auth.currentUser);
+    } catch {
+      console.log("logout error");
+    }
+    setLoading(false);
+    setOpen(null);
+  };
+
 
   return (
     <>
@@ -40,15 +56,15 @@ export default function AccountPopover() {
         }}
       >
         <Avatar
-          src={account.photoURL}
-          alt={account.displayName}
+          src={"/assets/images/avatars/avatar_25.jpg"}
+          alt={user?.email? user.email: "test"}
           sx={{
             width: 36,
             height: 36,
             border: (theme) => `solid 2px ${theme.palette.background.default}`,
           }}
         >
-          {account.displayName.charAt(0).toUpperCase()}
+          {user?.email? user.email: "test".charAt(0).toUpperCase()}
         </Avatar>
       </IconButton>
 
@@ -56,8 +72,8 @@ export default function AccountPopover() {
         open={!!open}
         anchorEl={open}
         onClose={handleClose}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        transformOrigin={{ vertical: "top", horizontal: "right" }}
         PaperProps={{
           sx: {
             p: 0,
@@ -69,23 +85,27 @@ export default function AccountPopover() {
       >
         <Box sx={{ my: 1.5, px: 2 }}>
           <Typography variant="subtitle2" noWrap>
-            {account.displayName}
+            {user?.email? user.email: "Koala anonyme"}
           </Typography>
-          <Typography variant="body2" sx={{ color: 'text.secondary' }} noWrap>
-            {account.email}
+          <Typography variant="body2" sx={{ color: "text.secondary" }} noWrap>
+            {user?.email? user.email: ""}
           </Typography>
         </Box>
 
-        <Divider sx={{ borderStyle: 'dashed', m: 0 }} />
+        <Divider sx={{ borderStyle: "dashed", m: 0 }} />
 
-        <MenuItem
-          disableRipple
-          disableTouchRipple
-          onClick={handleClose}
-          sx={{ typography: 'body2', color: 'error.main', py: 1.5 }}
+        <LoadingButton
+          loading={loading}
+          onClick={logout}
+          sx={{
+            typography: "body2",
+            color: "error.main",
+            py: 1.5,
+            width: "100%",
+          }}
         >
           Logout
-        </MenuItem>
+        </LoadingButton>
       </Popover>
     </>
   );

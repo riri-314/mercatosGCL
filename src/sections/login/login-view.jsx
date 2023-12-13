@@ -4,14 +4,13 @@ import Box from '@mui/material/Box';
 import Link from '@mui/material/Link';
 import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
-import Button from '@mui/material/Button';
-import Divider from '@mui/material/Divider';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import LoadingButton from '@mui/lab/LoadingButton';
 import { alpha, useTheme } from '@mui/material/styles';
 import InputAdornment from '@mui/material/InputAdornment';
+import Alert from '@mui/material/Alert';
 
 import { useRouter } from 'src/routes/hooks';
 
@@ -19,6 +18,10 @@ import { bgGradient } from 'src/theme/css';
 
 import Logo from 'src/components/logo';
 import Iconify from 'src/components/iconify';
+
+import { signInWithEmailAndPassword } from "@firebase/auth";
+import { auth } from "src/firebase_config";
+
 
 // ----------------------------------------------------------------------
 
@@ -29,19 +32,53 @@ export default function LoginView() {
 
   const [showPassword, setShowPassword] = useState(false);
 
-  const handleClick = () => {
-    router.push('/dashboard');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleClick = async () => {
+    // check login 
+    // do what need to be done
+    if (email == "" || password == ""){
+      setError("Entrez un mot de passe ou une adresse mail")
+      return
+    }
+    try {
+      setError("");
+      setLoading(true);
+      await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+      setLoading(false);
+      router.push('/');
+    } catch (error) {
+      console.log("Error: ", error.code)
+      if (error.code == "auth/too-many-requests") {
+        setError("Trop d'éssais, essayer plus tard");
+      } else if (error.code = "auth/invalid-credential"){
+        setError("Mauvais mot de passe ou email")
+      } 
+      else {
+        setError("Erreur de connection");
+      }
+      setLoading(false);
+    }
   };
 
   const renderForm = (
     <>
       <Stack spacing={3}>
-        <TextField name="email" label="Email" />
+        <TextField name="email" label="Email" onChange={(e) => setEmail(e.target.value)}/>
 
         <TextField
           name="password"
           label="Mot de passe"
           type={showPassword ? 'text' : 'password'}
+          onChange={(e) => setPassword(e.target.value)}
           InputProps={{
             endAdornment: (
               <InputAdornment position="end">
@@ -66,6 +103,7 @@ export default function LoginView() {
         type="submit"
         variant="contained"
         color="inherit"
+        loading={loading}
         onClick={handleClick}
       >
         Connection
@@ -100,7 +138,7 @@ export default function LoginView() {
           }}
         >
           <Typography sx={{ pb: 3 }} variant="h4">Connecte-toi</Typography>
-
+          {error && <Alert sx={{mb: 3}} severity="error">{error}</Alert>}
           {renderForm}
         </Card>
       </Stack>
