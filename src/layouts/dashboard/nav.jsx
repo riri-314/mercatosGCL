@@ -16,7 +16,10 @@ import Logo from 'src/components/logo';
 import Scrollbar from 'src/components/scrollbar';
 
 import { NAV } from './config-layout';
-import navConfig from './config-navigation';
+//import navConfig from './config-navigation';
+
+import SvgColor from 'src/components/svg-color';
+import { useAuth } from "src/auth/AuthProvider";
 
 // ----------------------------------------------------------------------
 
@@ -31,6 +34,36 @@ export default function Nav({ openNav, onCloseNav }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
+
+  const icon = (name) => (
+    <SvgColor src={`/assets/icons/navbar/${name}.svg`} sx={{ width: 1, height: 1 }} />
+  );
+  
+  const user = useAuth();
+  
+  let navConfig = [
+    {
+      title: 'résultats',
+      path: '/',
+      icon: icon('ic_analytics'),
+    },
+    {
+      title: 'comitards',
+      path: '/comitards',
+      icon: icon('ic_user'),
+    },
+    {
+      title: 'Règlement',
+      path: '/rules',
+      icon: icon('ic_disabled'),
+    },
+    {
+      title: user ? 'Compte' : 'Connection',
+      path: user ? '/account' : '/login',
+      icon: icon('ic_lock'),
+    },
+  ];
+  
 
 
   const renderMenu = (
