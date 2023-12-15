@@ -3,6 +3,8 @@ import { Outlet, Navigate, useRoutes } from 'react-router-dom';
 
 import DashboardLayout from 'src/layouts/dashboard';
 
+export const AccountPage = lazy(() => import('src/pages/account'));
+export const RulesPage = lazy(() => import('src/pages/rules'));
 export const ResultPage = lazy(() => import('src/pages/results'));
 export const LoginPage = lazy(() => import('src/pages/login'));
 export const ProductsPage = lazy(() => import('src/pages/products'));
@@ -23,6 +25,8 @@ export default function Router() {
       children: [
         { element: <ResultPage />, index: true },
         { path: 'comitards', element: <ProductsPage /> },
+        { path: 'account', element: <AccountPage /> },
+        { path: 'rules', element: <RulesPage /> },
       ],
     },
     {

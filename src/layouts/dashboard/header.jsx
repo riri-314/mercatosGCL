@@ -1,27 +1,29 @@
-import PropTypes from 'prop-types';
+import PropTypes from "prop-types";
 
-import Box from '@mui/material/Box';
-import Stack from '@mui/material/Stack';
-import AppBar from '@mui/material/AppBar';
-import Toolbar from '@mui/material/Toolbar';
-import { useTheme } from '@mui/material/styles';
-import IconButton from '@mui/material/IconButton';
+import Box from "@mui/material/Box";
+import Stack from "@mui/material/Stack";
+import AppBar from "@mui/material/AppBar";
+import Toolbar from "@mui/material/Toolbar";
+import { useTheme } from "@mui/material/styles";
+import IconButton from "@mui/material/IconButton";
 
-import { useResponsive } from 'src/hooks/use-responsive';
+import { useResponsive } from "src/hooks/use-responsive";
 
-import { bgBlur } from 'src/theme/css';
+import { bgBlur } from "src/theme/css";
 
-import Iconify from 'src/components/iconify';
+import Iconify from "src/components/iconify";
 
-import { NAV, HEADER } from './config-layout';
-import AccountPopover from './common/account-popover';
+import { NAV, HEADER } from "./config-layout";
+import AccountPopover from "./common/account-popover";
+import { useAuth } from "src/auth/AuthProvider";
 
 // ----------------------------------------------------------------------
 
 export default function Header({ onOpenNav }) {
   const theme = useTheme();
+  const user = useAuth();
 
-  const lgUp = useResponsive('up', 'lg');
+  const lgUp = useResponsive("up", "lg");
 
   const renderContent = (
     <>
@@ -31,25 +33,28 @@ export default function Header({ onOpenNav }) {
         </IconButton>
       )}
 
-
       <Box sx={{ flexGrow: 1 }} />
 
-      <Stack direction="row" alignItems="center" spacing={1}>
-        <AccountPopover />
-      </Stack>
+      {user && (
+        <>
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <AccountPopover />
+          </Stack>
+        </>
+      )}
     </>
   );
 
   return (
     <AppBar
       sx={{
-        boxShadow: 'none',
+        boxShadow: "none",
         height: HEADER.H_MOBILE,
         zIndex: theme.zIndex.appBar + 1,
         ...bgBlur({
           color: theme.palette.background.default,
         }),
-        transition: theme.transitions.create(['height'], {
+        transition: theme.transitions.create(["height"], {
           duration: theme.transitions.duration.shorter,
         }),
         ...(lgUp && {
