@@ -1,0 +1,97 @@
+import { collection, getDocs, limit, orderBy, query } from "@firebase/firestore";
+import { db } from "../firebase_config";
+
+
+type Dict = {
+    [key: string]: any;
+  };
+
+
+// for debug only
+export function InitDB(){
+    //add new doc into "editions"
+    //doc content:
+    //  edition num: int
+    //  date_start: datetime
+    //  date_stop: datetime
+    //  description: str
+    //  map with cercles
+    //  map with comitards
+    //
+    //cercle map content:
+    //  description: str
+    //  name: str
+    //  votes: int
+    //
+    //comitard map content:
+    //  name: str
+    //  surname: str
+    //  descriptions: str
+    //  cercle: str
+    //  enchere: map
+    //
+    //enchere map content:
+    //  amount: int
+    //  date: datetime
+    //  from: str
+}
+
+//EDITION
+
+const editionsRef = collection(db, "editions");
+
+export function newEdition(data: Dict){
+    const q = query(editionsRef, orderBy("edition", "desc"), limit(1));
+
+    // easy
+    // get the number of the new edition
+    // new doc in editions
+}
+
+export function editEdition(num: number, data: Dict){
+    // easy
+}
+
+//deleting edition is forbiden, can only be done from the web firebase console.
+
+//COMITARD
+
+// add comitard
+export function newComitard(num: number, data: Dict){
+    // easy
+    // add new comitard doc into comitard collection
+    // get back the id of the comitard doc
+    // add the comitard into the comitard map into the num doc
+    // done
+}
+
+export function removeComitard(num: number, comitardID: string){
+    // easy
+    // remove comitard from the comitards map into the num doc
+    //done
+}
+
+export function editComitard(num: number, comitardID: string, data: Dict){
+    //easy
+    //edit comitard info in the map
+}
+
+//CERCLE
+
+export function addCercle(num: number, data: Dict){
+    // easy
+    // add new cercle doc into cercle collection
+    // get back the id of the cercle doc
+    // add the cercle into the cercle map into the num doc
+    // done
+}
+
+export function removeCercle(num: number, cercleID: string){
+    // remove the cercle from the map
+    // remove all encheres from this cerlces in the comitard map, not easy
+}
+
+export function editCercle(num: number, comitardID: string, data: Dict){
+    //easy
+    //edit cercle info in the map
+}
