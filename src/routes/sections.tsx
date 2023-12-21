@@ -2,8 +2,10 @@ import { lazy, Suspense } from 'react';
 import { Outlet, Navigate, useRoutes } from 'react-router-dom';
 
 import DashboardLayout from '../layouts/dashboard';
+import { useAuth } from '../auth/AuthProvider';
 
 export const AccountPage = lazy(() => import('../pages/account'));
+export const AdminAccountPage = lazy(() => import('../pages/admin-account'));
 export const RulesPage = lazy(() => import('../pages/rules'));
 export const ResultPage = lazy(() => import('../pages/results'));
 export const LoginPage = lazy(() => import('../pages/login'));
@@ -13,6 +15,8 @@ export const Page404 = lazy(() => import('../pages/page-not-found'));
 // ----------------------------------------------------------------------
 
 export default function Router() {
+  const user = useAuth();
+
   const routes = useRoutes([
     {
       element: (
@@ -25,7 +29,7 @@ export default function Router() {
       children: [
         { element: <ResultPage />, index: true },
         { path: 'comitards', element: <ProductsPage /> },
-        { path: 'account', element: <AccountPage /> },
+        (user? (user?.email == "gcl@com.be"? { path: 'account', element: <AdminAccountPage /> } : { path: 'account', element: <AccountPage /> }):{ path: 'account', element: <LoginPage /> }),
         { path: 'rules', element: <RulesPage /> },
       ],
     },

@@ -11,17 +11,15 @@ import {
   orderBy,
   query,
 } from "@firebase/firestore";
-import Account from "../sections/account/account-view";
+import AdminAccount from "../sections/admin-account/admin-account-view";
 
 // ----------------------------------------------------------------------
 
-export default function AccountPage() {
+export default function AdminAccountPage() {
   const [data, setData] = useState<DocumentData | null>(null);
-  //const navigation = useNavigation();
-  
+
   useEffect(() => {
     const fetchData = async () => {
-      console.log("Fetched data")
       const editionsRef = collection(db, "editions");
 
       const queryDocs = query(
@@ -47,7 +45,7 @@ export default function AccountPage() {
         <Helmet>
           <title> Compte </title>
         </Helmet>
-        {data ? <Account data={data} /> : <Loading />}
+        {data ? <AdminAccount data={data} /> : <Loading />}
 
       </Container>
     </>
