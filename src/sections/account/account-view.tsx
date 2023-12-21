@@ -4,7 +4,9 @@ import Card from "@mui/material/Card";
 import { CardContent } from "@mui/material";
 import { useAuth } from "../../auth/AuthProvider";
 
-export default function Account() {
+import { DocumentData } from "@firebase/firestore";
+
+export default function Account({data}: DocumentData) {
   const user = useAuth();
 
   return (
@@ -22,31 +24,16 @@ export default function Account() {
 
       <Card sx={{ width: "100%", mb: 4 }}>
         <CardContent>
-          Create new event {"->"} add cercle ? {"->"} start and stop dates{" "}
-          {"->"} edit description ? (precise that start and stop dates are shown
-          by default) <br />
-          Table listing events and which one is active <br />
+            Table with all comitards and their info
         </CardContent>
       </Card>
 
       <Card sx={{ width: "100%", mb: 4 }}>
         <CardContent>
-          Add/Edit/Remove cercle <br />
+            Table with all encheres made by the cercle
         </CardContent>
       </Card>
 
-      <Card sx={{ width: "100%", mb: 4 }}>
-        <CardContent>
-          Add/Edit/Remove comitard <br />
-        </CardContent>
-      </Card>
-
-      <Card sx={{ width: "100%", mb: 4 }}>
-        <CardContent>
-          Debug card <br />
-          Init db <br />
-        </CardContent>
-      </Card>
     </>
   );
 }

@@ -24,7 +24,7 @@ import ResultsTableHead from './results-table-head';
 
 interface ResultTableProps {
   tableName: string;
-  columnName: string;
+  columnName: any[];
 }
 
 export default function ResultTable({tableName, columnName}: ResultTableProps) {
@@ -75,11 +75,7 @@ export default function ResultTable({tableName, columnName}: ResultTableProps) {
                 order={order}
                 orderBy={orderBy}
                 onRequestSort={handleSort}
-                headLabel={[
-                  { id: 'name', label: 'Nom' },
-                  { id: 'enchere', label: 'Enchère' },
-                  { id: 'date', label: columnName },
-                ]}
+                headLabel={columnName}
               />
               <TableBody>
                 {dataFiltered
