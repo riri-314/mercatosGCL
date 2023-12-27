@@ -34,6 +34,12 @@ export default function Account({data}: DocumentData) {
         </CardContent>
       </Card>
 
+      <Card sx={{ width: "100%", mb: 4 }}>
+        <CardContent>
+            Option to reset password
+        </CardContent>
+      </Card>
+
     </>
   );
 }

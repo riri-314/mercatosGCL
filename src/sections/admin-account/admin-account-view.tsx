@@ -5,6 +5,7 @@ import { Box, CardContent, Grid, TextField } from "@mui/material";
 import { useAuth } from "../../auth/AuthProvider";
 import { LoadingButton } from "@mui/lab";
 import {
+  addCercle,
   editEdition,
   newComitard,
   newEdition,
@@ -12,13 +13,73 @@ import {
 } from "../../utils/admin-tools";
 import { useState } from "react";
 import { DocumentData } from "@firebase/firestore";
+import Alert, { AlertColor } from "@mui/material/Alert";
+import {
+  getAuth,
+  sendPasswordResetEmail,
+//  updatePassword,
+} from "@firebase/auth";
+//import firebase from "@firebase/app";
+import { getFunctions, httpsCallable } from "@firebase/functions";
 
-export default function AdminAccount({data}: DocumentData) {
+interface AdminAccountProps {
+  data: DocumentData;
+  id: string;
+}
+
+export default function AdminAccount({ data, id }: AdminAccountProps) {
   const user = useAuth();
   const [newEditionLoading, setNewEditionLoading] = useState(false);
   const [editEditionLoading, setEditEditionLoading] = useState(false);
   const [newComiatrdLoading, setNewComitardLoading] = useState(false);
   const [removeComiatrdLoading, setRemoveComitardLoading] = useState(false);
+
+  const [cercleDescription, setCercleDescription] = useState<string>("");
+  const [cercleName, setCercleName] = useState<string>("");
+  const [cercleError, setCercleError] = useState<string>("");
+  const [cercleErrorSeverity, setCercleErrorSeverity] = useState<
+    AlertColor | undefined
+  >("error");
+
+  function handleNewCercle() {
+    setCercleError("");
+    setCercleErrorSeverity("error");
+    console.log(cercleDescription);
+    console.log(cercleName);
+    if (cercleName === "") {
+      setCercleError("Le nom du cercle ne peut pas être vide");
+      return;
+    } else {
+      //create cercle
+      try {
+        addCercle(
+          id,
+          { name: cercleName, description: cercleDescription },
+          data.votes
+        );
+        setCercleError("Succes !");
+        setCercleErrorSeverity("success");
+      } catch {
+        setCercleError("Erreur inconnue. Contacte l'administrateur");
+      }
+    }
+  }
+
+  const callableHelloWorld = httpsCallable(getFunctions(), "sayHello");
+
+  async function callHelloWorld(data: any) {
+    callableHelloWorld(data)
+      .then((result) => {
+        // Handle the result from the cloud function
+        console.log(result.data);
+      })
+      .catch((error) => {
+        // Handle any errors
+        console.error(error);
+      });
+  }
+
+  
 
   return (
     <>
@@ -46,10 +107,15 @@ export default function AdminAccount({data}: DocumentData) {
           <Typography variant="h5" sx={{ mb: 1 }}>
             Créer nouveau cercle
           </Typography>
+          Need to create new account for each cercle and set display name <br />
           <Box component="form" noValidate autoComplete="off">
             <Grid container spacing={2}>
               <Grid item xs={12} sm={4}>
-                <TextField label="Nom du cercle" color="success" fullWidth />
+                <TextField
+                  label="Nom du cercle"
+                  fullWidth
+                  onChange={(e) => setCercleName(e.target.value)}
+                />
               </Grid>
               <Grid item xs={12} sm={4}>
                 <TextField
@@ -57,15 +123,29 @@ export default function AdminAccount({data}: DocumentData) {
                   multiline
                   maxRows={4}
                   fullWidth
+                  onChange={(e) => {
+                    setCercleDescription(e.target.value);
+                  }}
                 />
               </Grid>
+
               <Grid item xs={12} sm={4}>
-                <LoadingButton size="large" variant="contained" fullWidth>
+                <LoadingButton
+                  size="large"
+                  variant="contained"
+                  fullWidth
+                  onClick={() => handleNewCercle()}
+                >
                   Créer cercle
                 </LoadingButton>
               </Grid>
             </Grid>
           </Box>
+          {cercleError && (
+            <Alert sx={{ mt: 3 }} severity={cercleErrorSeverity}>
+              {cercleError}
+            </Alert>
+          )}
         </CardContent>
       </Card>
 
@@ -74,6 +154,12 @@ export default function AdminAccount({data}: DocumentData) {
           <Typography variant="h5" sx={{ mb: 1 }}>
             Éditer, supprimer cercle
           </Typography>
+          Table with cercle data. Column with edit button and delete button{" "}
+          <br />
+          Delete button raise a generic warning pop up and also delete the user
+          login <br />
+          Edit button raise a edit form in form of a modal, change email adress{" "}
+          <br />
         </CardContent>
       </Card>
 
@@ -142,6 +228,36 @@ export default function AdminAccount({data}: DocumentData) {
             }}
           >
             Remove comitard
+          </LoadingButton>
+          <LoadingButton
+            onClick={async () => {
+              const auth = getAuth();
+              sendPasswordResetEmail(auth, "henri.pihet.807@gmail.com")
+                .then(() => {
+                  // Password reset email sent!
+                  // ..
+                })
+                .catch((error) => {
+                  //const errorCode = error.code;
+                  const errorMessage = error.message;
+                  console.log("error reset password:", errorMessage);
+                  // ..
+                });
+            }}
+          >
+            Reset password
+          </LoadingButton>
+          <LoadingButton
+            onClick={async () => {
+              try {
+                const result: any = await callHelloWorld({thing: "thing"});
+                console.log(result.data.output);
+              } catch (error) {
+                console.log(`error: ${JSON.stringify(error)}`);
+              }
+            }}
+          >
+            Cloud function
           </LoadingButton>
         </CardContent>
       </Card>

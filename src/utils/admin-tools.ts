@@ -79,6 +79,7 @@ export async function newEdition(
     doc_data.edition = a.edition + 1;
     doc_data.end = start;
     doc_data.start = end;
+    doc_data.votes = votes;
     doc_data.cercles = {};
 
     for (let key in a.cercles) {
@@ -166,7 +167,7 @@ export async function editComitard(id: string, comitardID: string, data: Dict) {
 // The function first adds a new document to the 'cercles' collection with the provided data.
 // Then it gets the ID of the newly created document.
 // After that, it adds the cercle's ID to the 'cercles' map of the specified 'edition' document.
-export async function addCercle(id: string, data: Dict ) {
+export async function addCercle(id: string, data: Dict, votes: number ) {
   const cercleCollection = collection(db, 'cercles');
 
   // add new cercle doc into cercle collection
@@ -174,6 +175,10 @@ export async function addCercle(id: string, data: Dict ) {
 
   // get back the id of the cercle doc
   const cercleId = cercleRef.id;
+
+  data["votes"] = votes;
+
+  console.log(data)
 
   // add the cercle into the cercle map into the num doc inside the editions collection
   const editionRef = doc(db, 'editions', id);
@@ -197,6 +202,7 @@ export function removeCercle(id: string, cercleID: string) {
   // remove all encheres from this cerlces in the comitard map, not easy
   id = "";
   cercleID = "";
+  
 }
 
 export function editCercle(id: string, data: Dict) {
