@@ -29,7 +29,7 @@ export default function Router() {
       children: [
         { element: <ResultPage />, index: true },
         { path: 'comitards', element: <ProductsPage /> },
-        (user? (user?.email == "gcl@com.be"? { path: 'account', element: <AdminAccountPage /> } : { path: 'account', element: <AccountPage /> }):{ path: 'account', element: <LoginPage /> }),
+        (user? (user?.uid == "06G0ZndofgTwTNl6nVniAhtaFX03"? { path: 'account', element: <AdminAccountPage /> } : { path: 'account', element: <AccountPage /> }):{ path: 'account', element: <LoginPage /> }),
         { path: 'rules', element: <RulesPage /> },
       ],
     },

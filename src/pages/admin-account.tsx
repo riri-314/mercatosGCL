@@ -17,6 +17,7 @@ import AdminAccount from "../sections/admin-account/admin-account-view";
 
 export default function AdminAccountPage() {
   const [data, setData] = useState<DocumentData | null>(null);
+  const [id, setId] = useState<string>("");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -30,8 +31,9 @@ export default function AdminAccountPage() {
       const docs = await getDocs(queryDocs);
       docs.forEach(async (doc) => {
         // doc.data() is never undefined for query doc snapshots
-        console.log(doc.data());
+        console.log(doc);
         setData(doc.data());
+        setId(doc.id);
       });
     };
 
@@ -45,7 +47,7 @@ export default function AdminAccountPage() {
         <Helmet>
           <title> Compte </title>
         </Helmet>
-        {data ? <AdminAccount data={data} /> : <Loading />}
+        {data ? <AdminAccount data={data} id={id} /> : <Loading />}
 
       </Container>
     </>
