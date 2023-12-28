@@ -6,20 +6,23 @@ import Typography from '@mui/material/Typography';
 import { useAuth } from '../../auth/AuthProvider';
 import { products } from '../../_mock/products';
 import ProductCard from './product-card';
+import { useData } from '../../data/DataProvider';
 
 
 // ----------------------------------------------------------------------
 
 export default function ProductsView() {
   const user = useAuth();
-
+  const data = useData();
+  console.log("DATA: ", data?.data()); // get the document data from the context
+  
 
   return (
     <Container>
       <Typography variant="h4" sx={{ mb: 5 }}>
         Comitards
       </Typography>
-
+      {data && 
       <Grid container spacing={3}>
         {products.map((product) => (
           <Grid key={product.id} xs={6} sm={6} md={3}>
@@ -27,6 +30,7 @@ export default function ProductsView() {
           </Grid>
         ))}
       </Grid>
+      }
     </Container>
   );
 }
