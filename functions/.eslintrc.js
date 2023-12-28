@@ -19,6 +19,7 @@ module.exports = {
   },
   ignorePatterns: [
     "/lib/**/*", // Ignore built files.
+    "/src/*",
   ],
   plugins: [
     "@typescript-eslint",
@@ -28,5 +29,9 @@ module.exports = {
     "quotes": ["error", "double"],
     "import/no-unresolved": 0,
     "indent": ["error", 2],
+    "max-len": ["error", {"code": 120}], // Set a higher value, e.g., 120 characters per line
+    "object-curly-spacing": ["error", "never"], // To disallow spaces after '{'
+    "block-spacing": ["error", "never"], // For disallowing spaces within blocks
+    "no-trailing-spaces": ["error", {"ignoreComments": true}], // To ignore trailing spaces in comments
   },
 };
