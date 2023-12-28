@@ -1,11 +1,10 @@
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import Card from "@mui/material/Card";
-import { Box, CardContent, Grid, TextField } from "@mui/material";
+import { CardContent } from "@mui/material";
 import { useAuth } from "../../auth/AuthProvider";
 import { LoadingButton } from "@mui/lab";
 import {
-  addCercle,
   editEdition,
   newComitard,
   newEdition,
@@ -13,14 +12,14 @@ import {
 } from "../../utils/admin-tools";
 import { useState } from "react";
 import { DocumentData } from "@firebase/firestore";
-import Alert, { AlertColor } from "@mui/material/Alert";
 import {
   getAuth,
   sendPasswordResetEmail,
-//  updatePassword,
+  //  updatePassword,
 } from "@firebase/auth";
 //import firebase from "@firebase/app";
 import { getFunctions, httpsCallable } from "@firebase/functions";
+import NewCerle from "./new_cercle";
 
 interface AdminAccountProps {
   data: DocumentData;
@@ -33,37 +32,6 @@ export default function AdminAccount({ data, id }: AdminAccountProps) {
   const [editEditionLoading, setEditEditionLoading] = useState(false);
   const [newComiatrdLoading, setNewComitardLoading] = useState(false);
   const [removeComiatrdLoading, setRemoveComitardLoading] = useState(false);
-
-  const [cercleDescription, setCercleDescription] = useState<string>("");
-  const [cercleName, setCercleName] = useState<string>("");
-  const [cercleError, setCercleError] = useState<string>("");
-  const [cercleErrorSeverity, setCercleErrorSeverity] = useState<
-    AlertColor | undefined
-  >("error");
-
-  function handleNewCercle() {
-    setCercleError("");
-    setCercleErrorSeverity("error");
-    console.log(cercleDescription);
-    console.log(cercleName);
-    if (cercleName === "") {
-      setCercleError("Le nom du cercle ne peut pas être vide");
-      return;
-    } else {
-      //create cercle
-      try {
-        addCercle(
-          id,
-          { name: cercleName, description: cercleDescription },
-          data.votes
-        );
-        setCercleError("Succes !");
-        setCercleErrorSeverity("success");
-      } catch {
-        setCercleError("Erreur inconnue. Contacte l'administrateur");
-      }
-    }
-  }
 
   const callableHelloWorld = httpsCallable(getFunctions(), "sayHello");
 
@@ -78,8 +46,6 @@ export default function AdminAccount({ data, id }: AdminAccountProps) {
         console.error(error);
       });
   }
-
-  
 
   return (
     <>
@@ -102,52 +68,8 @@ export default function AdminAccount({ data, id }: AdminAccountProps) {
           Table listing events and which one is active <br />
         </CardContent>
       </Card>
-      <Card sx={{ width: "100%", mb: 4 }}>
-        <CardContent>
-          <Typography variant="h5" sx={{ mb: 1 }}>
-            Créer nouveau cercle
-          </Typography>
-          Need to create new account for each cercle and set display name <br />
-          <Box component="form" noValidate autoComplete="off">
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={4}>
-                <TextField
-                  label="Nom du cercle"
-                  fullWidth
-                  onChange={(e) => setCercleName(e.target.value)}
-                />
-              </Grid>
-              <Grid item xs={12} sm={4}>
-                <TextField
-                  label="Description"
-                  multiline
-                  maxRows={4}
-                  fullWidth
-                  onChange={(e) => {
-                    setCercleDescription(e.target.value);
-                  }}
-                />
-              </Grid>
 
-              <Grid item xs={12} sm={4}>
-                <LoadingButton
-                  size="large"
-                  variant="contained"
-                  fullWidth
-                  onClick={() => handleNewCercle()}
-                >
-                  Créer cercle
-                </LoadingButton>
-              </Grid>
-            </Grid>
-          </Box>
-          {cercleError && (
-            <Alert sx={{ mt: 3 }} severity={cercleErrorSeverity}>
-              {cercleError}
-            </Alert>
-          )}
-        </CardContent>
-      </Card>
+      <NewCerle data={data} id={id} />
 
       <Card sx={{ width: "100%", mb: 4 }}>
         <CardContent>
@@ -178,9 +100,13 @@ export default function AdminAccount({ data, id }: AdminAccountProps) {
             onClick={async () => {
               setNewEditionLoading(true);
               await newEdition(
-                "ddd",
+                "New edition descritpion",
                 new Date("2022-03-25"),
                 new Date("2022-03-30"),
+                100,
+                960,
+                5,
+                1,
                 100
               );
               setNewEditionLoading(false);
@@ -250,7 +176,7 @@ export default function AdminAccount({ data, id }: AdminAccountProps) {
           <LoadingButton
             onClick={async () => {
               try {
-                const result: any = await callHelloWorld({thing: "thing"});
+                const result: any = await callHelloWorld({ thing: "thing" });
                 console.log(result.data.output);
               } catch (error) {
                 console.log(`error: ${JSON.stringify(error)}`);

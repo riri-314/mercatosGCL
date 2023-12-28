@@ -8,6 +8,7 @@ import {
   updateDoc,
   doc,
   deleteField,
+  writeBatch,
 } from "@firebase/firestore";
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "@firebase/storage";
 import { db } from "../firebase_config";
@@ -61,37 +62,60 @@ export async function newEdition(
   description: String,
   start: Date,
   end: Date,
-  votes: Number
+  votes: Number,
+  enchere_duration: Number,
+  comitard_per_cercle: Number,
+  min_encheres: Number,
+  max_encheres: Number,
 ) {
-  // easy
-  // get the number of the new edition
-  // new doc in editions
-  const queryDocs = query(editionsRef, orderBy("edition", "desc"), limit(1));
-  const docs = await getDocs(queryDocs);
-  let a;
-  docs.forEach(async (doc) => {
-    // doc.data() is never undefined for query doc snapshots
-    console.log(doc.data());
-    a = doc.data();
+  let newEdition = 0;
+  let oldCercles = {};
+  
+  // Retrieve all documents in the "editions" collection
+  getDocs(editionsRef)
+    .then(snapshot => {
+      const batch = writeBatch(db);
 
-    let doc_data: Dict = {};
-    doc_data.description = description;
-    doc_data.edition = a.edition + 1;
-    doc_data.end = start;
-    doc_data.start = end;
-    doc_data.votes = votes;
-    doc_data.cercles = {};
 
-    for (let key in a.cercles) {
-      let cercle = a.cercles[key];
-      cercle.votes = votes;
-      doc_data.cercles[key] = cercle;
-    }
+  
+      // Loop through each document in the collection and update the "active" field to false
+      snapshot.forEach(Doc => {
+        const edition = Doc.data().edition;
+        if (edition > newEdition) {
+          newEdition = edition;
+          oldCercles = Doc.data().cercles;
+        }
+        const docRef = doc(editionsRef, Doc.id);
+        batch.update(docRef, { active: false });
+      });
 
-    await addDoc(editionsRef, doc_data);
-
-    console.log("Doc data: ", doc_data);
-  });
+      const newEditionData = {
+        description : description,
+        edition : newEdition + 1,
+        end : start,
+        start : end,
+        votes : votes,
+        cercles : oldCercles,
+        enchere_duration : enchere_duration,
+        comitard_per_cercle : comitard_per_cercle,
+        max_encheres : max_encheres,
+        min_encheres : min_encheres,
+        active : true,
+      };
+    
+      // Create a new document in the same collection
+      const newDocRef = doc(editionsRef) // Auto-generated document ID
+      batch.set(newDocRef, newEditionData); // Add new document data
+  
+      // Commit the batched write operation
+      return batch.commit();
+    })
+    .then(() => {
+      console.log('All active fields set to false, and a new document added successfully.');
+    })
+    .catch(error => {
+      console.error('Error updating active fields and adding a new document:', error);
+    });
 }
 
 
@@ -167,18 +191,15 @@ export async function editComitard(id: string, comitardID: string, data: Dict) {
 // The function first adds a new document to the 'cercles' collection with the provided data.
 // Then it gets the ID of the newly created document.
 // After that, it adds the cercle's ID to the 'cercles' map of the specified 'edition' document.
-export async function addCercle(id: string, data: Dict, votes: number ) {
+export async function addCercle(id: string, email: string, votes: number, description?: string ) {
   const cercleCollection = collection(db, 'cercles');
 
   // add new cercle doc into cercle collection
+  let data = {votes: votes, description: description};
   const cercleRef = await addDoc(cercleCollection, data);
 
   // get back the id of the cercle doc
   const cercleId = cercleRef.id;
-
-  data["votes"] = votes;
-
-  console.log(data)
 
   // add the cercle into the cercle map into the num doc inside the editions collection
   const editionRef = doc(db, 'editions', id);
