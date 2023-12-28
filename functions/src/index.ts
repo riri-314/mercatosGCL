@@ -7,76 +7,61 @@
  * See a full list of supported triggers at https://firebase.google.com/docs/functions
  */
 
-import { HttpsError, onCall, onRequest } from "firebase-functions/v2/https";
+import { HttpsError, onCall } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
+import { getAuth } from "firebase-admin/auth";
 import {
   beforeUserCreated,
   beforeUserSignedIn,
 } from "firebase-functions/v2/identity";
-import { getAuth, sendPasswordResetEmail } from "@firebase/auth";
-
-// import { getAuth, sendPasswordResetEmail } from "@firebase/auth";
 
 admin.initializeApp();
+
+
 
 /**
  * Get the UID of the admin user.
  * @returns {string} - The UID of the admin user.
  * TODO: get the admin(s) uid from a doc in a collection
  */
-
 async function getAdminUid(uid: string): Promise<boolean> {
-  const adminsDocRef = admin.firestore().collection("admin").doc('admin'); // Assuming `admin.admin` is the document reference to the admin document
-  const adminsDoc = await adminsDocRef.get()
+  const adminsDocRef = admin.firestore().collection("admin").doc("admin"); // Assuming `admin.admin` is the document reference to the admin document
+  const adminsDoc = await adminsDocRef.get();
   const adminsMap = adminsDoc.data()?.admins || {};
-
+  //console.log("map: ", Object.values(adminsMap));
   //const adminUids = Object.values(adminsMap);
-  const containsValue = Object.values(adminsMap).includes("bb");
+  const containsValue = Object.values(adminsMap).includes(uid);
   return containsValue;
 }
-
-exports.sayHello = onRequest({ cors: true }, (req, res) => {
-  const data = req.body; // Access the request body
-
-  const responseObj = {
-    message: "Hello World",
-    data: data,
-  };
-
-  res.status(200).json(responseObj); // Send the response object as JSON
-});
 
 // disable user sign up
 export const beforecreated = beforeUserCreated((event) => {
   throw new HttpsError("permission-denied", "Unauthorized request!");
 });
 
-// TODO: instead of using the latest edition, use the edition that as the id (indexed field) set to true
 export const beforesignedin = beforeUserSignedIn(async (event) => {
   const user = event.data;
   const auth = event.auth;
 
   // admin can sign in
-  if (!auth || await getAdminUid(auth.uid)) {
+  if (auth && (await getAdminUid(auth.uid))) {
     return;
   }
 
   const activeEdition = await getActiveEdition();
   const activeEditionData = await activeEdition.get();
-  const activeEditionCercle = activeEditionData.data()?.cercle || {};
+  const activeEditionCercle = activeEditionData.data()?.cercles || {};
 
-  if (activeEditionCercle.empty) {
+  if (Object.keys(activeEditionCercle).length === 0) {
     // No editions found
-    throw new Error("Sign-in blocked. website not ready.");
+    throw new HttpsError("unavailable", "No editions found!");
   }
 
   // Check if the user's UID exists in the cercle map
   if (activeEditionCercle[user.uid]) {
     return;
   }
-
-  // If the user's UID doesn't exist in the cercle map, block sign-in
-  throw new Error("Sign-in blocked. User UID not found in the latest edition.");
+  throw new HttpsError("permission-denied", "Unauthorized access!");
 });
 
 /**
@@ -92,10 +77,10 @@ export const beforesignedin = beforeUserSignedIn(async (event) => {
 exports.resetPasswords = onCall(async (request) => {
   const context_auth = request.auth;
   const data = request.data;
-  const auth = getAuth();
+  //const auth = getAuth();
 
   // Check if the request is made by an admin
-  if (!context_auth || await getAdminUid(context_auth.uid)) {
+  if (!context_auth || !(await getAdminUid(context_auth.uid))) {
     throw new HttpsError("permission-denied", "Unauthorized request!");
   }
 
@@ -103,11 +88,13 @@ exports.resetPasswords = onCall(async (request) => {
 
   const activeEdition = await getActiveEdition();
   const activeEditionData = await activeEdition.get();
-  const activeEditionCercle = activeEditionData.data()?.cercle || {};
+  const activeEditionCercle = activeEditionData.data()?.cercles || {};
 
-  if (activeEditionCercle.empty) {
+  console.log("activeEditionCercle: ", activeEditionCercle);
+
+  if (Object.keys(activeEditionCercle).length === 0) {
     // No editions found
-    throw new Error("No editions found!");
+    throw new HttpsError("unavailable", "No editions found!");
   }
 
   const userUIDs = Object.keys(activeEditionCercle);
@@ -115,6 +102,7 @@ exports.resetPasswords = onCall(async (request) => {
   // Loop through user UIDs in the cercle
   for (const uid of userUIDs) {
     // Generate a random password
+    console.log("uid: ", uid);
     const newPassword = data.password || generateRandomPassword();
 
     // Reset password for each user
@@ -125,10 +113,12 @@ exports.resetPasswords = onCall(async (request) => {
 
     // Send reset password email
     // admin sdk give us email, send password reset email with firebase auth sdk
-    // necessary to do that. Only way to track user eamil is with firebase admin sdk. Firebase auth sdk only give us uid.
+    // necessary to do that. Only way to track user eamil is with firebase admin sdk.
+    // Firebase auth sdk only give us uid.
     if (email) {
       // await admin_auth.generatePasswordResetLink(email);
-      await sendPasswordResetEmail(auth, email);
+      //await sendPasswordResetEmail(auth, email);
+      console.log("email: ", email);
     } else {
       throw new Error("No email found for user!");
     }
@@ -140,7 +130,7 @@ exports.resetPasswords = onCall(async (request) => {
 /**
  * Generate a random password.
  *
- * @returns {string} - A randomly generated password.
+ * @return {string} - A randomly generated password.
  */
 function generateRandomPassword(): string {
   // Generate a random string as a password
@@ -157,17 +147,59 @@ function generateRandomPassword(): string {
 
 exports.signUpUser = onCall(async (request) => {
   const auth = request.auth;
-  //const data = request.data;
+  const data = request.data;
+  const description = data.description || "";
 
-  if (!auth || await getAdminUid(auth.uid)) {
+  if (!auth || !(await getAdminUid(auth.uid))) {
+    console.log("Error not admin");
     throw new HttpsError("permission-denied", "Unauthorized request!");
+  }
+  console.log("OK is admin");
+
+  if (data.email === undefined || data.displayName === undefined) {
+    console.log("Error missing data");
+    throw new HttpsError("invalid-argument", "Missing data!");
+  }
+
+  const activeEdition = await getActiveEdition();
+  const activeEditionData = await activeEdition.get();
+  const activeEditionVotes = activeEditionData.data()?.votes;
+
+  console.log("activeEditionVotes: ", activeEditionVotes);
+
+  if (activeEditionVotes === undefined) {
+    // No editions found
+    throw new HttpsError("unavailable", "No editions found!");
   }
 
   // create user account, catch uid
-  // add user to cercle
-  // send pawword reset email to user
+  getAuth()
+    .createUser({
+      email: data.email,
+      password: generateRandomPassword(),
+      displayName: data.displayName,
+    })
+    .then((userRecord) => {
+      // See the UserRecord reference doc for the contents of userRecord.
+      console.log("Successfully created new user:", userRecord.uid);
+      // add user to cercle
+      const s = `cercles.${userRecord.uid}`;
+      activeEdition
+        .update({
+            [s]: {
+              description: description,
+              votes: activeEditionVotes,
+              name: data.displayName,
+            },
+        })
+        .catch((error) => {
+          console.log("Error creating new user:", error);
+        });
 
-  return 1;
+      // send pawword reset email to user. NOPE
+
+      return 1;
+    });
 });
 
 /**
@@ -175,7 +207,7 @@ exports.signUpUser = onCall(async (request) => {
  * @returns {Firestore.DocumentReference} The Firestore document reference for the active edition.
  */
 async function getActiveEdition(): Promise<FirebaseFirestore.DocumentReference> {
-  const editionCollection = admin.firestore().collection("edition");
+  const editionCollection = admin.firestore().collection("editions");
   const querySnapshot = await editionCollection
     .where("active", "==", true)
     .orderBy("edition", "desc")
@@ -183,20 +215,31 @@ async function getActiveEdition(): Promise<FirebaseFirestore.DocumentReference> 
     .get();
 
   if (querySnapshot.empty) {
-    throw new Error("No active edition found");
+    throw new HttpsError("unavailable", "No editions found!");
   }
 
   return querySnapshot.docs[0].ref;
 }
 
 // TODO: active edition provider, return the active edition doc. DONE
-// TODO: add acitve edition provider to front end
+// TODO: add acitve edition provider to front end. DONE
 // TODO: admin provider, return admin(s) uid. DONE
 // TODO: add admin provider to front end. DONE
-// TODO: Finish signUpUser function
+// TODO: Finish signUpUser function. DONE: need to add throw nedd HttpsError
 // TODO: Refresh the db with correct data and correct users, using signUpUser function
-// TODO: Test resetPasswords function
+// TODO: Test resetPasswords function. DONE
 // TODO: create add comitard function
 // TODO: firestore security rules
 // TODO: cercle add vote
 // TODO: firestore security rules
+
+// admin tools: newEdition is DONE
+// edit edition: to be tested,  Done in front end
+
+// new comitard: TODO, cloud function
+// remove comitard: TODO, can be done by cercle ?
+// edit comitard: TODO, cloud function
+
+// addcercle: TRASH, cloud function
+// remove cercle: TODO, at the end
+// edit cercle: TODO, Done in front end

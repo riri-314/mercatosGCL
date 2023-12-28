@@ -2,15 +2,11 @@ import {
   addDoc,
   collection,
   getDocs,
-  limit,
-  orderBy,
-  query,
   updateDoc,
   doc,
   deleteField,
   writeBatch,
 } from "@firebase/firestore";
-import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "@firebase/storage";
 import { db } from "../firebase_config";
 
 type Dict = {
@@ -208,7 +204,7 @@ export async function addCercle(id: string, email: string, votes: number, descri
   });
 
   // done
-  console.log(`Cercle ${cercleId} added to edition ${id}`);
+  console.log(`Cercle ${cercleId} added to edition ${id}, email: ${email}`);
 }
 
 // This function is used to remove a cercle from the database.
@@ -220,13 +216,13 @@ export async function addCercle(id: string, email: string, votes: number, descri
 export function removeCercle(id: string, cercleID: string) {
   // remove the cercle from the map
   // remove all comitards from this cercle in the comitard map, not easy
-  // remove all encheres from this cerlces in the comitard map, not easy
-  id = "";
-  cercleID = "";
+  // remove all encheres from this cerlces in the comitard map, not easy  
+  console.log(id, cercleID)
   
 }
 
 export function editCercle(id: string, data: Dict) {
   //easy
   //edit cercle info in the map
+  console.log(id, data)
 }

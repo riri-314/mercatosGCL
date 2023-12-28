@@ -18,8 +18,9 @@ import {
   //  updatePassword,
 } from "@firebase/auth";
 //import firebase from "@firebase/app";
-import { getFunctions, httpsCallable } from "@firebase/functions";
+import { httpsCallable } from "@firebase/functions";
 import NewCerle from "./new_cercle";
+import { functions } from "../../firebase_config";
 
 interface AdminAccountProps {
   data: DocumentData;
@@ -33,19 +34,7 @@ export default function AdminAccount({ data, id }: AdminAccountProps) {
   const [newComiatrdLoading, setNewComitardLoading] = useState(false);
   const [removeComiatrdLoading, setRemoveComitardLoading] = useState(false);
 
-  const callableHelloWorld = httpsCallable(getFunctions(), "sayHello");
 
-  async function callHelloWorld(data: any) {
-    callableHelloWorld(data)
-      .then((result) => {
-        // Handle the result from the cloud function
-        console.log(result.data);
-      })
-      .catch((error) => {
-        // Handle any errors
-        console.error(error);
-      });
-  }
 
   return (
     <>
@@ -175,15 +164,48 @@ export default function AdminAccount({ data, id }: AdminAccountProps) {
           </LoadingButton>
           <LoadingButton
             onClick={async () => {
-              try {
-                const result: any = await callHelloWorld({ thing: "thing" });
-                console.log(result.data.output);
-              } catch (error) {
-                console.log(`error: ${JSON.stringify(error)}`);
-              }
+              const addMessage = httpsCallable(functions, 'signUpUser');
+              addMessage({ text: "Test super function" })
+                .then((result) => {
+                  // Read result of the Cloud Function.
+                  /** @type {any} */
+                  const data: any = result.data;
+                  //const sanitizedMessage = data.text;
+                  console.log("data:", data);
+                });
             }}
           >
-            Cloud function
+            Sing up user
+          </LoadingButton>
+          <LoadingButton
+            onClick={async () => {
+              const addMessage = httpsCallable(functions, 'resetPasswords');
+              addMessage({ text: "Test super function" })
+                .then((result) => {
+                  // Read result of the Cloud Function.
+                  /** @type {any} */
+                  const data: any = result.data;
+                  //const sanitizedMessage = data.text;
+                  console.log("data:", data);
+                });
+            }}
+          >
+            Reset all passwords
+          </LoadingButton>
+          <LoadingButton
+            onClick={async () => {
+              const addMessage = httpsCallable(functions, 'signUpUser');
+              addMessage({ email: "henri.pihet@protonmail.com", displayName: "kiki2000" })
+                .then((result) => {
+                  // Read result of the Cloud Function.
+                  /** @type {any} */
+                  const data: any = result.data;
+                  //const sanitizedMessage = data.text;
+                  console.log("data:", data);
+                });
+            }}
+          >
+            Signup user
           </LoadingButton>
         </CardContent>
       </Card>

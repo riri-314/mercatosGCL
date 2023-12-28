@@ -8,7 +8,7 @@ import { DocumentData } from "@firebase/firestore";
 
 export default function Account({data}: DocumentData) {
   const user = useAuth();
-
+  console.log(data)
   return (
     <>
       <Stack
