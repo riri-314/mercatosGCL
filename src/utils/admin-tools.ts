@@ -8,6 +8,7 @@ import {
   writeBatch,
 } from "@firebase/firestore";
 import { db } from "../firebase_config";
+import { Dayjs } from "dayjs";
 
 type Dict = {
   [key: string]: any;
@@ -55,20 +56,24 @@ const comitardCollection = collection(db, "comitards");
 // Then it creates a new document in the 'editions' collection with the provided data.
 // The function does not return anything.
 export async function newEdition(
-  description: String,
-  start: Date,
-  end: Date,
+  rules: String,
+  start: Dayjs | null,
+  end: Dayjs | null,
   votes: Number,
   enchere_duration: Number,
   comitard_per_cercle: Number,
   min_encheres: Number,
   max_encheres: Number,
-) {
+  remboursementVendeur: Number,
+  remboursementPerdant: Number,
+  remboursementGagnant: Number,
+): Promise<Number> {
   let newEdition = 0;
   let oldCercles = {};
+  let errorCode = 0
   
   // Retrieve all documents in the "editions" collection
-  getDocs(editionsRef)
+  await getDocs(editionsRef)
     .then(snapshot => {
       const batch = writeBatch(db);
 
@@ -86,17 +91,20 @@ export async function newEdition(
       });
 
       const newEditionData = {
-        description : description,
+        rules : rules,
         edition : newEdition + 1,
-        end : start,
-        start : end,
-        votes : votes,
+        stop : end?.toDate(),
+        start : start?.toDate(),
+        nbFut : votes,
         cercles : oldCercles,
-        enchere_duration : enchere_duration,
-        comitard_per_cercle : comitard_per_cercle,
-        max_encheres : max_encheres,
-        min_encheres : min_encheres,
+        duration : enchere_duration,
+        nbComitard : comitard_per_cercle,
+        enchereMin : min_encheres,
+        enchereMax : max_encheres,
         active : true,
+        remboursementVendeur: remboursementVendeur,
+        remboursementPerdant: remboursementPerdant,
+        remboursementGagnant: remboursementGagnant,
       };
     
       // Create a new document in the same collection
@@ -108,10 +116,13 @@ export async function newEdition(
     })
     .then(() => {
       console.log('All active fields set to false, and a new document added successfully.');
+      errorCode = 1;
     })
     .catch(error => {
       console.error('Error updating active fields and adding a new document:', error);
     });
+
+    return errorCode;
 }
 
 
