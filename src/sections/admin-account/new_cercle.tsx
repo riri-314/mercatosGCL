@@ -10,8 +10,9 @@ import Card from "@mui/material/Card";
 import Typography from "@mui/material/Typography";
 import { useState } from "react";
 import { LoadingButton } from "@mui/lab";
-import { addCercle } from "../../utils/admin-tools";
 import { DocumentData } from "@firebase/firestore";
+import { httpsCallable } from "@firebase/functions";
+import { functions } from "../../firebase_config";
 
 interface NewCercleProps {
     data: DocumentData;
@@ -27,28 +28,32 @@ export default function NewCerle({data, id}: NewCercleProps) {
     AlertColor | undefined
   >("error");
 
+  console.log("id:", id);
+
   function handleNewCercle() {
     setCercleError("");
     setCercleErrorSeverity("error");
-    console.log(cercleDescription);
-    console.log(cercleName);
+    // console.log(cercleDescription);
+    // console.log(cercleName);
     if (cercleName === "" || cercleEmail === "") {
       setCercleError("Le nom et email du cercle et ne peuvent pas être vide");
       return;
     } else {
-      //create cercle
-      try {
-        addCercle(
-          id,
-          cercleEmail,
-          data.votes,
-          cercleDescription
-        );
-        setCercleError("Succes !");
+      const addMessage = httpsCallable(functions, "signUpUser");
+      addMessage({
+        email: cercleEmail,
+        displayName: cercleName,
+        description: cercleDescription,
+      }).then((result) => {
+        const data: any = result.data;
+        //const sanitizedMessage = data.text;
         setCercleErrorSeverity("success");
-      } catch {
-        setCercleError("Erreur inconnue. Contacte l'administrateur");
-      }
+        setCercleError("Cercle créé avec succès");
+        console.log("data:", data);
+      }).catch((error) => {
+        setCercleError("Erreur veuillez contacter un geek");
+        console.log(error);
+      });
     }
   }
 
@@ -59,6 +64,11 @@ export default function NewCerle({data, id}: NewCercleProps) {
           <Typography variant="h5" sx={{ mb: 1 }}>
             Créer nouveau cercle
           </Typography>
+          {cercleError && (
+            <Alert sx={{ mb: 3 }} severity={cercleErrorSeverity}>
+              {cercleError}
+            </Alert>
+          )}
           <Box component="form" noValidate autoComplete="off">
             <Grid container spacing={2}>
               <Grid item xs={12} sm={6}>
@@ -99,11 +109,6 @@ export default function NewCerle({data, id}: NewCercleProps) {
               </Grid>
             </Grid>
           </Box>
-          {cercleError && (
-            <Alert sx={{ mt: 3 }} severity={cercleErrorSeverity}>
-              {cercleError}
-            </Alert>
-          )}
         </CardContent>
       </Card>
     </>

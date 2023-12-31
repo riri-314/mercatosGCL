@@ -41,10 +41,9 @@ export const beforecreated = beforeUserCreated((event) => {
 
 export const beforesignedin = beforeUserSignedIn(async (event) => {
   const user = event.data;
-  const auth = event.auth;
-
+  
   // admin can sign in
-  if (auth && (await getAdminUid(auth.uid))) {
+  if (user.uid && (await getAdminUid(user.uid))) {
     return;
   }
 
@@ -163,7 +162,7 @@ exports.signUpUser = onCall(async (request) => {
 
   const activeEdition = await getActiveEdition();
   const activeEditionData = await activeEdition.get();
-  const activeEditionVotes = activeEditionData.data()?.votes;
+  const activeEditionVotes = activeEditionData.data()?.nbFut;
 
   console.log("activeEditionVotes: ", activeEditionVotes);
 
@@ -188,18 +187,24 @@ exports.signUpUser = onCall(async (request) => {
         .update({
             [s]: {
               description: description,
-              votes: activeEditionVotes,
+              nbFut: activeEditionVotes,
               name: data.displayName,
             },
         })
-        .catch((error) => {
+        .catch((error: any) => {
           console.log("Error creating new user:", error);
+          throw new HttpsError("unavailable", "Error creating new user!");
         });
 
       // send pawword reset email to user. NOPE
 
       return 1;
+    }).catch((error) => {
+      console.log("Error creating new user:", error);
+      throw new HttpsError("unavailable", "Error creating new user!");
     });
+    
+  return { message: "User created and added to edition map" };
 });
 
 /**
@@ -225,8 +230,8 @@ async function getActiveEdition(): Promise<FirebaseFirestore.DocumentReference> 
 // TODO: add acitve edition provider to front end. DONE
 // TODO: admin provider, return admin(s) uid. DONE
 // TODO: add admin provider to front end. DONE
-// TODO: Finish signUpUser function. DONE: need to add throw nedd HttpsError
-// TODO: Refresh the db with correct data and correct users, using signUpUser function
+// TODO: Finish signUpUser function. DONE
+// TODO: Refresh the db with correct data and correct users, using signUpUser function. DONE
 // TODO: Test resetPasswords function. DONE
 // TODO: create add comitard function
 // TODO: firestore security rules
@@ -243,3 +248,6 @@ async function getActiveEdition(): Promise<FirebaseFirestore.DocumentReference> 
 // addcercle: TRASH, cloud function
 // remove cercle: TODO, at the end
 // edit cercle: TODO, Done in front end
+
+// https://www.youtube.com/watch?v=h79xrJZAQ6I
+

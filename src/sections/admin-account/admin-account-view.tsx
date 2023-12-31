@@ -4,13 +4,6 @@ import Card from "@mui/material/Card";
 import { CardContent } from "@mui/material";
 import { useAuth } from "../../auth/AuthProvider";
 import { LoadingButton } from "@mui/lab";
-import {
-  editEdition,
-  newComitard,
-  newEdition,
-  removeComitard,
-} from "../../utils/admin-tools";
-import { useState } from "react";
 import { DocumentData } from "@firebase/firestore";
 import {
   getAuth,
@@ -21,6 +14,7 @@ import {
 import { httpsCallable } from "@firebase/functions";
 import NewCerle from "./new_cercle";
 import { functions } from "../../firebase_config";
+import NewEdition from "./new_edition";
 
 interface AdminAccountProps {
   data: DocumentData;
@@ -29,12 +23,6 @@ interface AdminAccountProps {
 
 export default function AdminAccount({ data, id }: AdminAccountProps) {
   const user = useAuth();
-  const [newEditionLoading, setNewEditionLoading] = useState(false);
-  const [editEditionLoading, setEditEditionLoading] = useState(false);
-  const [newComiatrdLoading, setNewComitardLoading] = useState(false);
-  const [removeComiatrdLoading, setRemoveComitardLoading] = useState(false);
-
-
 
   return (
     <>
@@ -49,12 +37,16 @@ export default function AdminAccount({ data, id }: AdminAccountProps) {
         </Typography>
       </Stack>
 
+      <NewEdition data={data} id={id} />
+
       <Card sx={{ width: "100%", mb: 4 }}>
         <CardContent>
-          Create new event {"->"} add cercle ? {"->"} start and stop dates{" "}
-          {"->"} edit description ? (precise that start and stop dates are shown
-          by default) <br />
-          Table listing events and which one is active <br />
+          <Typography variant="h5" sx={{ mb: 1 }}>
+            Éditer édition
+          </Typography>
+          Table with edition data. Column with edit button <br />
+          Edit button raise a edit form in form of a modal <br />
+          Star ion to indicate the current active edition <br />
         </CardContent>
       </Card>
 
@@ -83,67 +75,6 @@ export default function AdminAccount({ data, id }: AdminAccountProps) {
       <Card sx={{ width: "100%", mb: 4 }}>
         <CardContent>
           Debug card <br />
-          Init db <br />
-          <LoadingButton
-            loading={newEditionLoading}
-            onClick={async () => {
-              setNewEditionLoading(true);
-              await newEdition(
-                "New edition descritpion",
-                new Date("2022-03-25"),
-                new Date("2022-03-30"),
-                100,
-                960,
-                5,
-                1,
-                100
-              );
-              setNewEditionLoading(false);
-            }}
-          >
-            New edition
-          </LoadingButton>
-          <LoadingButton
-            loading={editEditionLoading}
-            onClick={async () => {
-              setEditEditionLoading(true);
-              await editEdition("Tq3co1gQYRzW6cgNsXK0", {
-                name: "test",
-                start: new Date("2022-03-25"),
-                end: new Date("2022-03-30"),
-                maxComitards: 100,
-              });
-              setEditEditionLoading(false);
-            }}
-          >
-            Edit edition
-          </LoadingButton>
-          <LoadingButton
-            loading={newComiatrdLoading}
-            onClick={async () => {
-              setNewComitardLoading(true);
-              await newComitard("Tq3co1gQYRzW6cgNsXK0", {
-                name: "test",
-                email: "fff",
-              });
-              setNewComitardLoading(false);
-            }}
-          >
-            New comitard
-          </LoadingButton>
-          <LoadingButton
-            loading={removeComiatrdLoading}
-            onClick={async () => {
-              setRemoveComitardLoading(true);
-              await removeComitard(
-                "Tq3co1gQYRzW6cgNsXK0",
-                "85Xzv2z95pKp1vomfwq3"
-              );
-              setRemoveComitardLoading(false);
-            }}
-          >
-            Remove comitard
-          </LoadingButton>
           <LoadingButton
             onClick={async () => {
               const auth = getAuth();
@@ -164,45 +95,45 @@ export default function AdminAccount({ data, id }: AdminAccountProps) {
           </LoadingButton>
           <LoadingButton
             onClick={async () => {
-              const addMessage = httpsCallable(functions, 'signUpUser');
-              addMessage({ text: "Test super function" })
-                .then((result) => {
-                  // Read result of the Cloud Function.
-                  /** @type {any} */
-                  const data: any = result.data;
-                  //const sanitizedMessage = data.text;
-                  console.log("data:", data);
-                });
+              const addMessage = httpsCallable(functions, "signUpUser");
+              addMessage({ text: "Test super function" }).then((result) => {
+                // Read result of the Cloud Function.
+                /** @type {any} */
+                const data: any = result.data;
+                //const sanitizedMessage = data.text;
+                console.log("data:", data);
+              });
             }}
           >
             Sing up user
           </LoadingButton>
           <LoadingButton
             onClick={async () => {
-              const addMessage = httpsCallable(functions, 'resetPasswords');
-              addMessage({ text: "Test super function" })
-                .then((result) => {
-                  // Read result of the Cloud Function.
-                  /** @type {any} */
-                  const data: any = result.data;
-                  //const sanitizedMessage = data.text;
-                  console.log("data:", data);
-                });
+              const addMessage = httpsCallable(functions, "resetPasswords");
+              addMessage({ text: "Test super function" }).then((result) => {
+                // Read result of the Cloud Function.
+                /** @type {any} */
+                const data: any = result.data;
+                //const sanitizedMessage = data.text;
+                console.log("data:", data);
+              });
             }}
           >
             Reset all passwords
           </LoadingButton>
           <LoadingButton
             onClick={async () => {
-              const addMessage = httpsCallable(functions, 'signUpUser');
-              addMessage({ email: "henri.pihet@protonmail.com", displayName: "kiki2000" })
-                .then((result) => {
-                  // Read result of the Cloud Function.
-                  /** @type {any} */
-                  const data: any = result.data;
-                  //const sanitizedMessage = data.text;
-                  console.log("data:", data);
-                });
+              const addMessage = httpsCallable(functions, "signUpUser");
+              addMessage({
+                email: "henri.pihet@protonmail.com",
+                displayName: "kiki2000",
+              }).then((result) => {
+                // Read result of the Cloud Function.
+                /** @type {any} */
+                const data: any = result.data;
+                //const sanitizedMessage = data.text;
+                console.log("data:", data);
+              });
             }}
           >
             Signup user
