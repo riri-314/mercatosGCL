@@ -221,6 +221,7 @@ export default function NewEdition({ data, id }: NewEditionProps) {
             <Grid item xs={12} sm={6}>
               <QuantityInput
                 title="Enchere maximum"
+                min={1}
                 helpText={`Enchere maximum qu'il cercle peut mettre sur un comitard. Defaut ${
                   data.enchereMax ? data.enchereMax : 100
                 }`}
