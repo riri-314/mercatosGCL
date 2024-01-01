@@ -15,6 +15,7 @@ import { httpsCallable } from "@firebase/functions";
 import NewCerle from "./new_cercle";
 import { functions } from "../../firebase_config";
 import NewEdition from "./new_edition";
+import NewComitard from "./new_comitard";
 
 interface AdminAccountProps {
   data: DocumentData;
@@ -66,9 +67,11 @@ export default function AdminAccount({ data, id }: AdminAccountProps) {
         </CardContent>
       </Card>
 
+      <NewComitard />
+
       <Card sx={{ width: "100%", mb: 4 }}>
         <CardContent>
-          Add/Edit/Remove comitard <br />
+          Edit/Remove comitard <br />
         </CardContent>
       </Card>
 

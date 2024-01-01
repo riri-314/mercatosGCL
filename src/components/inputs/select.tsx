@@ -9,11 +9,13 @@ import { Option as BaseOption, optionClasses } from "@mui/base/Option";
 import { Popper as BasePopper } from "@mui/base/Popper";
 import { styled } from "@mui/system";
 import FormHelperText from "@mui/material/FormHelperText";
+import { FormControl, InputLabel } from "@mui/material";
 
 interface OptionProps {
-  defaultValue: number;
+  defaultValue?: number;
   option: object;
   helpText?: string;
+  isError?: boolean;
   change: (event: any, val: any) => void;
 }
 
@@ -21,11 +23,12 @@ export default function UnstyledSelectIntroduction({
   defaultValue,
   option,
   helpText,
+  isError,
   change,
 }: OptionProps) {
   return (
     <>
-      <Select defaultValue={defaultValue} placeholder="Choisir une proportion" onChange={change}>
+      <Select style={isError ? { color: "red", borderColor: "red" } : {}} defaultValue={defaultValue} placeholder="Choisir une proportion" onChange={change}>
         {Object.entries(option).map(([text, value]) => (
           <Option value={value}>{text}</Option>
         ))}
