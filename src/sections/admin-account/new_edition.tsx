@@ -25,29 +25,37 @@ interface NewEditionProps {
 }
 //  <DateTimePicker defaultValue={dayjs('2022-04-17T15:30')} />
 export default function NewEdition({ data, id }: NewEditionProps) {
-  console.log(id)
+  console.log(id);
   const [rules, setRules] = useState<string>(data.rules ? data.rules : "");
+  const [rulesError, setRulesError] = useState<boolean>(false);
   const [start, setStart] = useState<Dayjs | null>(null);
   const [stop, setStop] = useState<Dayjs | null>(null);
   const [nbFut, setNbFut] = useState<number>(data.nbFut ? data.nbFut : 100);
+  const [nbFutError, setNbFutError] = useState<boolean>(false);
   const [duration, setDuration] = useState<number>(
     data.duration ? data.duration : 16
   );
+  const [durationError, setDurationError] = useState<boolean>(false);
   const [nbComitard, setNbComitard] = useState<number>(
     data.nbComitard ? data.nbComitard : 5
   );
+  const [nbComitardError, setNbComitardError] = useState<boolean>(false);
   const [enchereMin, setEnchereMin] = useState<number>(
     data.enchereMin ? data.enchereMin : 1
   );
+  const [enchereMinError, setEnchereMinError] = useState<boolean>(false);
   const [enchereMax, setEnchereMax] = useState<number>(
     data.enchereMax ? data.enchereMax : 100
   );
+  const [enchereMaxError, setEnchereMaxError] = useState<boolean>(false);
   const [remboursementVendeur, setRemboursementVendeur] = useState<number>(
     data.remboursementVendeur ? data.remboursementVendeur : 0.5
   );
+
   const [remboursementPerdant, setRemboursementPerdant] = useState<number>(
     data.remboursementPerdant ? data.remboursementPerdant : 1
   );
+
   const [remboursementGagnant, setRemboursementGagnant] = useState<number>(
     data.remboursementGagnant ? data.remboursementGagnant : 0
   );
@@ -77,8 +85,14 @@ export default function NewEdition({ data, id }: NewEditionProps) {
     setLoading(true);
     setErrorType("error");
     setError("");
-    if (duration == 0) {
+    if (rules == "") {
+      setError("Les régles ne peuvent pas être vide");
+      setRulesError(true);
+      setLoading(false);
+      return;
+    } else if (duration == 0) {
       setError("La durée d'une enchere doit être supérieur à 0");
+      setDurationError(true);
       setLoading(false);
       return;
     } else if (!validateDates()) {
@@ -87,22 +101,29 @@ export default function NewEdition({ data, id }: NewEditionProps) {
       );
       setLoading(false);
       return;
-    } else if (rules == "") {
-      setError("Les régles ne peuvent pas être vide");
-      setLoading(false);
-      return;
     } else if (nbFut <= 0) {
       setError("Le nombre de fut doit être supérieur à 0");
+      setNbFutError(true);
       setLoading(false);
       return;
     } else if (nbComitard <= 0) {
       setError("Le nombre de comitard doit être supérieur à 0");
+      setNbComitardError(true);
       setLoading(false);
       return;
     } else if (enchereMin > enchereMax) {
       setError("L'enchere minimum doit être inférieur à l'enchere maximum");
+      setEnchereMinError(true);
+      setEnchereMaxError(true);
       setLoading(false);
-
+      return;
+    } else if (enchereMin > nbFut) {
+      setError(
+        "L'enchere minimum doit être inférieur au nombre de futs par cercle"
+      );
+      setEnchereMinError(true);
+      setNbFutError(true);
+      setLoading(false);
       return;
     } else if (
       remboursementVendeur < 0 ||
@@ -114,8 +135,20 @@ export default function NewEdition({ data, id }: NewEditionProps) {
 
       return;
     }
-    const ret = await newEdition(rules, start, stop, nbFut, duration, nbComitard, enchereMin, enchereMax, remboursementVendeur, remboursementPerdant, remboursementGagnant)
-    console.log("ret: ",ret)
+    const ret = await newEdition(
+      rules,
+      start,
+      stop,
+      nbFut,
+      duration,
+      nbComitard,
+      enchereMin,
+      enchereMax,
+      remboursementVendeur,
+      remboursementPerdant,
+      remboursementGagnant
+    );
+    console.log("ret: ", ret);
     if (ret) {
       setErrorType("success");
       setError("Edition créée");
@@ -149,10 +182,18 @@ export default function NewEdition({ data, id }: NewEditionProps) {
               <TextField
                 label="Régles"
                 multiline
-                maxRows={4}
+                maxRows={10}
                 fullWidth
                 value={rules}
-                onChange={(e) => setRules(e.target.value)}
+                error={rulesError}
+                onChange={(e) => {
+                  setRules(e.target.value);
+                  if (e.target.value != "") {
+                    setRulesError(false);
+                  } else {
+                    setRulesError(true);
+                  }
+                }}
               />
               <FormHelperText>
                 Régles affichées dans l'onglet réglement. Les infos entées ci
@@ -164,7 +205,7 @@ export default function NewEdition({ data, id }: NewEditionProps) {
               <Grid item xs={12} sm={6}>
                 <DateTimePicker
                   label="Start date"
-                  sx={{ width: "100%" }}
+                  sx={{ width: "100%", color: "red" }}
                   onChange={(e: Dayjs | null) => setStart(e)}
                 />
                 <FormHelperText>Début du concours</FormHelperText>
@@ -182,50 +223,90 @@ export default function NewEdition({ data, id }: NewEditionProps) {
               <QuantityInput
                 title="Nombre de futs par cercles"
                 min={1}
+                error={nbFutError}
                 helpText={`Nombre de futs qu'un cercle posséde initialement. Defaut: ${
                   data.nbFut ? data.nbFut : 100
                 }`}
-                change={(_event: any, val: any) => setNbFut(val)}
+                change={(_event: any, val: any) => {
+                  setNbFut(val);
+                  if (!val) {
+                    setNbFutError(true);
+                  } else {
+                    setNbFutError(false);
+                  }
+                }}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
               <QuantityInput
                 title="Duration d'une enchere"
                 min={1}
+                error={durationError}
                 helpText={`Duration d'une enchere en heures. Defaut: ${
                   data.duration ? data.duration : 16
                 }`}
-                change={(_event: any, val: any) => setDuration(val)}
+                change={(_event: any, val: any) => {
+                  setDuration(val);
+                  if (!val) {
+                    setDurationError(true);
+                  } else {
+                    setDurationError(false);
+                  }
+                }}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
               <QuantityInput
                 title="Nombre de comitards max par cercles"
                 min={1}
+                error={nbComitardError}
                 helpText={`Nombre de comitard qu'un cercle peut proposer à l'enchere. Defaut:  ${
                   data.nbComitard ? data.nbComitard : 5
                 }`}
-                change={(_event: any, val: any) => setNbComitard(val)}
+                change={(_event: any, val: any) => {
+                  setNbComitard(val);
+                  if (!val) {
+                    setNbComitardError(true);
+                  } else {
+                    setNbComitardError(false);
+                  }
+                }}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
               <QuantityInput
                 title="Enchere minimum"
                 min={1}
+                error={enchereMinError}
                 helpText={`Enchere minimum qu'il cercle peut mettre sur un comitard. Defaut: ${
                   data.enchereMin ? data.enchereMin : 1
                 }`}
-                change={(_event: any, val: any) => setEnchereMin(val)}
+                change={(_event: any, val: any) => {
+                  setEnchereMin(val);
+                  if (!val) {
+                    setEnchereMinError(true);
+                  } else {
+                    setEnchereMinError(false);
+                  }
+                }}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
               <QuantityInput
                 title="Enchere maximum"
                 min={1}
+                error={enchereMaxError}
                 helpText={`Enchere maximum qu'il cercle peut mettre sur un comitard. Defaut ${
                   data.enchereMax ? data.enchereMax : 100
                 }`}
-                change={(_event: any, val: any) => setEnchereMax(val)}
+                change={(_event: any, val: any) => {
+                  setEnchereMax(val);
+                  if (!val) {
+                    setEnchereMaxError(true);
+                  } else {
+                    setEnchereMaxError(false);
+                  }
+                }}
               />
             </Grid>
             <Grid item xs={12} sm={6}>

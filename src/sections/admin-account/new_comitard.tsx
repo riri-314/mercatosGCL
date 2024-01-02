@@ -12,6 +12,7 @@ import Typography from "@mui/material/Typography";
 import UnstyledSelectIntroduction from "../../components/inputs/select";
 import QuantityInput from "../../components/inputs/numberInput";
 import { useState } from "react";
+import PictureInput from "../../components/inputs/pictureInput";
 
 export default function NewComitard() {
   const [name, setName] = useState("");
@@ -40,7 +41,9 @@ export default function NewComitard() {
   const [estLeSeulError, setEstLeSeulError] = useState(false);
 
   const [error, setError] = useState("");
-  const [errorSeverity, setErrorSeverity] = useState<AlertColor | undefined>("error");
+  const [errorSeverity, setErrorSeverity] = useState<AlertColor | undefined>(
+    "error"
+  );
 
   const txtlenght1 = 30;
   const txtlenght2 = 150;
@@ -126,7 +129,7 @@ export default function NewComitard() {
       setError("Comitard créé avec succès");
     } else {
       setErrorSeverity("error");
-      setError("Certains champs sont incorrects");
+      setError("Certains champs sont incorrects. Petit con.");
     }
   }
 
@@ -401,8 +404,14 @@ export default function NewComitard() {
                 {txtlenght2}
               </FormHelperText>
             </Grid>
-            <Grid item xs={12} sm={6}>
-              <LoadingButton size="large" variant="contained" fullWidth onClick={handleNewComitard}>
+            <PictureInput />
+            <Grid item xs={12} sm={12}>
+              <LoadingButton
+                size="large"
+                variant="contained"
+                fullWidth
+                onClick={handleNewComitard}
+              >
                 Créer comitard
               </LoadingButton>
             </Grid>

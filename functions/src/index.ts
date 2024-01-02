@@ -233,9 +233,10 @@ async function getActiveEdition(): Promise<FirebaseFirestore.DocumentReference> 
 // TODO: Finish signUpUser function. DONE
 // TODO: Refresh the db with correct data and correct users, using signUpUser function. DONE
 // TODO: Test resetPasswords function. DONE
-// TODO: Update new edition form
-// TODO  Update new cercle form
+// TODO: Update new edition form. DONE
+// TODO  Update new cercle form. DONE
 // TODO: create add comitard form. DONE
+// TODO: add comitard picture. DONE
 // TODO: create add comitard function
 // TODO: firestore security rules. DONE
 // TODO: cercle add vote
