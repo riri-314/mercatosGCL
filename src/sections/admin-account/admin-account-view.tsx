@@ -51,7 +51,7 @@ export default function AdminAccount({ data, id }: AdminAccountProps) {
         </CardContent>
       </Card>
 
-      <NewCerle data={data} id={id} />
+      <NewCerle/>
 
       <Card sx={{ width: "100%", mb: 4 }}>
         <CardContent>

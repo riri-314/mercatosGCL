@@ -37,12 +37,11 @@ const NumberInput = React.forwardRef(function CustomNumberInput(
     text-align: center;
   
     &:hover {
-      border-color: ${blue[400]};
+      border-color: ${props.isError ? "#ff0000" : blue[400]};
     }
   
     &:focus {
-      border-color: ${blue[400]};
-      box-shadow: 0 0 0 3px ${blue[200]};
+      border-color: ${props.isError ? "#ff0000" : blue[400]};
     }
   
     &:focus-visible {

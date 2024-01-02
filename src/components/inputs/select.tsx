@@ -9,7 +9,6 @@ import { Option as BaseOption, optionClasses } from "@mui/base/Option";
 import { Popper as BasePopper } from "@mui/base/Popper";
 import { styled } from "@mui/system";
 import FormHelperText from "@mui/material/FormHelperText";
-import { FormControl, InputLabel } from "@mui/material";
 
 interface OptionProps {
   defaultValue?: number;
