@@ -14,10 +14,9 @@ import {
   beforeUserCreated,
   beforeUserSignedIn,
 } from "firebase-functions/v2/identity";
+import { v4 as uuidv4 } from "uuid";
 
 admin.initializeApp();
-
-
 
 /**
  * Get the UID of the admin user.
@@ -41,7 +40,7 @@ export const beforecreated = beforeUserCreated((event) => {
 
 export const beforesignedin = beforeUserSignedIn(async (event) => {
   const user = event.data;
-  
+
   // admin can sign in
   if (user.uid && (await getAdminUid(user.uid))) {
     return;
@@ -61,6 +60,123 @@ export const beforesignedin = beforeUserSignedIn(async (event) => {
     return;
   }
   throw new HttpsError("permission-denied", "Unauthorized access!");
+});
+
+exports.addComitard = onCall(async (request) => {
+  const context_auth = request.auth;
+  const data = request.data;
+  let admin = false;
+  const txtlenght1 = 30;
+  const txtlenght2 = 150;
+
+  const activeEdition = await getActiveEdition();
+  const activeEditionData = await activeEdition.get();
+  const activeEditionCercle = activeEditionData.data()?.cercles || {};
+
+  if (Object.keys(activeEditionCercle).length === 0) {
+    // No editions found
+    throw new HttpsError("unavailable", "No cercles found in edition!");
+  }
+
+  // Check if the request is made by an admin
+  if (!context_auth) {
+    throw new HttpsError(
+      "permission-denied",
+      "Unauthorized request!Context auth"
+    ); // return error if not connected
+  } else {
+    admin = await getAdminUid(context_auth.uid);
+    if (!activeEditionCercle[context_auth.uid] && !admin) {
+      throw new HttpsError(
+        "permission-denied",
+        "Unauthorized request!loged or admin"
+      ); // return error if not admin or not a active cercle
+    }
+  }
+
+  let cercle = context_auth.uid;
+
+  // Check if the request contains the required data
+  if (
+    data.name === undefined ||
+    data.name.length == 0 ||
+    data.name.length > txtlenght1 ||
+    data.firstname === undefined ||
+    data.firstname.length == 0 ||
+    data.firstname.length > txtlenght1 ||
+    data.nickname === undefined ||
+    data.nickname.length == 0 ||
+    data.nickname.length > txtlenght1 ||
+    data.post === undefined ||
+    data.post.length == 0 ||
+    data.post.length > txtlenght1 ||
+    data.teneurTaule === undefined ||
+    data.teneurTaule.length < 0 ||
+    data.teneurTaule.length > 10 ||
+    data.etatCivil === undefined ||
+    data.etatCivil.length == 0 ||
+    data.etatCivil.length > txtlenght2 ||
+    data.age === undefined ||
+    data.age.length < 0 ||
+    data.age.length > 99 ||
+    data.nbEtoiles === undefined ||
+    data.nbEtoiles.length < 0 ||
+    data.nbEtoiles.length > 15 ||
+    data.pointFort === undefined ||
+    data.pointFort.length == 0 ||
+    data.pointFort.length > txtlenght2 ||
+    data.pointFaible === undefined ||
+    data.pointFaible.length == 0 ||
+    data.pointFaible.length > txtlenght2 ||
+    data.estLeSeul === undefined ||
+    data.estLeSeul.length == 0 ||
+    data.estLeSeul.length > txtlenght2 ||
+    data.picture === undefined ||
+    data.picture.length == 0
+  ) {
+    throw new HttpsError("invalid-argument", "Missing data!");
+  }
+  if (admin) {
+    if (data.cercle === undefined || data.cercle.length == 0) {
+      throw new HttpsError("invalid-argument", "Missing data!");
+    } else {
+      // Check if the cercle exists
+      if (!activeEditionCercle[data.cercle]) {
+        throw new HttpsError("invalid-argument", "Cercle does not exist!");
+      } else {
+        cercle = data.cercle;
+      }
+    }
+  }
+
+  const s = `cercles.${cercle}.comitards.${uuidv4()}`;
+  activeEdition
+    .update({
+      [s]: {
+        name: data.name,
+        firstname: data.firstname,
+        nickname: data.nickname,
+        post: data.post,
+        teneurTaule: data.teneurTaule,
+        etatCivil: data.etatCivil,
+        age: data.age,
+        nbEtoiles: data.nbEtoiles,
+        pointFort: data.pointFort,
+        pointFaible: data.pointFaible,
+        estLeSeul: data.estLeSeul,
+        picture: data.picture,
+      },
+    })
+    .catch((error: any) => {
+      console.log("Error creating new user:", error);
+      throw new HttpsError("unavailable", "Error creating new user!");
+    })
+    .then(() => {
+      return { message: "Comitard added to edition map" };
+    });
+  return { message: "Comitard added to edition map" };
+
+  // add comitard in the map
 });
 
 /**
@@ -141,7 +257,8 @@ function generateRandomPassword(): string {
     newPassword += chars.charAt(Math.floor(Math.random() * chars.length));
   }
 
-  return newPassword;
+  //return newPassword;
+  return "123456"
 }
 
 exports.signUpUser = onCall(async (request) => {
@@ -185,11 +302,11 @@ exports.signUpUser = onCall(async (request) => {
       const s = `cercles.${userRecord.uid}`;
       activeEdition
         .update({
-            [s]: {
-              description: description,
-              nbFut: activeEditionVotes,
-              name: data.displayName,
-            },
+          [s]: {
+            description: description,
+            nbFut: activeEditionVotes,
+            name: data.displayName,
+          },
         })
         .catch((error: any) => {
           console.log("Error creating new user:", error);
@@ -199,11 +316,12 @@ exports.signUpUser = onCall(async (request) => {
       // send pawword reset email to user. NOPE
 
       return 1;
-    }).catch((error) => {
+    })
+    .catch((error) => {
       console.log("Error creating new user:", error);
       throw new HttpsError("unavailable", "Error creating new user!");
     });
-    
+
   return { message: "User created and added to edition map" };
 });
 
@@ -237,6 +355,7 @@ async function getActiveEdition(): Promise<FirebaseFirestore.DocumentReference> 
 // TODO  Update new cercle form. DONE
 // TODO: create add comitard form. DONE
 // TODO: add comitard picture. DONE
+// TODO: add comitard picture compression. DONE
 // TODO: create add comitard function
 // TODO: firestore security rules. DONE
 // TODO: cercle add vote
@@ -249,9 +368,8 @@ async function getActiveEdition(): Promise<FirebaseFirestore.DocumentReference> 
 // remove comitard: TODO, can be done by cercle ?
 // edit comitard: TODO, cloud function
 
-// addcercle: TRASH, cloud function
+// addcercle: TRASH, cloud function. DONE
 // remove cercle: TODO, at the end
 // edit cercle: TODO, Done in front end
 
 // https://www.youtube.com/watch?v=h79xrJZAQ6I
-

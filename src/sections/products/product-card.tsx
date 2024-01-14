@@ -6,7 +6,6 @@ import useMediaQuery from "@mui/material/useMediaQuery";
 
 import Button from "@mui/material/Button";
 import Box from "@mui/material/Box";
-import Link from "@mui/material/Link";
 import Card from "@mui/material/Card";
 import Stack from "@mui/material/Stack";
 import Modal from "@mui/material/Modal";
@@ -15,6 +14,7 @@ import TextField from "@mui/material/TextField";
 import Divider from "@mui/material/Divider";
 import Iconify from "../../components/iconify/iconify";
 import Label from "../../components/label/label";
+import LazyLoad from "react-lazy-load";
 
 // ----------------------------------------------------------------------
 
@@ -22,6 +22,7 @@ export default function ShopProductCard({ product, loged }: any) {
   const [open, setOpen] = useState(false);
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
+
 
   const theme = useTheme();
   const isSmallScreen = useMediaQuery(theme.breakpoints.down("sm")); // Adjust breakpoint as needed
@@ -53,24 +54,27 @@ export default function ShopProductCard({ product, loged }: any) {
         textTransform: "uppercase",
       }}
     >
-      {product.status}
+      test
       <Iconify icon="jam:chronometer" />
     </Label>
   );
 
   const renderImg = (
-    <Box
-      component="img"
-      alt={product.name}
-      src={product.cover}
-      sx={{
-        top: 0,
-        width: 1,
-        height: 1,
-        objectFit: "cover",
-        position: "absolute",
-      }}
-    />
+    <LazyLoad>
+      <Box
+        component="img"
+        alt={product.name}
+        src={product.picture}
+        sx={{
+          top: 0,
+          width: 1,
+          height: 1,
+          objectFit: "cover",
+          position: "absolute",
+        }}
+        loading="lazy"
+      />
+    </LazyLoad>
   );
 
   return (
@@ -83,15 +87,9 @@ export default function ShopProductCard({ product, loged }: any) {
         </Box>
 
         <Stack spacing={2} sx={{ p: 3 }}>
-          <Link
-            color="inherit"
-            underline="hover"
-            onClick={handleOpen}
-            variant="subtitle2"
-            noWrap
-          >
-            {product.name} Pihet
-          </Link>
+          <Typography variant="h3" noWrap>
+          {product.firstname} {product.name} 
+          </Typography>
 
           {loged && (
             <>
@@ -130,39 +128,32 @@ export default function ShopProductCard({ product, loged }: any) {
             {renderImg}
           </Box>
           <Typography variant="h1" sx={{ pl: 3, pt: 2 }}>
-            {product.name} Pihet
+            {product.firstname} {product.name} 
             <Divider variant="middle" />
           </Typography>
           <Box sx={{ maxHeight: "calc(80vh - 120px)", overflowY: "auto" }}>
             <div style={{ maxHeight: "300px", overflowY: "auto" }}>
               <Stack spacing={0} sx={{ p: 3, pt: 1, maxHeight: "80vh" }}>
                 <Typography variant="body1">
-                  <strong>Surnom:</strong> La briseuse de vitres
+                  <strong>Surnom:</strong> {product.nickname}
                   <br />
-                  <strong>Poste</strong> : Photographe
+                  <strong>Poste</strong> : {product.post}
                   <br />
-                  <strong>Maison d'appartenance </strong>: Adèle
+                  <strong>Maison d'appartenance </strong>: Todo
                   <br />
-                  <strong>Taille du bonnet</strong> : Elle porte plutôt des
-                  casquettes
+                  <strong>Teneur en taule</strong> : {product.teneurTaule}
                   <br />
-                  <strong>Teneur en taule</strong> : C'est une femme les gars...
+                  <strong>État civil</strong> : {product.etatCivil}
                   <br />
-                  <strong>État civil</strong> : Coureuse de remparts
+                  <strong>Age</strong> : {product.age}
                   <br />
-                  <strong>Age</strong> : 19
+                  <strong>Nombre d'étoiles</strong> : {product.nbEtoiles}
                   <br />
-                  <strong>Nombre d'étoiles</strong> : 2
+                  <strong>Point fort</strong> : {product.pointFort}
                   <br />
-                  <strong>Point fort</strong> : Aime le travail de groupe,
-                  plutôt sociable. Aime le vélo, le ping-pong et les aveugles.
+                  <strong>Point faible </strong>: {product.pointFaible}
                   <br />
-                  <strong>Point faible </strong>: Elle a du mal à maîtriser sa
-                  force lorsqu'elle est alcoolisée. Point faible : Trop forte
-                  <br />
-                  <strong>Est le seul</strong> : A avoir chopé Bicra, un homme
-                  bien mais malvoyant. Ce qui peut offrir l'avantage non
-                  négligeable de ne pas voir qui il chope.
+                  <strong>Est le seul</strong> : {product.estLeSeul}
                 </Typography>
               </Stack>
             </div>

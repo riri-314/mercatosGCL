@@ -5,10 +5,15 @@ import { CardContent } from "@mui/material";
 import { useAuth } from "../../auth/AuthProvider";
 
 import { DocumentData } from "@firebase/firestore";
+import NewComitard from "../admin-account/new_comitard";
 
-export default function Account({data}: DocumentData) {
+interface AccountProps {
+  data: DocumentData;
+  refetchData: () => void;
+}
+
+export default function Account({ data, refetchData }: AccountProps) {
   const user = useAuth();
-  console.log(data)
   return (
     <>
       <Stack
@@ -18,9 +23,11 @@ export default function Account({data}: DocumentData) {
         mb={5}
       >
         <Typography variant="h4" sx={{ mb: 1 }}>
-          Hi, Welcome back {user && user?.email} 👋
+          Hi, Welcome back {user && user?.displayName} 👋
         </Typography>
       </Stack>
+
+      <NewComitard data={data} admin={false} refetchData={refetchData}/>
 
       <Card sx={{ width: "100%", mb: 4 }}>
         <CardContent>

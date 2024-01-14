@@ -19,13 +19,13 @@ import UnstyledSelectIntroduction from "../../components/inputs/select";
 import { useState } from "react";
 import { newEdition } from "../../utils/admin-tools";
 
-interface NewEditionProps {
+interface DataContextValue {
   data: DocumentData;
-  id: string;
+  refetchData: () => void;
 }
 //  <DateTimePicker defaultValue={dayjs('2022-04-17T15:30')} />
-export default function NewEdition({ data, id }: NewEditionProps) {
-  console.log(id);
+export default function NewEdition({ data, refetchData }: DataContextValue) {
+
   const [rules, setRules] = useState<string>(data.rules ? data.rules : "");
   const [rulesError, setRulesError] = useState<boolean>(false);
   const [start, setStart] = useState<Dayjs | null>(null);
@@ -150,8 +150,10 @@ export default function NewEdition({ data, id }: NewEditionProps) {
     );
     console.log("ret: ", ret);
     if (ret) {
+      refetchData();
       setErrorType("success");
       setError("Edition créée");
+
       // load modal that ask to reload the website to fetch new data.
     } else {
       setErrorType("error");
@@ -172,11 +174,6 @@ export default function NewEdition({ data, id }: NewEditionProps) {
           <Typography variant="h5" sx={{ mb: 1 }}>
             Créer nouvelle édition
           </Typography>
-          {error && (
-            <Alert sx={{ mb: 3 }} severity={errorType}>
-              {error}
-            </Alert>
-          )}
           <Grid container spacing={2}>
             <Grid item xs={12} sm={6}>
               <TextField
@@ -376,6 +373,11 @@ export default function NewEdition({ data, id }: NewEditionProps) {
               </LoadingButton>
             </Grid>
           </Grid>
+          {error && (
+            <Alert sx={{ mt: 3 }} severity={errorType}>
+              {error}
+            </Alert>
+          )}
         </CardContent>
       </Card>
     </>

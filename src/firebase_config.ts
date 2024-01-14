@@ -6,8 +6,8 @@ import { initializeApp } from "@firebase/app";
 import { getFirestore } from "@firebase/firestore";
 import { getAuth } from "@firebase/auth";
 import { getStorage } from "@firebase/storage";
-import { connectFunctionsEmulator, getFunctions } from "@firebase/functions";
-//import { getFunctions } from "@firebase/functions";
+//import { connectFunctionsEmulator, getFunctions } from "@firebase/functions";
+import { getFunctions } from "@firebase/functions";
 
 // https://firebase.google.com/docs/web/setup#available-libraries
 
@@ -18,13 +18,14 @@ import { connectFunctionsEmulator, getFunctions } from "@firebase/functions";
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_apiKey,
   authDomain: import.meta.env.VITE_authDomain,
-  databaseURL: import.meta.env.VITE_databaseURL,
   projectId: import.meta.env.VITE_projectId,
-  storageBucket: import.meta.env.VITE_storageBucket,
+  storageBucket: "mercatosgcl.appspot.com",
   messagingSenderId: import.meta.env.VITE_messagingSenderId,
   appId: import.meta.env.VITE_appId,
   measurementId: import.meta.env.VITE_measurementId,
 };
+
+firebaseConfig.storageBucket = firebaseConfig.storageBucket.replace(/"/g, '');
 
 // Initialize Firebase
 
@@ -39,7 +40,7 @@ export const storage = getStorage(app);
 export const functions = getFunctions(app);
 
 
-connectFunctionsEmulator(functions, "127.0.0.1", 5001);
+//connectFunctionsEmulator(functions, "127.0.0.1", 5001);
 
 //const analytics = getAnalytics(app);
 
