@@ -13,8 +13,25 @@ import UnstyledSelectIntroduction from "../../components/inputs/select";
 import QuantityInput from "../../components/inputs/numberInput";
 import { useState } from "react";
 import PictureInput from "../../components/inputs/pictureInput";
+import { ImageListType } from "react-images-uploading";
+import { functions, storage } from "../../firebase_config";
+import { getDownloadURL, ref, uploadBytesResumable } from "@firebase/storage";
+import { v4 as uuidv4 } from "uuid";
+import { DocumentData } from "@firebase/firestore";
+import { useAuth } from "../../auth/AuthProvider";
+import { httpsCallable } from "@firebase/functions";
 
-export default function NewComitard() {
+interface NewComitardProps {
+  data: DocumentData;
+  admin: Boolean;
+  refetchData: () => void;
+}
+
+export default function NewComitard({
+  data,
+  admin,
+  refetchData,
+}: NewComitardProps) {
   const [name, setName] = useState("");
   const [nameError, setNameError] = useState(false);
   const [firstname, setFirstname] = useState("");
@@ -39,17 +56,36 @@ export default function NewComitard() {
   const [pointFaibleError, setPointFaibleError] = useState(false);
   const [estLeSeul, setEstLeSeul] = useState("");
   const [estLeSeulError, setEstLeSeulError] = useState(false);
-
+  const [picture, setPicture] = useState<ImageListType>([]);
+  const [pictureError, setPictureError] = useState(false);
+  const [pictureUpload, setPictureUpload] = useState<number | undefined>(
+    undefined
+  );
   const [error, setError] = useState("");
   const [errorSeverity, setErrorSeverity] = useState<AlertColor | undefined>(
     "error"
   );
+  const [loading, setLoading] = useState(false);
+
+  const user = useAuth();
 
   const txtlenght1 = 30;
   const txtlenght2 = 150;
 
+  function cerclesOption() {
+    const out: { [key: string]: string } = {}; // Add type annotation to the 'out' object
+    for (const [key, value] of Object.entries(data.data().cercles)) {
+      if (typeof value === "object" && value !== null) {
+        out[(value as { name: string }).name] = key; // Add type assertion to 'value'
+      }
+    }
+    return out;
+  }
+
   async function handleNewComitard() {
+    setLoading(true);
     let error = false;
+    setError("");
     if (name.length === 0 || name.length > txtlenght1) {
       setNameError(true);
       error = true;
@@ -74,13 +110,15 @@ export default function NewComitard() {
     } else {
       setPostError(false);
     }
-    if (!cercle) {
-      error = true;
-      setCercleError(true);
-    } else {
-      setCercleError(false);
+    if (admin) {
+      if (!cercle) {
+        error = true;
+        setCercleError(true);
+      } else {
+        setCercleError(false);
+      }
     }
-    if (!teneurTaule) {
+    if (teneurTaule == undefined || teneurTaule < 0 || teneurTaule > 10) {
       error = true;
       setTeneurTauleError(true);
     } else {
@@ -92,13 +130,13 @@ export default function NewComitard() {
     } else {
       setEtatCivilError(false);
     }
-    if (!age) {
+    if (age == undefined || age < 0 || age > 99) {
       error = true;
       setAgeError(true);
     } else {
       setAgeError(false);
     }
-    if (!nbEtoiles) {
+    if (nbEtoiles == undefined || nbEtoiles < 0 || nbEtoiles > 10) {
       error = true;
       setNbEtoilesError(true);
     } else {
@@ -122,12 +160,98 @@ export default function NewComitard() {
     } else {
       setEstLeSeulError(false);
     }
-    if (!error) {
-      console.log("ok");
-      // add comitard to db
-      setErrorSeverity("success");
-      setError("Comitard créé avec succès");
+    if (picture[0] != null && picture[0].file !== undefined) {
+      setPictureError(false);
     } else {
+      error = true;
+      setPictureError(true);
+    }
+
+    if (!error) {
+      console.log("Check user input ok");
+      const storageRef = ref(storage, `${data.id}/${user?.uid}/${uuidv4()}`);
+
+      const uploadTask = uploadBytesResumable(
+        storageRef,
+        picture[0].file as File
+      );
+      uploadTask.on(
+        "state_changed",
+        (snapshot) => {
+          // Observe state change events such as progress, pause, and resume
+          // Get task progress, including the number of bytes uploaded and the total number of bytes to be uploaded
+          const progress =
+            (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          console.log("Upload is " + progress + "% done");
+          setPictureUpload(progress);
+          switch (snapshot.state) {
+            case "paused":
+              console.log("Upload is paused");
+              break;
+            case "running":
+              console.log("Upload is running");
+              break;
+          }
+        },
+        (error) => {
+          // Handle unsuccessful uploads
+          console.log("error uploading file: ", error);
+          setPictureUpload(undefined);
+          setErrorSeverity("error");
+          setError("Une erreur est survenue lors de l'upload de l'image.");
+          setLoading(false);
+
+          return;
+        },
+        () => {
+          getDownloadURL(uploadTask.snapshot.ref)
+            .then((downloadURL) => {
+              console.log("File available at", downloadURL);
+              const data = {
+                name: name,
+                firstname: firstname,
+                nickname: nickname,
+                post: post,
+                cercle: cercle ? cercle : null,
+                teneurTaule: teneurTaule,
+                etatCivil: etatCivil,
+                age: age,
+                nbEtoiles: nbEtoiles,
+                pointFort: pointFort,
+                pointFaible: pointFaible,
+                estLeSeul: estLeSeul,
+                picture: downloadURL,
+              };
+              const addMessage = httpsCallable(functions, "addComitard");
+              addMessage(data).then((result) => {
+                const data: any = result.data;
+                // reload data
+                refetchData();
+                console.log("data:", data);
+                setPictureUpload(undefined);
+                setErrorSeverity("success");
+                setError("Comitard créé avec succès");
+                setLoading(false);
+              }).catch((error) => {
+                console.log("error:", error);
+                setPictureUpload(undefined);
+                setErrorSeverity("error");
+                setError("Une erreur est survenue lors de la création du comitard. serveur error.");
+                setLoading(false);
+              });
+              // call cloud function with all arguments and wait for response
+            })
+            .catch((error) => {
+              console.log("error uploading file: ", error);
+              setPictureUpload(undefined);
+              setErrorSeverity("error");
+              setError("Une erreur est survenue lors de l'upload de l'image.");
+              setLoading(false);
+            });
+        }
+      );
+    } else {
+      setLoading(false);
       setErrorSeverity("error");
       setError("Certains champs sont incorrects. Petit con.");
     }
@@ -140,11 +264,6 @@ export default function NewComitard() {
           <Typography variant="h5" sx={{ mb: 1 }}>
             Créer nouveau comitard
           </Typography>
-          {error && (
-            <Alert sx={{ mb: 3 }} severity={errorSeverity}>
-              {error}
-            </Alert>
-          )}
           <Grid container spacing={2}>
             <Grid item xs={12} sm={6}>
               <TextField
@@ -238,23 +357,19 @@ export default function NewComitard() {
                 {txtlenght1}
               </FormHelperText>
             </Grid>
-            <Grid item xs={12} sm={6}>
-              <UnstyledSelectIntroduction
-                isError={cercleError}
-                option={{
-                  MDS: 1,
-                  CESEC: 2,
-                  CI: 3,
-                  AGRO: 4,
-                  CEP: 5,
-                }}
-                helpText={"Cercle du comitard"}
-                change={(_event: any, val: any) => {
-                  setCercle(val);
-                  setCercleError(false);
-                }}
-              />
-            </Grid>
+            {admin && (
+              <Grid item xs={12} sm={6}>
+                <UnstyledSelectIntroduction
+                  isError={cercleError}
+                  option={cerclesOption()}
+                  helpText={"Cercle du comitard"}
+                  change={(_event: any, val: any) => {
+                    setCercle(val);
+                    setCercleError(false);
+                  }}
+                />
+              </Grid>
+            )}
             <Grid item xs={12} sm={6}>
               <QuantityInput
                 title="Teneur en taule du comitard"
@@ -264,7 +379,7 @@ export default function NewComitard() {
                 helpText={`Teneur en taule du comitard de 0 à 10`}
                 change={(_event: any, val: any) => {
                   setTeneurTaule(val);
-                  if (!val) {
+                  if (val == undefined) {
                     setTeneurTauleError(true);
                   } else {
                     setTeneurTauleError(false);
@@ -304,7 +419,7 @@ export default function NewComitard() {
                 helpText={`Age du comitard de 0 à 99`}
                 change={(_event: any, val: any) => {
                   setAge(val);
-                  if (!val) {
+                  if (val == undefined) {
                     setAgeError(true);
                   } else {
                     setAgeError(false);
@@ -321,7 +436,7 @@ export default function NewComitard() {
                 helpText={`Nombre d'étoiles du comitard de 0 à 10 (plus que 10 étoiles faut décrocher)`}
                 change={(_event: any, val: any) => {
                   setNbEtoiles(val);
-                  if (!val) {
+                  if (val == undefined) {
                     setNbEtoilesError(true);
                   } else {
                     setNbEtoilesError(false);
@@ -404,18 +519,38 @@ export default function NewComitard() {
                 {txtlenght2}
               </FormHelperText>
             </Grid>
-            <PictureInput />
+            <Grid item xs={12} sm={12}>
+              <PictureInput
+                change={(images: ImageListType) => {
+                  setPicture(images);
+                  if (images.length > 0) {
+                    setPictureError(false);
+                  } else {
+                    setPictureError(true);
+                  }
+                }}
+                error={pictureError}
+                upload={pictureUpload}
+              />
+            </Grid>
+
             <Grid item xs={12} sm={12}>
               <LoadingButton
                 size="large"
                 variant="contained"
                 fullWidth
                 onClick={handleNewComitard}
+                loading={loading}
               >
                 Créer comitard
               </LoadingButton>
             </Grid>
           </Grid>
+          {error && (
+            <Alert sx={{ mt: 3 }} severity={errorSeverity}>
+              {error}
+            </Alert>
+          )}
         </CardContent>
       </Card>
     </>

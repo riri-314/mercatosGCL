@@ -14,7 +14,12 @@ import { LoadingButton } from "@mui/lab";
 import { httpsCallable } from "@firebase/functions";
 import { functions } from "../../firebase_config";
 
-export default function NewCerle() {
+interface NewCerleProps {
+  refetchData: () => void;
+}
+
+export default function NewCerle({ refetchData }: NewCerleProps) {
+  const [loading, setLoading] = useState<boolean>(false);
   const [cercleDescription, setCercleDescription] = useState<string>("");
   const [cercleDescriptionError, setCercleDescriptionError] =
     useState<boolean>(false);
@@ -29,27 +34,25 @@ export default function NewCerle() {
   const textLenght = 150;
 
   function handleNewCercle() {
+    setLoading(true);
     setCercleError("");
     setCercleErrorSeverity("error");
     let error = false;
     if (cercleName == "") {
       setCercleNameError(true);
       error = true;
-    } 
+    }
     if (cercleEmail == "") {
       setCercleEmailError(true);
       error = true;
-    } 
-    if (
-      cercleDescription.length > textLenght ||
-      cercleDescription == ""
-    ) {
+    }
+    if (cercleDescription.length > textLenght || cercleDescription == "") {
       setCercleDescriptionError(true);
       error = true;
     }
     if (error) {
       setCercleError("Veuillez remplir les champs");
-      return;
+      setLoading(false);
     } else {
       const addMessage = httpsCallable(functions, "signUpUser");
       addMessage({
@@ -60,13 +63,16 @@ export default function NewCerle() {
         .then((result) => {
           const data: any = result.data;
           //const sanitizedMessage = data.text;
+          refetchData();
           setCercleErrorSeverity("success");
           setCercleError("Cercle créé avec succès");
           console.log("data:", data);
+          setLoading(false);
         })
         .catch((error) => {
           setCercleError("Erreur veuillez contacter un geek");
           console.log(error);
+          setLoading(false);
         });
     }
   }
@@ -78,11 +84,6 @@ export default function NewCerle() {
           <Typography variant="h5" sx={{ mb: 1 }}>
             Créer nouveau cercle
           </Typography>
-          {cercleError && (
-            <Alert sx={{ mb: 3 }} severity={cercleErrorSeverity}>
-              {cercleError}
-            </Alert>
-          )}
           <Box component="form" noValidate autoComplete="off">
             <Grid container spacing={2}>
               <Grid item xs={12} sm={6}>
@@ -99,7 +100,10 @@ export default function NewCerle() {
                     }
                   }}
                 />
-                <FormHelperText>Adress mail que le cercle va utiliser pour se connecter. Attention: elle doit etre valide.</FormHelperText>
+                <FormHelperText>
+                  Adress mail que le cercle va utiliser pour se connecter.
+                  Attention: elle doit etre valide.
+                </FormHelperText>
               </Grid>
               <Grid item xs={12} sm={6}>
                 <TextField
@@ -146,11 +150,17 @@ export default function NewCerle() {
                   variant="contained"
                   fullWidth
                   onClick={() => handleNewCercle()}
+                  loading={loading}
                 >
                   Créer cercle
                 </LoadingButton>
               </Grid>
             </Grid>
+            {cercleError && (
+            <Alert sx={{ mt: 3 }} severity={cercleErrorSeverity}>
+              {cercleError}
+            </Alert>
+          )}
           </Box>
         </CardContent>
       </Card>

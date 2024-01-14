@@ -4,7 +4,6 @@ import Card from "@mui/material/Card";
 import { CardContent } from "@mui/material";
 import { useAuth } from "../../auth/AuthProvider";
 import { LoadingButton } from "@mui/lab";
-import { DocumentData } from "@firebase/firestore";
 import {
   getAuth,
   sendPasswordResetEmail,
@@ -16,14 +15,16 @@ import NewCerle from "./new_cercle";
 import { functions } from "../../firebase_config";
 import NewEdition from "./new_edition";
 import NewComitard from "./new_comitard";
+import { DocumentData } from "@firebase/firestore";
 
 interface AdminAccountProps {
   data: DocumentData;
-  id: string;
+  refetchData: () => void;
 }
 
-export default function AdminAccount({ data, id }: AdminAccountProps) {
+export default function AdminAccount({ data, refetchData }: AdminAccountProps) {
   const user = useAuth();
+  
 
   return (
     <>
@@ -38,7 +39,7 @@ export default function AdminAccount({ data, id }: AdminAccountProps) {
         </Typography>
       </Stack>
 
-      <NewEdition data={data} id={id} />
+      <NewEdition data={data} refetchData={refetchData}/>
 
       <Card sx={{ width: "100%", mb: 4 }}>
         <CardContent>
@@ -51,7 +52,7 @@ export default function AdminAccount({ data, id }: AdminAccountProps) {
         </CardContent>
       </Card>
 
-      <NewCerle/>
+      <NewCerle refetchData={refetchData}/>
 
       <Card sx={{ width: "100%", mb: 4 }}>
         <CardContent>
@@ -67,7 +68,7 @@ export default function AdminAccount({ data, id }: AdminAccountProps) {
         </CardContent>
       </Card>
 
-      <NewComitard />
+      <NewComitard data={data} admin={true} refetchData={refetchData}/>
 
       <Card sx={{ width: "100%", mb: 4 }}>
         <CardContent>
@@ -141,6 +142,7 @@ export default function AdminAccount({ data, id }: AdminAccountProps) {
           >
             Signup user
           </LoadingButton>
+
         </CardContent>
       </Card>
     </>
