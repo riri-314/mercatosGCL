@@ -1,0 +1,12 @@
+
+## FIX ##
+créer nouveau cercle send reset password email and indicate that mail sent
+new edition send reset password email and indicate that mail sent
+edit index.html
+fix favicon
+
+## NEW ##
+Edition table
+Adapt new edition form to edit edition form
+// same for new comitard
+Reglement display pretty data

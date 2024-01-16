@@ -1,7 +1,7 @@
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import Card from "@mui/material/Card";
-import { CardContent } from "@mui/material";
+import { Button, CardContent, Modal } from "@mui/material";
 import { useAuth } from "../../auth/AuthProvider";
 import { LoadingButton } from "@mui/lab";
 import {
@@ -16,6 +16,8 @@ import { functions } from "../../firebase_config";
 import NewEdition from "./new_edition";
 import NewComitard from "./new_comitard";
 import { DocumentData } from "@firebase/firestore";
+import AskConfirmationBeforeSave from "./edit_edition";
+import { useState } from "react";
 
 interface AdminAccountProps {
   data: DocumentData;
@@ -24,6 +26,18 @@ interface AdminAccountProps {
 
 export default function AdminAccount({ data, refetchData }: AdminAccountProps) {
   const user = useAuth();
+
+  const [open, setOpen] = useState(false);
+  const handleOpen = () => setOpen(true);
+  const handleClose = () => setOpen(false);
+
+  const style = {
+    position: 'absolute' as 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
+    bgcolor: 'background.paper',
+  };
   
 
   return (
@@ -39,20 +53,18 @@ export default function AdminAccount({ data, refetchData }: AdminAccountProps) {
         </Typography>
       </Stack>
 
-      <NewEdition data={data} refetchData={refetchData}/>
+      <NewEdition data={data} refetchData={refetchData} />
 
       <Card sx={{ width: "100%", mb: 4 }}>
         <CardContent>
           <Typography variant="h5" sx={{ mb: 1 }}>
             Éditer édition
           </Typography>
-          Table with edition data. Column with edit button <br />
-          Edit button raise a edit form in form of a modal <br />
-          Star ion to indicate the current active edition <br />
+          <AskConfirmationBeforeSave />
         </CardContent>
       </Card>
 
-      <NewCerle refetchData={refetchData}/>
+      <NewCerle refetchData={refetchData} />
 
       <Card sx={{ width: "100%", mb: 4 }}>
         <CardContent>
@@ -65,16 +77,41 @@ export default function AdminAccount({ data, refetchData }: AdminAccountProps) {
           login <br />
           Edit button raise a edit form in form of a modal, change email adress{" "}
           <br />
+          Let change the fut count
         </CardContent>
       </Card>
+      <Button onClick={handleOpen}>Open modal</Button>
+      <Modal
+        open={open}
+        onClose={handleClose}
+        aria-labelledby="modal-modal-title"
+        aria-describedby="modal-modal-description"
+        sx={{
+          m: 3,
+          overflow:'scroll',
+          maxWidth: 800,
+          ml: "auto",
+          mr: "auto",
+        }}
+      >
+        <NewComitard data={data} admin={true} refetchData={refetchData} />
+      </Modal>
 
-      <NewComitard data={data} admin={true} refetchData={refetchData}/>
+      <NewComitard data={data} admin={true} refetchData={refetchData} />
 
       <Card sx={{ width: "100%", mb: 4 }}>
         <CardContent>
           Edit/Remove comitard <br />
         </CardContent>
       </Card>
+
+      <Card sx={{ width: "100%", mb: 4 }}>
+        <CardContent>
+          Edit/Remove auctions <br />
+        </CardContent>
+      </Card>
+
+
 
       <Card sx={{ width: "100%", mb: 4 }}>
         <CardContent>
@@ -142,7 +179,6 @@ export default function AdminAccount({ data, refetchData }: AdminAccountProps) {
           >
             Signup user
           </LoadingButton>
-
         </CardContent>
       </Card>
     </>
