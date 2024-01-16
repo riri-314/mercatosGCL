@@ -55,7 +55,7 @@ export default function LoginView() {
     } catch (error: any) {
       console.log("Error: ", error?.code)
       if (error?.code == "auth/too-many-requests") {
-        setError("Trop d'éssais, essayer plus tard");
+        setError("Trop d'essais, essayer plus tard");
       } else if (error?.code == "auth/invalid-credential"){
         setError("Mauvais mot de passe ou email")
       } 
@@ -86,7 +86,7 @@ export default function LoginView() {
     } catch (error: any) {
       console.log("Error: ", error?.code)
       if (error?.code == "auth/too-many-requests") {
-        setError("Trop d'éssais, essayer plus tard");
+        setError("Trop d'essais, essayer plus tard");
       } else if (error?.code == "auth/invalid-credential"){
         setError("Mauvais mot de passe ou email")
       } 
