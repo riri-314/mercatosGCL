@@ -35,7 +35,7 @@ export default function AdminAccount({ data, refetchData }: AdminAccountProps) {
         mb={5}
       >
         <Typography variant="h4" sx={{ mb: 1 }}>
-          Hi, Welcome back {user && user?.email} 👋
+          Bonjour, bienvenue {user && user?.email} 👋
         </Typography>
       </Stack>
 

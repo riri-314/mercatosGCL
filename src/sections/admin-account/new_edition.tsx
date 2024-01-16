@@ -86,18 +86,18 @@ export default function NewEdition({ data, refetchData }: DataContextValue) {
     setErrorType("error");
     setError("");
     if (rules == "") {
-      setError("Les régles ne peuvent pas être vide");
+      setError("Les règles ne peuvent pas être vide");
       setRulesError(true);
       setLoading(false);
       return;
     } else if (duration == 0) {
-      setError("La durée d'une enchere doit être supérieur à 0");
+      setError("La durée d'une enchère doit être supérieur à 0");
       setDurationError(true);
       setLoading(false);
       return;
     } else if (!validateDates()) {
       setError(
-        "La date de fin doit être supérieur à la date de début et la période les séparant doit etre plus grande que la durée d'une enchere"
+        "La date de fin doit être supérieur à la date de début et la période les séparant doit être plus grande que la durée d'une enchere"
       );
       setLoading(false);
       return;
@@ -112,14 +112,14 @@ export default function NewEdition({ data, refetchData }: DataContextValue) {
       setLoading(false);
       return;
     } else if (enchereMin > enchereMax) {
-      setError("L'enchere minimum doit être inférieur à l'enchere maximum");
+      setError("L'enchère minimum doit être inférieur à l'enchère maximum");
       setEnchereMinError(true);
       setEnchereMaxError(true);
       setLoading(false);
       return;
     } else if (enchereMin > nbFut) {
       setError(
-        "L'enchere minimum doit être inférieur au nombre de futs par cercle"
+        "L'enchère minimum doit être inférieur au nombre de futs par cercle"
       );
       setEnchereMinError(true);
       setNbFutError(true);
@@ -174,10 +174,11 @@ export default function NewEdition({ data, refetchData }: DataContextValue) {
           <Typography variant="h5" sx={{ mb: 1 }}>
             Créer nouvelle édition
           </Typography>
+
           <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
+            <Grid item xs={12} sm={12}>
               <TextField
-                label="Régles"
+                label="Règles"
                 multiline
                 maxRows={10}
                 fullWidth
@@ -193,7 +194,8 @@ export default function NewEdition({ data, refetchData }: DataContextValue) {
                 }}
               />
               <FormHelperText>
-                Régles affichées dans l'onglet réglement. Les infos entées ci
+                Ces règles sont affichées dans l'onglet règlement.
+                Les infos entées ci
                 dessous y sont automatiquement présentes. Defaut: description de
                 l'année passé
               </FormHelperText>
@@ -201,27 +203,26 @@ export default function NewEdition({ data, refetchData }: DataContextValue) {
             <LocalizationProvider dateAdapter={AdapterDayjs}>
               <Grid item xs={12} sm={6}>
                 <DateTimePicker
-                  label="Start date"
+                  label="Début du mercato"
                   sx={{ width: "100%", color: "red" }}
                   onChange={(e: Dayjs | null) => setStart(e)}
                 />
-                <FormHelperText>Début du concours</FormHelperText>
               </Grid>
               <Grid item xs={12} sm={6}>
                 <DateTimePicker
-                  label="Stop date"
+                  label="Fin du mercato"
                   onChange={(e: Dayjs | null) => setStop(e)}
                   sx={{ width: "100%" }}
                 />
-                <FormHelperText>Fin du concours</FormHelperText>
               </Grid>
             </LocalizationProvider>
-            <Grid item xs={12} sm={6}>
+
+            <Grid item xs={12} sm={4}>
               <QuantityInput
                 title="Nombre de futs par cercles"
                 min={1}
                 error={nbFutError}
-                helpText={`Nombre de futs qu'un cercle posséde initialement. Defaut: ${
+                helpText={`Nombre de futs qu'un cercle possède initialement. Défaut: ${
                   data.nbFut ? data.nbFut : 100
                 }`}
                 change={(_event: any, val: any) => {
@@ -234,30 +235,15 @@ export default function NewEdition({ data, refetchData }: DataContextValue) {
                 }}
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
+
+
+            {/*TODO reduce help width to match input width */}
+            <Grid item xs={12} sm={4}>
               <QuantityInput
-                title="Duration d'une enchere"
-                min={1}
-                error={durationError}
-                helpText={`Duration d'une enchere en heures. Defaut: ${
-                  data.duration ? data.duration : 16
-                }`}
-                change={(_event: any, val: any) => {
-                  setDuration(val);
-                  if (!val) {
-                    setDurationError(true);
-                  } else {
-                    setDurationError(false);
-                  }
-                }}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <QuantityInput
-                title="Nombre de comitards max par cercles"
+                title="Nombre de comitards max/cercles"
                 min={1}
                 error={nbComitardError}
-                helpText={`Nombre de comitard qu'un cercle peut proposer à l'enchere. Defaut:  ${
+                helpText={`Nombre de comitard qu'un cercle peut proposer à l'enchère. Défaut:  ${
                   data.nbComitard ? data.nbComitard : 5
                 }`}
                 change={(_event: any, val: any) => {
@@ -270,9 +256,29 @@ export default function NewEdition({ data, refetchData }: DataContextValue) {
                 }}
               />
             </Grid>
+
+            <Grid item xs={12} sm={4}>
+              <QuantityInput
+                title="Durée d'une enchère"
+                min={1}
+                error={durationError}
+                helpText={`Durée d'une enchère en heures. Défaut: ${
+                  data.duration ? data.duration : 16
+                }`}
+                change={(_event: any, val: any) => {
+                  setDuration(val);
+                  if (!val) {
+                    setDurationError(true);
+                  } else {
+                    setDurationError(false);
+                  }
+                }}
+              />
+            </Grid>
+
             <Grid item xs={12} sm={6}>
               <QuantityInput
-                title="Enchere minimum"
+                title="Enchère minimum"
                 min={1}
                 error={enchereMinError}
                 helpText={`Enchere minimum qu'il cercle peut mettre sur un comitard. Defaut: ${
@@ -306,7 +312,7 @@ export default function NewEdition({ data, refetchData }: DataContextValue) {
                 }}
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid item xs={12} sm={4}>
               <UnstyledSelectIntroduction
                 defaultValue={remboursementVendeur}
                 option={{
@@ -316,7 +322,7 @@ export default function NewEdition({ data, refetchData }: DataContextValue) {
                   "25%": 0.25,
                   "0%": 0,
                 }}
-                helpText={`Pourcentage de la somme des futs mis en enchere qui est remboursé au cercle vendant son comitard. Defaut: ${
+                helpText={`Pourcentage de la somme des futs mis en enchère qui est remboursée au cercle vendant son comitard. Défaut: ${
                   data.remboursementVendeur
                     ? data.remboursementVendeur * 100
                     : 50
@@ -324,7 +330,7 @@ export default function NewEdition({ data, refetchData }: DataContextValue) {
                 change={(_event: any, val: any) => setRemboursementVendeur(val)}
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid item xs={12} sm={4}>
               <UnstyledSelectIntroduction
                 defaultValue={remboursementPerdant}
                 option={{
@@ -334,7 +340,7 @@ export default function NewEdition({ data, refetchData }: DataContextValue) {
                   "25%": 0.25,
                   "0%": 0,
                 }}
-                helpText={`Pourcentage de la somme des futs mis en enchere qui est remboursé au cercle perdant. Defaut: ${
+                helpText={`Pourcentage de la somme des futs mis en enchère qui est remboursé au cercle perdant l'enchère. Défaut: ${
                   data.remboursementPerdant
                     ? data.remboursementPerdant * 100
                     : 100
@@ -342,7 +348,7 @@ export default function NewEdition({ data, refetchData }: DataContextValue) {
                 change={(_event: any, val: any) => setRemboursementPerdant(val)}
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid item xs={12} sm={4}>
               <UnstyledSelectIntroduction
                 defaultValue={remboursementGagnant}
                 option={{
@@ -352,7 +358,7 @@ export default function NewEdition({ data, refetchData }: DataContextValue) {
                   "25%": 0.25,
                   "0%": 0,
                 }}
-                helpText={`Pourcentage de la somme des futs mis en enchere qui est remboursé au cercle gagnant. Defaut: ${
+                helpText={`Pourcentage de la somme des futs mis en enchère qui est remboursé au cercle gagnant l'enchère. Défaut: ${
                   data.remboursementGagnant
                     ? data.remboursementGagnant * 100
                     : 0
@@ -361,7 +367,7 @@ export default function NewEdition({ data, refetchData }: DataContextValue) {
               />
             </Grid>
 
-            <Grid item xs={12} sm={6}>
+            <Grid item xs={12} sm={12}>
               <LoadingButton
                 size="large"
                 variant="contained"

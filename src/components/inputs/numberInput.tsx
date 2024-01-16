@@ -32,7 +32,7 @@ const NumberInput = React.forwardRef(function CustomNumberInput(
     padding: 10px 12px;
     outline: 0;
     min-width: 0;
-    width: 100%;
+    width: calc(100% - (2*3.5rem));
   
     text-align: center;
   
@@ -153,13 +153,14 @@ const StyledButton = styled("button")(
   box-sizing: border-box;
   line-height: 1.5;
   border: 1px solid;
-  border-radius: 999px;
+  border-radius: 50%;
   border-color: ${theme.palette.mode === "dark" ? grey[800] : grey[200]};
   background: ${theme.palette.mode === "dark" ? grey[900] : grey[50]};
   color: ${theme.palette.mode === "dark" ? grey[200] : grey[900]};
-  width: 75px;
-  height: 56px;
-  display: flex;
+  width: 3.5rem;
+  max-width;
+  padding: 0;
+  height: 3.5rem;
   flex-flow: row nowrap;
   justify-content: center;
   align-items: center;
