@@ -3,14 +3,16 @@ import Typography from "@mui/material/Typography";
 import Card from "@mui/material/Card";
 import {CardContent} from "@mui/material";
 import Loading from "../loading/loading.tsx";
-import Container from "@mui/material/Container";
 import {useData} from "../../data/DataProvider.tsx";
 import {DocumentData} from "@firebase/firestore";
+import Markdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import rehypeRaw from 'rehype-raw'
 
 
 interface DataContextValue {
-  data: DocumentData | null;
-  refetchData: () => void;
+    data: DocumentData | null;
+    refetchData: () => void;
 }
 
 export default function Rules() {
@@ -31,15 +33,14 @@ export default function Rules() {
             </Stack>
 
             <Card sx={{width: "100%", mb: 4}}>
-                <CardContent>
-                    <Container>
-                        { data ? (
-                            data.data().rules
-                        ) : (
-                            <Loading />
-                        ) }
-                    </Container>
+                <CardContent sx={{ml: 2}}>
+                    {data ? (
+                        <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{data.data().rules}</Markdown>
+                    ) : (
+                        <Loading/>
+                    )}
                 </CardContent>
+
             </Card>
         </>
     );
