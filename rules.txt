@@ -1,0 +1,29 @@
+function getMaxId() {
+  // Query the collection to get all documents
+  let maxId = 0;
+  // Replace "your_collection_name" with the actual name of your collection
+  // Replace "id" with the field name containing the numbers
+  // Replace "your_document_id" with the actual document ID if necessary
+  let docs = firestore
+    .collection('your_collection_name')
+    .documents()
+    .filter((doc) => doc.data.id is number);
+
+  // Iterate through the documents to find the maximum value of the 'id' field
+  for (let i = 0; i < docs.length; i = i + 1) {
+    let currentId = docs[i].data.id;
+    if (currentId > maxId) {
+      maxId = currentId;
+    }
+  }
+
+  // Return the maximum id as a string
+  return String(maxId);
+}
+
+// Use the getMaxId function in your security rules
+match /your_collection_name/{document} {
+  // Use getMaxId() function to get the maximum id
+  allow read: if getMaxId() == request.resource.data.id;
+  allow write: if request.auth != null;
+}

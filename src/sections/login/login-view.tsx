@@ -15,7 +15,7 @@ import Alert from '@mui/material/Alert';
 
 
 
-import { signInWithEmailAndPassword } from "@firebase/auth";
+import { sendPasswordResetEmail, signInWithEmailAndPassword } from "@firebase/auth";
 import { useRouter } from '../../routes/hooks/use-router';
 import Logo from '../../components/logo/logo';
 import Iconify from '../../components/iconify/iconify';
@@ -38,6 +38,34 @@ export default function LoginView() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const handleForgottenPassword = async () => {
+    if (email == ""){
+      setError("Entrez une adresse mail pour changer votre mot de passe")
+      return
+    }
+    try {
+      setError("");
+      setLoading(true);
+      await sendPasswordResetEmail(
+        auth,
+        email
+      );
+      setLoading(false);
+      setError("Un email vous a été envoyé");
+    } catch (error: any) {
+      console.log("Error: ", error?.code)
+      if (error?.code == "auth/too-many-requests") {
+        setError("Trop d'essais, essayer plus tard");
+      } else if (error?.code == "auth/invalid-credential"){
+        setError("Mauvais mot de passe ou email")
+      } 
+      else {
+        setError("Erreur de connection");
+      }
+      setLoading(false);
+    }
+  };
+
   const handleClick = async () => {
     // check login 
     // do what need to be done
@@ -58,7 +86,7 @@ export default function LoginView() {
     } catch (error: any) {
       console.log("Error: ", error?.code)
       if (error?.code == "auth/too-many-requests") {
-        setError("Trop d'éssais, essayer plus tard");
+        setError("Trop d'essais, essayer plus tard");
       } else if (error?.code == "auth/invalid-credential"){
         setError("Mauvais mot de passe ou email")
       } 
@@ -92,7 +120,7 @@ export default function LoginView() {
       </Stack>
 
       <Stack direction="row" alignItems="center" justifyContent="flex-end" sx={{ my: 3 }}>
-        <Link variant="subtitle2" underline="hover" href="https://www.youtube.com/watch?v=dQw4w9WgXcQ">
+        <Link variant="subtitle2" underline="hover" onClick={handleForgottenPassword}>
           Mot de passe oublié?
         </Link>
       </Stack>
