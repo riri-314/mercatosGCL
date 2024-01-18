@@ -4,9 +4,16 @@ import Card from "@mui/material/Card";
 import { CardContent } from "@mui/material";
 import { useAuth } from "../../auth/AuthProvider";
 
-export default function Account() {
-  const user = useAuth();
+import { DocumentData } from "@firebase/firestore";
+import NewComitard from "../admin-account/new_comitard";
 
+interface AccountProps {
+  data: DocumentData;
+  refetchData: () => void;
+}
+
+export default function Account({ data, refetchData }: AccountProps) {
+  const user = useAuth();
   return (
     <>
       <Stack
@@ -16,37 +23,30 @@ export default function Account() {
         mb={5}
       >
         <Typography variant="h4" sx={{ mb: 1 }}>
-          Hi, Welcome back {user && user?.email} 👋
+          Hi, Welcome back {user && user?.displayName} 👋
         </Typography>
       </Stack>
 
+      <NewComitard data={data} admin={false} refetchData={refetchData}/>
+
       <Card sx={{ width: "100%", mb: 4 }}>
         <CardContent>
-          Create new event {"->"} add cercle ? {"->"} start and stop dates{" "}
-          {"->"} edit description ? (precise that start and stop dates are shown
-          by default) <br />
-          Table listing events and which one is active <br />
+            Table with all comitards and their info
         </CardContent>
       </Card>
 
       <Card sx={{ width: "100%", mb: 4 }}>
         <CardContent>
-          Add/Edit/Remove cercle <br />
+            Table with all encheres made by the cercle
         </CardContent>
       </Card>
 
       <Card sx={{ width: "100%", mb: 4 }}>
         <CardContent>
-          Add/Edit/Remove comitard <br />
+            Option to reset password
         </CardContent>
       </Card>
 
-      <Card sx={{ width: "100%", mb: 4 }}>
-        <CardContent>
-          Debug card <br />
-          Init db <br />
-        </CardContent>
-      </Card>
     </>
   );
 }
