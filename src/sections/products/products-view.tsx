@@ -7,6 +7,7 @@ import { useData } from "../../data/DataProvider";
 import { DocumentData } from "@firebase/firestore";
 import Loading from "../loading/loading";
 import ProductCard from "./product-card";
+import { useEffect } from "react";
 
 // ----------------------------------------------------------------------
 
@@ -19,12 +20,74 @@ export default function ProductsView() {
   const user = useAuth();
   const { data } = useData() as DataContextValue;
 
+  useEffect(() => {
+    if (user) {
+      isInTimeFrame();
+      const interval = setInterval(() => {
+        isInTimeFrame();
+      }, 10000); // Update every 10 seconds
+      return () => clearInterval(interval);
+    }
+  }, [user]);
+
+  function nbFutsLeft(): number {
+    if (user) {
+      const nbFuts = data?.data().cercles[user?.uid].nbFut;
+      if (nbFuts) {
+        return nbFuts;
+      } else {
+        return 0;
+      }
+    } else {
+      return 0;
+    }
+  }
+
+  function enchereMinMax(): number[] {
+    if (user) {
+      const enchereMin = data?.data().enchereMin;
+      const enchereMax = data?.data().enchereMax;
+      if (enchereMin && enchereMax) {
+        return [enchereMin, enchereMax];
+      } else {
+        return [0, 0];
+      }
+    } else {
+      return [0, 0];
+    }
+  }
+
+  function isInTimeFrame(): boolean {
+    //console.log("isInTimeFrame");
+    if (user) {
+      const date = new Date();
+      const start = data?.data().start;
+      const stop = data?.data().stop;
+      if (start && stop) {
+        if (
+          date.getTime() > start.toMillis() &&
+          date.getTime() < stop.toMillis()
+        ) {
+          return true;
+        } else {
+          return false;
+        }
+      } else {
+        return false;
+      }
+    } else {
+      return false;
+    }
+  }
+
   return (
     <Container>
       {data ? (
         Object.keys(data.data().cercles).map((cercleId) => (
           <div key={cercleId} style={{ marginBottom: "20px" }}>
-            <Typography sx={{m: 3}} variant="h3">{data.data().cercles[cercleId].name}</Typography>
+            <Typography sx={{ m: 3 }} variant="h3">
+              {data.data().cercles[cercleId].name}
+            </Typography>
             <Grid container spacing={3}>
               {data.data().cercles[cercleId].comitards &&
                 Object.keys(data.data().cercles[cercleId].comitards).map(
@@ -34,7 +97,13 @@ export default function ProductsView() {
                         product={
                           data.data().cercles[cercleId].comitards[comitardID]
                         }
-                        loged={user ? true : false}
+                        user={user?.uid}
+                        cercleId={cercleId}
+                        comitardId={comitardID}
+                        nbFutsLeft={nbFutsLeft()}
+                        enchereMax={enchereMinMax()[1]}
+                        enchereMin={enchereMinMax()[0]}
+                        isInTimeFrame={isInTimeFrame()}
                       />
                     </Grid>
                   )
