@@ -8,26 +8,10 @@ import {AdapterDayjs} from "@mui/x-date-pickers/AdapterDayjs";
 import LoadingButton from "@mui/lab/LoadingButton";
 import QuantityInput from "../../components/inputs/numberInput";
 import UnstyledSelectIntroduction from "../../components/inputs/select";
-import {useState} from "react";
+import React, {useState} from "react";
 import {newEdition} from "../../utils/admin-tools";
 
-import '@mdxeditor/editor/style.css';
-import {
-    BlockTypeSelect,
-    BoldItalicUnderlineToggles,
-    headingsPlugin,
-    InsertTable,
-    listsPlugin,
-    ListsToggle,
-    MDXEditor,
-    tablePlugin,
-    toolbarPlugin,
-    UndoRedo,
-    CreateLink,
-    linkDialogPlugin,
-    InsertThematicBreak,
-    thematicBreakPlugin
-} from '@mdxeditor/editor'
+import EditorWithTheme from "../../components/inputs/mdInput.tsx";
 
 interface DataContextValue {
     data: DocumentData;
@@ -44,31 +28,31 @@ export default function NewEdition({data, refetchData}: DataContextValue) {
     const [nbFut, setNbFut] = useState<number>(data.nbFut ? data.nbFut : 100);
     const [nbFutError, setNbFutError] = useState<boolean>(false);
     const [duration, setDuration] = useState<number>(
-        data.duration ? data.duration : 16
+        data.duration ?? 16
     );
     const [durationError, setDurationError] = useState<boolean>(false);
     const [nbComitard, setNbComitard] = useState<number>(
-        data.nbComitard ? data.nbComitard : 5
+        data.nbComitard ?? 5
     );
     const [nbComitardError, setNbComitardError] = useState<boolean>(false);
     const [enchereMin, setEnchereMin] = useState<number>(
-        data.enchereMin ? data.enchereMin : 1
+        data.enchereMin ?? 1
     );
     const [enchereMinError, setEnchereMinError] = useState<boolean>(false);
     const [enchereMax, setEnchereMax] = useState<number>(
-        data.enchereMax ? data.enchereMax : 100
+        data.enchereMax ?? 100
     );
     const [enchereMaxError, setEnchereMaxError] = useState<boolean>(false);
     const [remboursementVendeur, setRemboursementVendeur] = useState<number>(
-        data.remboursementVendeur ? data.remboursementVendeur : 0.5
+        data.remboursementVendeur ?? 0.5
     );
 
     const [remboursementPerdant, setRemboursementPerdant] = useState<number>(
-        data.remboursementPerdant ? data.remboursementPerdant : 1
+        data.remboursementPerdant ?? 1
     );
 
     const [remboursementGagnant, setRemboursementGagnant] = useState<number>(
-        data.remboursementGagnant ? data.remboursementGagnant : 0
+        data.remboursementGagnant ?? 0
     );
 
     const [error, setError] = useState<string>("");
@@ -189,34 +173,9 @@ export default function NewEdition({data, refetchData}: DataContextValue) {
 
                     <Grid container spacing={2}>
                         <Grid item xs={12} sm={12}>
-                            <MDXEditor
-                                onChange={(e) => {
-                                    setRules(e);
-                                }}
-                                markdown={rules}
-                                plugins={[
-                                    tablePlugin(),
-                                    listsPlugin(),
-                                    headingsPlugin(),
-                                    linkDialogPlugin(),
-                                    thematicBreakPlugin(),
-                                    toolbarPlugin({
-                                        toolbarContents: () => (
-                                            <>
-                                                {' '}
-                                                <UndoRedo/>
-                                                <BlockTypeSelect/>
-                                                <BoldItalicUnderlineToggles/>
-                                                <ListsToggle/>
-                                                <InsertTable/>
-                                                <CreateLink/>
-                                                <InsertThematicBreak/>
-                                            </>
-                                        )
-                                    })
-                                ]}
-                            />
+                            <EditorWithTheme setRules={setRules} markdown={rules}/>
                         </Grid>
+
                         <LocalizationProvider dateAdapter={AdapterDayjs}>
                             <Grid item xs={12} sm={6}>
                                 <DateTimePicker
@@ -236,39 +195,39 @@ export default function NewEdition({data, refetchData}: DataContextValue) {
 
                         <Grid item xs={12} sm={4}>
                             <QuantityInput
-                                title="Nombre de futs par cercles"
+                                title="Fûts par cercle"
                                 min={1}
                                 error={nbFutError}
                                 helpText={`Nombre de futs qu'un cercle possède initialement. Défaut: ${
                                     data.nbFut ? data.nbFut : 100
                                 }`}
-                                change={(_event: any, val: any) => {
-                                    setNbFut(val);
-                                    if (!val) {
-                                        setNbFutError(true);
-                                    } else {
+                                change={(_event: React.FocusEvent<HTMLInputElement> | React.PointerEvent | React.KeyboardEvent,
+                                         val: number | undefined) => {
+                                    if (typeof val !== 'undefined') {
+                                        setNbFut(val);
                                         setNbFutError(false);
+                                    } else {
+                                        setNbFutError(true);
                                     }
                                 }}
                             />
                         </Grid>
 
-
-                        {/*TODO reduce help width to match input width */}
                         <Grid item xs={12} sm={4}>
                             <QuantityInput
-                                title="Nombre de comitards max/cercles"
+                                title="Comitards par cercle"
                                 min={1}
                                 error={nbComitardError}
-                                helpText={`Nombre de comitard qu'un cercle peut proposer à l'enchère. Défaut:  ${
+                                helpText={`Nombre maximum de comitard qu'un cercle peut proposer à l'enchère. Défaut:  ${
                                     data.nbComitard ? data.nbComitard : 5
                                 }`}
-                                change={(_event: any, val: any) => {
-                                    setNbComitard(val);
-                                    if (!val) {
-                                        setNbComitardError(true);
-                                    } else {
+                                change={(_event: React.FocusEvent<HTMLInputElement> | React.PointerEvent | React.KeyboardEvent,
+                                         val: number | undefined) => {
+                                    if (typeof val !== 'undefined') {
+                                        setNbComitard(val);
                                         setNbComitardError(false);
+                                    } else {
+                                        setNbComitardError(true);
                                     }
                                 }}
                             />
@@ -282,12 +241,13 @@ export default function NewEdition({data, refetchData}: DataContextValue) {
                                 helpText={`Durée d'une enchère en heures. Défaut: ${
                                     data.duration ? data.duration : 16
                                 }`}
-                                change={(_event: any, val: any) => {
-                                    setDuration(val);
-                                    if (!val) {
-                                        setDurationError(true);
-                                    } else {
+                                change={(_event: React.FocusEvent<HTMLInputElement> | React.PointerEvent | React.KeyboardEvent,
+                                         val: number | undefined) => {
+                                    if (typeof val !== 'undefined') {
+                                        setDuration(val);
                                         setDurationError(false);
+                                    } else {
+                                        setDurationError(true);
                                     }
                                 }}
                             />
@@ -301,12 +261,13 @@ export default function NewEdition({data, refetchData}: DataContextValue) {
                                 helpText={`Enchere minimum qu'il cercle peut mettre sur un comitard. Defaut: ${
                                     data.enchereMin ? data.enchereMin : 1
                                 }`}
-                                change={(_event: any, val: any) => {
-                                    setEnchereMin(val);
-                                    if (!val) {
-                                        setEnchereMinError(true);
-                                    } else {
+                                change={(_event: React.FocusEvent<HTMLInputElement> | React.PointerEvent | React.KeyboardEvent,
+                                         val: number | undefined) => {
+                                    if (typeof val !== 'undefined') {
+                                        setEnchereMin(val);
                                         setEnchereMinError(false);
+                                    } else {
+                                        setEnchereMinError(true);
                                     }
                                 }}
                             />
@@ -319,12 +280,13 @@ export default function NewEdition({data, refetchData}: DataContextValue) {
                                 helpText={`Enchere maximum qu'il cercle peut mettre sur un comitard. Defaut ${
                                     data.enchereMax ? data.enchereMax : 100
                                 }`}
-                                change={(_event: any, val: any) => {
-                                    setEnchereMax(val);
-                                    if (!val) {
-                                        setEnchereMaxError(true);
-                                    } else {
+                                change={(_event: React.FocusEvent<HTMLInputElement> | React.PointerEvent | React.KeyboardEvent,
+                                         val: number | undefined) => {
+                                    if (typeof val !== 'undefined') {
+                                        setEnchereMax(val);
                                         setEnchereMaxError(false);
+                                    } else {
+                                        setEnchereMaxError(true);
                                     }
                                 }}
                             />

@@ -15,7 +15,7 @@ export default function ThemeProvider({ children }: any) {
   const memoizedValue = useMemo(
     () => ({
       palette: palette(),
-      typography,
+      typography : typography() as any,
       shadows: shadows(),
       customShadows: customShadows(),
       shape: { borderRadius: 8 },

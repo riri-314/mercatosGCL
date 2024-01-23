@@ -1,50 +1,84 @@
+import {styled} from "@mui/system";
 import {
-    BlockTypeSelect, BoldItalicUnderlineToggles, CreateLink,
-    headingsPlugin, InsertTable, InsertThematicBreak,
+    BlockTypeSelect,
+    BoldItalicUnderlineToggles,
+    CreateLink,
+    headingsPlugin,
+    InsertTable,
+    InsertThematicBreak,
     linkDialogPlugin,
-    listsPlugin, ListsToggle, MDXEditor,
+    listsPlugin,
+    ListsToggle,
+    MDXEditor,
     tablePlugin,
     thematicBreakPlugin,
-    toolbarPlugin, UndoRedo
+    toolbarPlugin,
+    UndoRedo
 } from "@mdxeditor/editor";
-import { styled } from "@mui/system";
-import { withTheme } from "@mui/material";
+import '@mdxeditor/editor/style.css';
 
-const StyledMDXEditor = styled('div')(({ theme }) => ({
-    backgroundColor: theme.palette.background.paper,
-    padding: theme.spacing(2),
+const StyledMDXEditor = styled(MDXEditor)(({theme}) => ({
     borderRadius: theme.shape.borderRadius,
-    boxShadow: theme.palette.background.boxShadow,
+    border: `1px solid ${theme.palette.divider}`,
+    "&:hover": {
+        borderColor: theme.palette.action.hoverBorder,
+    },
+
+    "&:focus-within": {
+        border: `2px solid ${theme.palette.primary.main}`,
+        borderRadius: theme.shape.borderRadius + "px",
+    },
+
+    "& [role=textbox]": {
+        fontFamily: "Public Sans, sans-serif",
+        // that would be great if theme.typography was typed
+    },
+
+    "& [role=toolbar]": {
+        backgroundColor: theme.palette.background.neutral,
+        borderRadius: theme.shape.borderRadius + "px",
+
+        "& [type=button]": {
+            color: theme.palette.text.secondary,
+            fontFamily: "Public Sans, sans-serif",
+            '&:hover': {
+                backgroundColor: theme.palette.action.hover,
+            },
+        }
+    }
+
 }));
 
-const EditorWithTheme = withTheme(({ setRules}: { setRules: (value: string) => void}) => (
-    <StyledMDXEditor>
-        <MDXEditor
-            onChange={(e) => setRules(e)}
-            plugins={[
-                tablePlugin(),
-                listsPlugin(),
-                headingsPlugin(),
-                linkDialogPlugin(),
-                thematicBreakPlugin(),
-                toolbarPlugin({
-                    toolbarContents: () => (
-                        <>
-                            {' '}
-                            <UndoRedo />
-                            <BlockTypeSelect />
-                            <BoldItalicUnderlineToggles />
-                            <ListsToggle />
-                            <InsertTable />
-                            <CreateLink />
-                            <InsertThematicBreak />
-                        </>
-                    )
-                })
-            ]}
-            markdown={""}
-        />
-    </StyledMDXEditor>
-));
+
+const EditorWithTheme = ({setRules, markdown}: {
+    setRules: (value: string) => void,
+    markdown: string,
+}) => (
+    <StyledMDXEditor
+        onChange={(e) => setRules(e)}
+        plugins={[
+            tablePlugin(),
+            listsPlugin(),
+            headingsPlugin(),
+            linkDialogPlugin(),
+            thematicBreakPlugin(),
+            toolbarPlugin({
+                toolbarContents: () => (
+                    <>
+                        {' '}
+                        <UndoRedo/>
+                        <BlockTypeSelect/>
+                        <BoldItalicUnderlineToggles/>
+                        <ListsToggle/>
+                        <InsertTable/>
+                        <CreateLink/>
+                        <InsertThematicBreak/>
+                    </>
+                )
+            })
+        ]}
+        markdown={markdown}
+    />
+);
 
 export default EditorWithTheme;
