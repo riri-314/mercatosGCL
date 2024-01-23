@@ -1,6 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-import PropTypes from "prop-types";
 import { useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
 
@@ -10,23 +9,153 @@ import Card from "@mui/material/Card";
 import Stack from "@mui/material/Stack";
 import Modal from "@mui/material/Modal";
 import Typography from "@mui/material/Typography";
-import TextField from "@mui/material/TextField";
 import Divider from "@mui/material/Divider";
 import Iconify from "../../components/iconify/iconify";
 import Label from "../../components/label/label";
 import LazyLoad from "react-lazy-load";
+import QuantityInput from "../../components/inputs/numberInput";
+import { httpsCallable } from "@firebase/functions";
+import { functions } from "../../firebase_config";
+
 
 // ----------------------------------------------------------------------
 
-export default function ShopProductCard({ product, loged }: any) {
+interface ShopProductCardProps {
+  product: any;
+  user: string | undefined;
+  cercleId: string;
+  comitardId: string;
+  nbFutsLeft: number;
+  enchereMin: number;
+  enchereMax: number;
+  isInTimeFrame: boolean;
+}
+
+export default function ShopProductCard({
+  product,
+  user,
+  cercleId,
+  comitardId,
+  nbFutsLeft,
+  enchereMin,
+  enchereMax,
+  isInTimeFrame,
+}: ShopProductCardProps) {
   const [open, setOpen] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(0);
+  const [displayVote, setDisplayVote] = useState(false);
+  const [vote, setVote] = useState(0); 
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
-
 
   const theme = useTheme();
   const isSmallScreen = useMediaQuery(theme.breakpoints.down("sm")); // Adjust breakpoint as needed
 
+  useEffect(() => {
+    if (isInTimeFrame) {
+      if (user) {
+        displayVoteFn();
+        const interval = setInterval(() => {
+          displayVoteFn();
+        }, 1000); // Update every second
+  
+        return () => clearInterval(interval);
+      } else {
+        displayTimeLeft();
+        const interval = setInterval(() => {
+          displayTimeLeft();
+        }, 1000); // Update every second
+  
+        return () => clearInterval(interval);
+      }
+    }
+
+  }, []);
+
+  // function to decide if we display the vote button or not
+  // only for logged in users
+  // also update the time left of the enchère
+  function displayVoteFn(): void {
+    if (!user || user === cercleId) {
+      setDisplayVote(false);
+      return;
+    }
+
+    if (nbFutsLeft <= 0 || nbFutsLeft < enchereMin) {
+      console.log("Number of futs left: ", nbFutsLeft);
+      setDisplayVote(false);
+      return;
+    }
+
+    if (product.enchereStart && product.enchereStop) {
+      const now = new Date().getTime();
+      const enchereStart = product.enchereStart.toMillis();
+      const enchereStop = product.enchereStop.toMillis();
+      if (now >= enchereStart && now <= enchereStop) {
+        setTimeLeft(enchereStop - now);
+        setDisplayVote(true);
+        return;
+      } else {
+        setTimeLeft(0);
+        setDisplayVote(false);
+        return;
+      }
+    } else {
+      setDisplayVote(true);
+      return;
+    }
+  }
+
+  // function to display the time left of the enchère
+  // only for not logged in users
+  function displayTimeLeft(): void {
+    const enchereStart = product.enchereStart.toMillis();
+    const enchereStop = product.enchereStop.toMillis();
+    const now = new Date().getTime();
+    if (now >= enchereStart && now <= enchereStop) {
+      setTimeLeft(enchereStop - now);
+      return;
+    } else {
+      setTimeLeft(0);
+      return;
+    }
+  }
+
+  function formatTimeLeft(time: number): string {
+    const hours = Math.floor(time / (1000 * 60 * 60));
+    const minutes = Math.floor((time % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((time % (1000 * 60)) / 1000);
+
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${seconds}s`;
+    } else {
+      return `${seconds}s`;
+    }
+  }
+
+  function handleVote(): void {
+    console.log("vote");
+    if (vote && vote > 0 && vote >= enchereMin && enchereMax >= vote && vote <= nbFutsLeft) {
+      const Vote = httpsCallable(functions, "vote");
+      Vote({ vote: vote, comitardId: comitardId })
+        .then((result) => {
+          // Read result of the Cloud Function.
+          /** @type {any} */
+          const data: any = result.data;
+          //const sanitizedMessage = data.text;
+          console.log("data:", data);
+        })
+        .catch((error) => {
+          // Getting the Error details.
+          //const code = error.code;
+          const message = error.message;
+          const details = error.details;
+          console.log("error:", message, details);
+        });
+    }
+  }
   const style = {
     position: "absolute",
     top: "50%",
@@ -54,7 +183,7 @@ export default function ShopProductCard({ product, loged }: any) {
         textTransform: "uppercase",
       }}
     >
-      test
+      {formatTimeLeft(timeLeft)}
       <Iconify icon="jam:chronometer" />
     </Label>
   );
@@ -81,37 +210,37 @@ export default function ShopProductCard({ product, loged }: any) {
     <>
       <Card>
         <Box onClick={handleOpen} sx={{ pt: "100%", position: "relative" }}>
-          {product.status && renderStatus}
+          {timeLeft > 0 && renderStatus}
 
           {renderImg}
         </Box>
 
         <Stack spacing={2} sx={{ p: 3 }}>
           <Typography variant="h3" noWrap>
-          {product.firstname} {product.name} 
+            {product.firstname} {product.name}
           </Typography>
 
-          {loged && (
+          {(displayVote && isInTimeFrame) && (
             <>
-              <TextField
-                size="small"
-                label="Entez une enchère"
-                inputProps={{ type: "number" }}
+              <QuantityInput
+                title="Enchère"
+                min={enchereMin}
+                max={Math.min(nbFutsLeft, enchereMax)}
+                error={false}
+                helpText={""}
+                change={(_event: any, val: any) => {
+                  console.log(val);
+                  setVote(val);
+                }}
               />
               <Button
-                onClick={() => {
-                  console.log("voteee");
-                }}
+                onClick={() => handleVote()}
                 variant="contained"
                 color="inherit"
                 startIcon={<Iconify icon="octicon:check-16" />}
               >
                 Enchérir
               </Button>
-              {/* 
-          <Alert severity="success">Vote enregistré</Alert>
-          <Alert severity="error">Erreur</Alert> 
-          */}
             </>
           )}
         </Stack>
@@ -124,11 +253,11 @@ export default function ShopProductCard({ product, loged }: any) {
       >
         <Card sx={style}>
           <Box sx={{ pt: "50%", position: "relative" }}>
-            {product.status && renderStatus}
+            {timeLeft > 0 && renderStatus}
             {renderImg}
           </Box>
           <Typography variant="h1" sx={{ pl: 3, pt: 2 }}>
-            {product.firstname} {product.name} 
+            {product.firstname} {product.name}
             <Divider variant="middle" />
           </Typography>
           <Box sx={{ maxHeight: "calc(80vh - 120px)", overflowY: "auto" }}>
@@ -164,7 +293,24 @@ export default function ShopProductCard({ product, loged }: any) {
   );
 }
 
-ShopProductCard.propTypes = {
-  product: PropTypes.object,
-  loged: PropTypes.bool,
-};
+//<>
+//<TextField
+//  size="small"
+//  label="Entez une enchère"
+//  inputProps={{ type: "number" }}
+///>
+//<Button
+//  onClick={() => {
+//    console.log("voteee");
+//  }}
+//  variant="contained"
+//  color="inherit"
+//  startIcon={<Iconify icon="octicon:check-16" />}
+//>
+//  Enchérir
+//</Button>
+//{/*
+//<Alert severity="success">Vote enregistré</Alert>
+//<Alert severity="error">Erreur</Alert>
+//*/}
+//</>

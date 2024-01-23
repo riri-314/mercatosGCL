@@ -8,10 +8,6 @@ import {
   GridActionsCellItem,
   GridRowModesModel,
   GridRowModes,
-  GridPreProcessEditCellProps,
-  GridEditInputCell,
-  //  GridEventListener,
-  //  GridRowEditStopReasons,
 } from "@mui/x-data-grid";
 import Snackbar from "@mui/material/Snackbar";
 import Dialog from "@mui/material/Dialog";
@@ -191,10 +187,10 @@ export default function AskConfirmationBeforeSave() {
       type: "number",
       editable: true,
       width: 800,
-      renderEditCell: (params) => (
+      renderEditCell: (_params) => (
         <QuantityInput
           title="Age"
-          change={(event, val) => {console.log("test: ", val)}}
+          change={(_event, val) => {console.log("test: ", val)}}
           min={0}
           max={100}
           />

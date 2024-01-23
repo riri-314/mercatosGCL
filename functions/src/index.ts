@@ -9,12 +9,14 @@
 
 import { HttpsError, onCall } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
+import * as test from "firebase-admin/firestore";
 import { getAuth } from "firebase-admin/auth";
 import {
   beforeUserCreated,
   beforeUserSignedIn,
 } from "firebase-functions/v2/identity";
 import { v4 as uuidv4 } from "uuid";
+//import { Timestamp, increment } from "@firebase/firestore";
 
 admin.initializeApp();
 
@@ -62,6 +64,200 @@ export const beforesignedin = beforeUserSignedIn(async (event) => {
   throw new HttpsError("permission-denied", "Unauthorized access!");
 });
 
+exports.vote = onCall(async (request) => {
+  const context_auth = request.auth;
+  const data = request.data;
+  let isAdmin = false;
+
+  const activeEdition = await getActiveEditionBis();
+  const activeEditionData = await activeEdition.get();
+  const activeEditionCercle = activeEditionData.data()?.cercles || {};
+
+  if (Object.keys(activeEditionCercle).length === 0) {
+    // No editions found
+    throw new HttpsError("unavailable", "No cercles found in edition!");
+  }
+
+  // Check if the request is made by an isAdmin
+  if (!context_auth) {
+    throw new HttpsError("permission-denied", "Unauthorized request!"); // return error if not connected
+  } else {
+    isAdmin = await getAdminUid(context_auth.uid);
+    if (!activeEditionCercle[context_auth.uid] && !isAdmin) {
+      throw new HttpsError("permission-denied", "Unauthorized request!"); // return error if not isAdmin or not a active cercle
+    }
+  }
+
+  // check date
+  console.log("before now:", admin.firestore.Timestamp);
+  console.log("before now:", test);
+  console.log("before now:", test.Timestamp);
+  const now = test.Timestamp.now();
+  //const now = admin.firestore.Timestamp.fromDate(new Date());
+
+  console.log("now: ", now.toMillis());
+  const start = activeEditionData.data()?.start;
+  const stop = activeEditionData.data()?.stop;
+  if (start && stop) {
+    if (now < start || now > stop) {
+      throw new HttpsError(
+        "permission-denied",
+        "Vote time frame for the event is over!"
+      );
+    }
+  } else {
+    throw new HttpsError("unavailable", "No vote time frame found!");
+  }
+
+  let senderId = context_auth.uid;
+
+  // Check if the request contains the required data
+
+  const enchereMin = activeEditionData.data()?.enchereMin;
+  const enchereMax = activeEditionData.data()?.enchereMax;
+  if (!enchereMin || !enchereMax) {
+    throw new HttpsError("unavailable", "No min max enchere found!");
+  }
+
+  let nbFut = 0;
+  if (isAdmin) {
+    nbFut = Infinity;
+  } else {
+    nbFut = activeEditionCercle[senderId].nbFut;
+  }
+  if (!nbFut) {
+    throw new HttpsError("unavailable", "No nbFut found!");
+  }
+
+  // check vote number > 0, > votemin, < votemax, <= nbFut
+  if (
+    data.vote === undefined ||
+    data.vote < 0 ||
+    data.vote == Infinity ||
+    data.vote > enchereMax ||
+    data.vote < enchereMin ||
+    data.vote > nbFut
+  ) {
+    throw new HttpsError("invalid-argument", "Vote number is invalide");
+  }
+  // comitard id exist and not same cercle
+  const cercleId = getCercleId(data.comitardId, activeEditionCercle);
+
+  if (!cercleId) {
+    throw new HttpsError("invalid-argument", "Comitard id is invalid");
+  } else {
+    if (cercleId === senderId) {
+      throw new HttpsError(
+        "invalid-argument",
+        "Cannot vote for yourself, comitard id is invalid"
+      );
+    }
+  }
+  const enchereStart = activeEditionCercle[cercleId].comitards[data.comitardId].enchereStart;
+  const enchereStop = activeEditionCercle[cercleId].comitards[data.comitardId].enchereStop;
+
+  const duration = activeEditionData.data()?.duration;
+
+  if (!duration) {
+    throw new HttpsError("unavailable", "No duration found!");
+  }
+
+  if (!enchereStart || !enchereStop) {
+    // start enchere
+    // set start and end date for enchere
+    // add enchere
+    // increment jobs
+    // decrement nbFut
+    const secondsToAdd = duration * 60 * 60;
+    //const test = Timestamp.fromDate(new Date());
+
+    //const hoursToAdd = 5; // replace with the number of hours you want to add
+    //const futureDate = new Date(Date.now() + duration * 60 * 60 * 1000);
+    //const future = Timestamp.fromDate(futureDate);
+
+    const future = test.Timestamp.fromMillis(
+      now.toMillis() + secondsToAdd * 1000
+    );
+    console.log("future: ", future.toMillis());
+
+    const s = `cercles.${cercleId}.comitards.${data.comitardId}`;
+    //const d = `cercles.${cercleId}.comitards.${
+    //  data.comitardId
+    //}.encheres.${uuidv4()}`;
+    const e = `cercles.${senderId}.nbFut`;
+    console.log("fieldValue: ", test.FieldValue);
+    console.log("fieldValue: ", test.FieldValue.increment);
+    console.log("fieldValue: ", test.FieldValue.increment(4));
+    const enchereId = uuidv4();
+    const encherePath = `${s}.encheres.${enchereId}`;
+    
+    activeEdition.update({
+      [encherePath]: {
+        vote: data.vote,
+        sender: senderId,
+        date: now,
+      },
+      [`${s}.enchereStart`]: now,
+      [`${s}.enchereStop`]: future,
+      [e]: test.FieldValue.increment(-data.vote),
+      jobs: test.FieldValue.increment(1),
+    })
+      .catch((error: any) => {
+        console.log("Error adding new enchere:", error);
+        throw new HttpsError("unavailable", "Error adding new enchere!");
+      })
+      .then(() => {
+        return { message: "Added new enchere" };
+      });
+  } else {
+    if (now < enchereStart || now > enchereStop) {
+      throw new HttpsError(
+        "permission-denied",
+        "Not in the vote time frame for the comitard!"
+      );
+    } else {
+      // add enchere
+      // decrement nbFut
+      const s = `cercles.${cercleId}.comitards.${data.comitardId}`;
+
+      const enchereId = uuidv4();
+      const encherePath = `${s}.encheres.${enchereId}`;
+      const e = `cercles.${senderId}.nbFut`;
+      activeEdition
+        .update({
+          [encherePath]: {
+            vote: data.vote,
+            sender: senderId,
+            date: now,
+          },
+          [e]: test.FieldValue.increment(-data.vote),
+        })
+        .catch((error: any) => {
+          console.log("Error adding new enchere:", error);
+          throw new HttpsError("unavailable", "Error adding new enchere!");
+        })
+        .then(() => {
+          return { message: "Added new enchere" };
+        });
+    }
+  }
+  return { message: "Added new enchere" };
+});
+
+function getCercleId(
+  comitardId: string,
+  activeEditionCercle: any
+): string | null {
+  let cercleIdFound = null;
+  Object.keys(activeEditionCercle).forEach(function (cercleId) {
+    const cercle = activeEditionCercle[cercleId];
+    if (cercle.comitards.hasOwnProperty(comitardId)) {
+      cercleIdFound = cercleId;
+    }
+  });
+  return cercleIdFound;
+}
+
 exports.addComitard = onCall(async (request) => {
   const context_auth = request.auth;
   const data = request.data;
@@ -80,17 +276,11 @@ exports.addComitard = onCall(async (request) => {
 
   // Check if the request is made by an admin
   if (!context_auth) {
-    throw new HttpsError(
-      "permission-denied",
-      "Unauthorized request!Context auth"
-    ); // return error if not connected
+    throw new HttpsError("permission-denied", "Unauthorized request!"); // return error if not connected
   } else {
     admin = await getAdminUid(context_auth.uid);
     if (!activeEditionCercle[context_auth.uid] && !admin) {
-      throw new HttpsError(
-        "permission-denied",
-        "Unauthorized request!loged or admin"
-      ); // return error if not admin or not a active cercle
+      throw new HttpsError("permission-denied", "Unauthorized request!"); // return error if not admin or not a active cercle
     }
   }
 
@@ -258,7 +448,7 @@ function generateRandomPassword(): string {
   }
 
   //return newPassword;
-  return "123456"
+  return "123456";
 }
 
 exports.signUpUser = onCall(async (request) => {
@@ -329,8 +519,25 @@ exports.signUpUser = onCall(async (request) => {
  * Retrieves the active edition from Firestore.
  * @returns {Firestore.DocumentReference} The Firestore document reference for the active edition.
  */
+
 async function getActiveEdition(): Promise<FirebaseFirestore.DocumentReference> {
   const editionCollection = admin.firestore().collection("editions");
+  const querySnapshot = await editionCollection
+    .where("active", "==", true)
+    .orderBy("edition", "desc")
+    .limit(1)
+    .get();
+
+  if (querySnapshot.empty) {
+    throw new HttpsError("unavailable", "No editions found!");
+  }
+
+  return querySnapshot.docs[0].ref;
+}
+
+async function getActiveEditionBis(): Promise<FirebaseFirestore.DocumentReference> {
+  const db = test.getFirestore();
+  const editionCollection = db.collection("editions");
   const querySnapshot = await editionCollection
     .where("active", "==", true)
     .orderBy("edition", "desc")

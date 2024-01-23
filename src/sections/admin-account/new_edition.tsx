@@ -98,7 +98,7 @@ export default function NewEdition({data, refetchData}: DataContextValue) {
         setError("");
         if (rules == "") {
             setError("Les règles ne peuvent pas être vide");
-            setRulesError(true);
+            //setRulesError(true);
             setLoading(false);
             return;
         } else if (duration == 0) {

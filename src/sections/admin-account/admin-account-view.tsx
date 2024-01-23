@@ -31,15 +31,6 @@ export default function AdminAccount({ data, refetchData }: AdminAccountProps) {
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
 
-  const style = {
-    position: 'absolute' as 'absolute',
-    top: '50%',
-    left: '50%',
-    transform: 'translate(-50%, -50%)',
-    bgcolor: 'background.paper',
-  };
-  
-
   return (
     <>
       <Stack
