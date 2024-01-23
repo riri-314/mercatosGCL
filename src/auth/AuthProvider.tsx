@@ -11,6 +11,8 @@ export const AuthContext = React.createContext<User | null>(null);
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
 
+  console.log(user);
+
   //const [isLoading, setIsInitializing] = useState(true);
 
   useEffect(() => {
