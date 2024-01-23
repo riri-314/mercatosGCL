@@ -69,22 +69,25 @@ export async function newEdition(
   remboursementGagnant: Number,
 ): Promise<Number> {
   let newEdition = 0;
-  let oldCercles = {};
+  let oldCercles: any = {};
   let errorCode = 0
   
   // Retrieve all documents in the "editions" collection
   await getDocs(editionsRef)
     .then(snapshot => {
       const batch = writeBatch(db);
-
-
-  
       // Loop through each document in the collection and update the "active" field to false
       snapshot.forEach(Doc => {
         const edition = Doc.data().edition;
         if (edition > newEdition) {
           newEdition = edition;
           oldCercles = Doc.data().cercles;
+          Object.keys(oldCercles).forEach(function (cercleId) {
+            const cercle = oldCercles[cercleId];
+            if (cercle.hasOwnProperty("comitards")) {
+              oldCercles[cercleId].comitards = {};
+            }
+          });
         }
         const docRef = doc(editionsRef, Doc.id);
         batch.update(docRef, { active: false });

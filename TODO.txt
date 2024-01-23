@@ -10,3 +10,9 @@ Edition table
 Adapt new edition form to edit edition form
 // same for new comitard
 Reglement display pretty data
+
+Test vote function
+Comitard page dont work when admin
+Timer dont show when not logged in
+Display error/success when voting
+Display winner of auction
