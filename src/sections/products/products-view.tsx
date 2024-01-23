@@ -8,23 +8,28 @@ import { DocumentData } from "@firebase/firestore";
 import Loading from "../loading/loading";
 import ProductCard from "./product-card";
 import { useEffect, useState } from "react";
+import { Box } from "@mui/material";
+import Iconify from "../../components/iconify/iconify";
 
 // ----------------------------------------------------------------------
 
 interface DataContextValue {
   data: DocumentData | null;
   refetchData: () => void;
+  fetchedTime: number;
 }
 
 export default function ProductsView() {
   const user = useAuth();
-  const { data, refetchData } = useData() as DataContextValue;
+  const { data, refetchData, fetchedTime } = useData() as DataContextValue;
   const [isInTimeFrame, setIsInTimeFrame] = useState(false);
-
+  const [refreshTime, setRefreshTime] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
   useEffect(() => {
     isInTimeFrameFN();
     const interval = setInterval(() => {
       isInTimeFrameFN();
+      setRefreshTime(formatTime(Date.now() - fetchedTime));
     }, 1000); // Update every second
     return () => clearInterval(interval);
   }, [data]);
@@ -81,42 +86,110 @@ export default function ProductsView() {
     }
   }
 
+  function formatTime(time: number): string {
+    const hours = Math.floor(time / (1000 * 60 * 60));
+    const minutes = Math.floor((time % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((time % (1000 * 60)) / 1000);
+
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${seconds}s`;
+    } else {
+      return `${seconds}s`;
+    }
+  }
+
+
+  function refresh() {
+    setRefreshing(true);
+    console.log("refresh");
+    refetchData();
+    const time = 4000
+    setTimeout(() => {setRefreshing(false)}, time);
+  }
+
   return (
     <Container>
+      <Container>
+        {data && refreshTime && !refreshing ? (
+          <>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontStyle: "oblique",
+                m: -1,
+              }}
+              onClick={() => refresh()}
+            >
+              <Typography variant="body1" sx={{ marginLeft: "5px" }}>
+                Rafraîchis il y a {refreshTime}.
+              </Typography>
+              <Iconify icon="material-symbols-light:refresh" />
+            </Box>
+          </>
+        ) : (
+          <>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontStyle: "oblique",
+                m: -1,
+              }}
+            >
+              <Typography variant="body1" sx={{ marginLeft: "5px" }}>
+                Mise à jour...
+              </Typography>
+            </Box>
+          </>
+        )}
+      </Container>
       {data ? (
         Object.keys(data.data().cercles)
-          .sort((a, b) => data.data().cercles[a].name.localeCompare(data.data().cercles[b].name))
+          .sort((a, b) =>
+            data
+              .data()
+              .cercles[a].name.localeCompare(data.data().cercles[b].name)
+          )
           .map((cercleId) => (
-          <div key={cercleId} style={{ marginBottom: "20px" }}>
-            <Typography sx={{ m: 3 }} variant="h3">
-              {data.data().cercles[cercleId].name}
-            </Typography>
-            <Grid container spacing={3}>
-              {data.data().cercles[cercleId].comitards &&
-                Object.keys(data.data().cercles[cercleId].comitards)
-                .sort((a, b) => data.data().cercles[cercleId].comitards[a].name.localeCompare(data.data().cercles[cercleId].comitards[b].name))
-                .map(
-                  (comitardID: any) => (
-                    <Grid key={comitardID} item xs={12} sm={6} md={3}>
-                      <ProductCard
-                        product={
-                          data.data().cercles[cercleId].comitards[comitardID]
-                        }
-                        user={user?.uid}
-                        cercleId={cercleId}
-                        comitardId={comitardID}
-                        nbFutsLeft={nbFutsLeft()}
-                        enchereMax={enchereMinMax()[1]}
-                        enchereMin={enchereMinMax()[0]}
-                        isInTimeFrame={isInTimeFrame}
-                        refetchData={refetchData}
-                      />
-                    </Grid>
-                  )
-                )}
-            </Grid>
-          </div>
-        ))
+            <div key={cercleId} style={{ marginBottom: "20px" }}>
+              <Typography sx={{ m: 3 }} variant="h3">
+                {data.data().cercles[cercleId].name}
+              </Typography>
+              <Grid container spacing={3}>
+                {data.data().cercles[cercleId].comitards &&
+                  Object.keys(data.data().cercles[cercleId].comitards)
+                    .sort((a, b) =>
+                      data
+                        .data()
+                        .cercles[cercleId].comitards[a].name.localeCompare(
+                          data.data().cercles[cercleId].comitards[b].name
+                        )
+                    )
+                    .map((comitardID: any) => (
+                      <Grid key={comitardID} item xs={12} sm={6} md={3}>
+                        <ProductCard
+                          product={
+                            data.data().cercles[cercleId].comitards[comitardID]
+                          }
+                          user={user?.uid}
+                          cercleId={cercleId}
+                          comitardId={comitardID}
+                          nbFutsLeft={nbFutsLeft()}
+                          enchereMax={enchereMinMax()[1]}
+                          enchereMin={enchereMinMax()[0]}
+                          isInTimeFrame={isInTimeFrame}
+                          refetchData={refetchData}
+                        />
+                      </Grid>
+                    ))}
+              </Grid>
+            </div>
+          ))
       ) : (
         <Loading />
       )}
