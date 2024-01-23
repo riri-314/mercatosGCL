@@ -7,7 +7,7 @@ import { useData } from "../../data/DataProvider";
 import { DocumentData } from "@firebase/firestore";
 import Loading from "../loading/loading";
 import ProductCard from "./product-card";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 // ----------------------------------------------------------------------
 
@@ -18,17 +18,17 @@ interface DataContextValue {
 
 export default function ProductsView() {
   const user = useAuth();
-  const { data } = useData() as DataContextValue;
+  const { data, refetchData } = useData() as DataContextValue;
+  const [isInTimeFrame, setIsInTimeFrame] = useState(false);
 
   useEffect(() => {
-    if (user) {
-      isInTimeFrame();
-      const interval = setInterval(() => {
-        isInTimeFrame();
-      }, 10000); // Update every 10 seconds
-      return () => clearInterval(interval);
-    }
-  }, [user]);
+    isInTimeFrameFN();
+    const interval = setInterval(() => {
+      isInTimeFrameFN();
+    }, 1000); // Update every second
+    return () => clearInterval(interval);
+  }, [data]);
+  //isInTimeFrameFN();
 
   function nbFutsLeft(): number {
     if (user) {
@@ -57,40 +57,45 @@ export default function ProductsView() {
     }
   }
 
-  function isInTimeFrame(): boolean {
-    //console.log("isInTimeFrame");
-    if (user) {
-      const date = new Date();
-      const start = data?.data().start;
-      const stop = data?.data().stop;
-      if (start && stop) {
-        if (
-          date.getTime() > start.toMillis() &&
-          date.getTime() < stop.toMillis()
-        ) {
-          return true;
-        } else {
-          return false;
-        }
+  function isInTimeFrameFN(): void {
+    //console.log("isInTimeFrameFN");
+    const date = new Date();
+    const start = data?.data().start;
+    const stop = data?.data().stop;
+    if (start && stop) {
+      if (
+        date.getTime() > start.toMillis() &&
+        date.getTime() < stop.toMillis()
+      ) {
+        //console.log("It is really in time frame");
+        setIsInTimeFrame(true);
       } else {
-        return false;
+        //console.log("It is really NOT in time frame");
+
+        setIsInTimeFrame(false);
       }
     } else {
-      return false;
+      //console.log("It is really NOT in time frame START OR STOP IS NULL");
+
+      setIsInTimeFrame(false);
     }
   }
 
   return (
     <Container>
       {data ? (
-        Object.keys(data.data().cercles).map((cercleId) => (
+        Object.keys(data.data().cercles)
+          .sort((a, b) => data.data().cercles[a].name.localeCompare(data.data().cercles[b].name))
+          .map((cercleId) => (
           <div key={cercleId} style={{ marginBottom: "20px" }}>
             <Typography sx={{ m: 3 }} variant="h3">
               {data.data().cercles[cercleId].name}
             </Typography>
             <Grid container spacing={3}>
               {data.data().cercles[cercleId].comitards &&
-                Object.keys(data.data().cercles[cercleId].comitards).map(
+                Object.keys(data.data().cercles[cercleId].comitards)
+                .sort((a, b) => data.data().cercles[cercleId].comitards[a].name.localeCompare(data.data().cercles[cercleId].comitards[b].name))
+                .map(
                   (comitardID: any) => (
                     <Grid key={comitardID} item xs={12} sm={6} md={3}>
                       <ProductCard
@@ -103,7 +108,8 @@ export default function ProductsView() {
                         nbFutsLeft={nbFutsLeft()}
                         enchereMax={enchereMinMax()[1]}
                         enchereMin={enchereMinMax()[0]}
-                        isInTimeFrame={isInTimeFrame()}
+                        isInTimeFrame={isInTimeFrame}
+                        refetchData={refetchData}
                       />
                     </Grid>
                   )

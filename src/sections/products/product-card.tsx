@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
 
-import Button from "@mui/material/Button";
 import Box from "@mui/material/Box";
 import Card from "@mui/material/Card";
 import Stack from "@mui/material/Stack";
@@ -16,7 +15,8 @@ import LazyLoad from "react-lazy-load";
 import QuantityInput from "../../components/inputs/numberInput";
 import { httpsCallable } from "@firebase/functions";
 import { functions } from "../../firebase_config";
-
+import { Alert, AlertColor } from "@mui/material";
+import { LoadingButton } from "@mui/lab";
 
 // ----------------------------------------------------------------------
 
@@ -29,7 +29,10 @@ interface ShopProductCardProps {
   enchereMin: number;
   enchereMax: number;
   isInTimeFrame: boolean;
+  refetchData: () => void;
 }
+
+
 
 export default function ShopProductCard({
   product,
@@ -40,37 +43,47 @@ export default function ShopProductCard({
   enchereMin,
   enchereMax,
   isInTimeFrame,
+  refetchData,
 }: ShopProductCardProps) {
   const [open, setOpen] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
   const [displayVote, setDisplayVote] = useState(false);
-  const [vote, setVote] = useState(0); 
+  const [vote, setVote] = useState(0);
+  const [voteError, setVoteError] = useState("");
+  const [voteErrorSeverity, setVoteErrorSeverity] = useState<
+    AlertColor | undefined
+  >("error");
+  const [loading, setLoading] = useState(false);
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
 
   const theme = useTheme();
   const isSmallScreen = useMediaQuery(theme.breakpoints.down("sm")); // Adjust breakpoint as needed
+  //console.log("isInTimeFrame: ", isInTimeFrame);
 
   useEffect(() => {
+    //console.log("isInTimeFrame: ", isInTimeFrame);
     if (isInTimeFrame) {
       if (user) {
         displayVoteFn();
+        displayTimeLeft();
         const interval = setInterval(() => {
           displayVoteFn();
+          displayTimeLeft();
         }, 1000); // Update every second
-  
+
         return () => clearInterval(interval);
       } else {
+        console.log("No suer")
         displayTimeLeft();
         const interval = setInterval(() => {
           displayTimeLeft();
         }, 1000); // Update every second
-  
+
         return () => clearInterval(interval);
       }
     }
-
-  }, []);
+  }, [isInTimeFrame, product]);
 
   // function to decide if we display the vote button or not
   // only for logged in users
@@ -92,11 +105,11 @@ export default function ShopProductCard({
       const enchereStart = product.enchereStart.toMillis();
       const enchereStop = product.enchereStop.toMillis();
       if (now >= enchereStart && now <= enchereStop) {
-        setTimeLeft(enchereStop - now);
+        //setTimeLeft(enchereStop - now);
         setDisplayVote(true);
         return;
       } else {
-        setTimeLeft(0);
+        //setTimeLeft(0);
         setDisplayVote(false);
         return;
       }
@@ -109,8 +122,8 @@ export default function ShopProductCard({
   // function to display the time left of the enchère
   // only for not logged in users
   function displayTimeLeft(): void {
-    const enchereStart = product.enchereStart.toMillis();
-    const enchereStop = product.enchereStop.toMillis();
+    const enchereStart = product?.enchereStart?.toMillis();
+    const enchereStop = product?.enchereStop?.toMillis();
     const now = new Date().getTime();
     if (now >= enchereStart && now <= enchereStop) {
       setTimeLeft(enchereStop - now);
@@ -136,8 +149,17 @@ export default function ShopProductCard({
   }
 
   function handleVote(): void {
-    console.log("vote");
-    if (vote && vote > 0 && vote >= enchereMin && enchereMax >= vote && vote <= nbFutsLeft) {
+    setLoading(true);
+    setVoteError("");
+    setVoteErrorSeverity("error");
+    console.log("vote: ", vote);
+    if (
+      vote &&
+      vote > 0 &&
+      vote >= enchereMin &&
+      enchereMax >= vote &&
+      vote <= nbFutsLeft
+    ) {
       const Vote = httpsCallable(functions, "vote");
       Vote({ vote: vote, comitardId: comitardId })
         .then((result) => {
@@ -146,6 +168,10 @@ export default function ShopProductCard({
           const data: any = result.data;
           //const sanitizedMessage = data.text;
           console.log("data:", data);
+          refetchData();
+          setVoteErrorSeverity("success");
+          setVoteError("Vote enregistré");
+          setLoading(false);
         })
         .catch((error) => {
           // Getting the Error details.
@@ -153,7 +179,12 @@ export default function ShopProductCard({
           const message = error.message;
           const details = error.details;
           console.log("error:", message, details);
+          setVoteError("Erreur veuillez contacter un geek");
+          setLoading(false);
         });
+    } else {
+      setVoteError("Veuillez entrer une enchère valide");
+      setLoading(false);
     }
   }
   const style = {
@@ -220,7 +251,7 @@ export default function ShopProductCard({
             {product.firstname} {product.name}
           </Typography>
 
-          {(displayVote && isInTimeFrame) && (
+          {displayVote && isInTimeFrame && (
             <>
               <QuantityInput
                 title="Enchère"
@@ -229,20 +260,27 @@ export default function ShopProductCard({
                 error={false}
                 helpText={""}
                 change={(_event: any, val: any) => {
-                  console.log(val);
+                  //console.log(val);
                   setVote(val);
                 }}
               />
-              <Button
+              <LoadingButton
                 onClick={() => handleVote()}
+                loading={loading}
                 variant="contained"
                 color="inherit"
                 startIcon={<Iconify icon="octicon:check-16" />}
               >
                 Enchérir
-              </Button>
+              </LoadingButton>
+
             </>
           )}
+                        {voteError && (
+                <Alert sx={{ mt: 3 }} severity={voteErrorSeverity}>
+                  {voteError}
+                </Alert>
+              )}
         </Stack>
       </Card>
       <Modal
