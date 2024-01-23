@@ -13,13 +13,15 @@ import { auth } from "../../../firebase_config";
 import { useAuth } from "../../../auth/AuthProvider";
 
 // ----------------------------------------------------------------------
+interface AuthContextValue {
+  user: any;
+}
 
 export default function AccountPopover() {
   const [open, setOpen] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  //defrrfez
-  const user = useAuth();
+  const { user } = useAuth() as AuthContextValue;  
 
   const handleOpen = (event: any) => {
     setOpen(event.currentTarget);

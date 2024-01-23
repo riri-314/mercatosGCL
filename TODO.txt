@@ -4,8 +4,6 @@ créer nouveau cercle send reset password email and indicate that mail sent
 new edition send reset password email and indicate that mail sent
 edit index.html to display accurate info
 fix favicon
-only display cercles that have comitards in the comitards tab
-sort cercles in alphabetical order in comitards tab
 
 ## NEW ##
 Edition table
@@ -14,7 +12,4 @@ Adapt new edition form to edit edition form
 Reglement display pretty data - Flo
 
 Test vote function
-Comitard page dont work when admin
-Timer dont show when logged out
-Display error/success when voting
 Display winner of auction

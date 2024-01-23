@@ -22,6 +22,9 @@ import RouterLink from '../../routes/components/router-link';
 import Scrollbar from '../../components/scrollbar/scrollbar';
 
 // ----------------------------------------------------------------------
+interface AuthContextValue {
+  user: any;
+}
 
 export default function Nav({ openNav, onCloseNav }: any) {
   const pathname = usePathname();
@@ -39,7 +42,8 @@ export default function Nav({ openNav, onCloseNav }: any) {
     <SvgColor src={`/assets/icons/navbar/${name}.svg`} sx={{ width: 1, height: 1 }} />
   );
   
-  const user = useAuth();
+  const { user } = useAuth() as AuthContextValue;
+  
   
   let navConfig = [
     {

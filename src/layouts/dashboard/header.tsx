@@ -12,10 +12,14 @@ import { useAuth } from "../../auth/AuthProvider";
 import Iconify from "../../components/iconify/iconify";
 
 // ----------------------------------------------------------------------
+interface AuthContextValue {
+  user: any;
+}
 
 export default function Header({ onOpenNav }:any) {
   const theme = useTheme();
-  const user = useAuth();
+  const { user } = useAuth() as AuthContextValue;
+  
 
   const lgUp = useResponsive('lg','tt','up'); //fix
   //const lgUp = useResponsive("up", "lg");
