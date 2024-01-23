@@ -1,5 +1,14 @@
 import Card from "@mui/material/Card";
-import {Alert, AlertColor, CardContent, Grid,} from "@mui/material";
+import {
+    Accordion,
+    AccordionDetails,
+    AccordionSummary,
+    Alert,
+    AlertColor,
+    CardContent,
+    Grid,
+    Typography,
+} from "@mui/material";
 import {DocumentData} from "@firebase/firestore";
 import {Dayjs} from "dayjs";
 import React, {useState} from "react";
@@ -11,7 +20,6 @@ import {DateTimePicker} from "@mui/x-date-pickers/DateTimePicker";
 import QuantityInput from "../../components/inputs/numberInput.tsx";
 import UnstyledSelectIntroduction from "../../components/inputs/select.tsx";
 import LoadingButton from "@mui/lab/LoadingButton";
-import Typography from "@mui/material/Typography";
 
 interface DataContextValue {
     data: DocumentData;
@@ -164,208 +172,210 @@ export default function NewEdition({data, refetchData}: DataContextValue) {
     // enchere minimum > 0
 
     return (
-        <>
-            <Card sx={{width: "100%", mb: 4}}>
-                <CardContent>
-                    <Typography variant="h5" sx={{mb: 1}}>
-                        Créer nouvelle édition
-                    </Typography>
+        <Card sx={{width: "100%", mb: 4}}>
+            <CardContent>
+                <Accordion>
+                    <AccordionSummary expandIcon={<Typography variant="h3">🢃</Typography>}>
+                        <Typography variant="h5">Créer une nouvelle édition</Typography>
+                    </AccordionSummary>
+                    <AccordionDetails>
+                        <Grid container spacing={2}>
+                            <Grid item xs={12} sm={12}>
+                                <EditorWithTheme setRules={setRules} markdown={rules}/>
+                            </Grid>
 
-                    <Grid container spacing={2}>
-                        <Grid item xs={12} sm={12}>
-                            <EditorWithTheme setRules={setRules} markdown={rules}/>
-                        </Grid>
+                            <LocalizationProvider dateAdapter={AdapterDayjs}>
+                                <Grid item xs={12} sm={6}>
+                                    <DateTimePicker
+                                        label="Début du mercato"
+                                        sx={{width: "100%", color: "red"}}
+                                        onChange={(e: Dayjs | null) => setStart(e)}
+                                    />
+                                </Grid>
+                                <Grid item xs={12} sm={6}>
+                                    <DateTimePicker
+                                        label="Fin du mercato"
+                                        onChange={(e: Dayjs | null) => setStop(e)}
+                                        sx={{width: "100%"}}
+                                    />
+                                </Grid>
+                            </LocalizationProvider>
 
-                        <LocalizationProvider dateAdapter={AdapterDayjs}>
+                            <Grid item xs={12} sm={4}>
+                                <QuantityInput
+                                    title="Fûts par cercle"
+                                    min={1}
+                                    error={nbFutError}
+                                    helpText={`Nombre de futs qu'un cercle possède initialement. Défaut: ${
+                                        data.nbFut ? data.nbFut : 100
+                                    }`}
+                                    change={(_event: React.FocusEvent<HTMLInputElement> | React.PointerEvent | React.KeyboardEvent,
+                                             val: number | undefined) => {
+                                        if (typeof val !== 'undefined') {
+                                            setNbFut(val);
+                                            setNbFutError(false);
+                                        } else {
+                                            setNbFutError(true);
+                                        }
+                                    }}
+                                />
+                            </Grid>
+
+                            <Grid item xs={12} sm={4}>
+                                <QuantityInput
+                                    title="Comitards par cercle"
+                                    min={1}
+                                    error={nbComitardError}
+                                    helpText={`Nombre maximum de comitard qu'un cercle peut proposer à l'enchère. Défaut:  ${
+                                        data.nbComitard ? data.nbComitard : 5
+                                    }`}
+                                    change={(_event: React.FocusEvent<HTMLInputElement> | React.PointerEvent | React.KeyboardEvent,
+                                             val: number | undefined) => {
+                                        if (typeof val !== 'undefined') {
+                                            setNbComitard(val);
+                                            setNbComitardError(false);
+                                        } else {
+                                            setNbComitardError(true);
+                                        }
+                                    }}
+                                />
+                            </Grid>
+
+                            <Grid item xs={12} sm={4}>
+                                <QuantityInput
+                                    title="Durée d'une enchère"
+                                    min={1}
+                                    error={durationError}
+                                    helpText={`Durée d'une enchère en heures. Défaut: ${
+                                        data.duration ? data.duration : 16
+                                    }`}
+                                    change={(_event: React.FocusEvent<HTMLInputElement> | React.PointerEvent | React.KeyboardEvent,
+                                             val: number | undefined) => {
+                                        if (typeof val !== 'undefined') {
+                                            setDuration(val);
+                                            setDurationError(false);
+                                        } else {
+                                            setDurationError(true);
+                                        }
+                                    }}
+                                />
+                            </Grid>
+
                             <Grid item xs={12} sm={6}>
-                                <DateTimePicker
-                                    label="Début du mercato"
-                                    sx={{width: "100%", color: "red"}}
-                                    onChange={(e: Dayjs | null) => setStart(e)}
+                                <QuantityInput
+                                    title="Enchère minimum"
+                                    min={1}
+                                    error={enchereMinError}
+                                    helpText={`Enchere minimum qu'il cercle peut mettre sur un comitard. Defaut: ${
+                                        data.enchereMin ? data.enchereMin : 1
+                                    }`}
+                                    change={(_event: React.FocusEvent<HTMLInputElement> | React.PointerEvent | React.KeyboardEvent,
+                                             val: number | undefined) => {
+                                        if (typeof val !== 'undefined') {
+                                            setEnchereMin(val);
+                                            setEnchereMinError(false);
+                                        } else {
+                                            setEnchereMinError(true);
+                                        }
+                                    }}
                                 />
                             </Grid>
                             <Grid item xs={12} sm={6}>
-                                <DateTimePicker
-                                    label="Fin du mercato"
-                                    onChange={(e: Dayjs | null) => setStop(e)}
-                                    sx={{width: "100%"}}
+                                <QuantityInput
+                                    title="Enchere maximum"
+                                    min={1}
+                                    error={enchereMaxError}
+                                    helpText={`Enchere maximum qu'il cercle peut mettre sur un comitard. Defaut ${
+                                        data.enchereMax ? data.enchereMax : 100
+                                    }`}
+                                    change={(_event: React.FocusEvent<HTMLInputElement> | React.PointerEvent | React.KeyboardEvent,
+                                             val: number | undefined) => {
+                                        if (typeof val !== 'undefined') {
+                                            setEnchereMax(val);
+                                            setEnchereMaxError(false);
+                                        } else {
+                                            setEnchereMaxError(true);
+                                        }
+                                    }}
                                 />
                             </Grid>
-                        </LocalizationProvider>
+                            <Grid item xs={12} sm={4}>
+                                <UnstyledSelectIntroduction
+                                    defaultValue={remboursementVendeur}
+                                    option={{
+                                        "100%": 1,
+                                        "75%": 0.75,
+                                        "50%": 0.5,
+                                        "25%": 0.25,
+                                        "0%": 0,
+                                    }}
+                                    helpText={`Pourcentage de la somme des futs mis en enchère qui est remboursée au cercle vendant son comitard. Défaut: ${
+                                        data.remboursementVendeur
+                                            ? data.remboursementVendeur * 100
+                                            : 50
+                                    }%`}
+                                    change={(_event: any, val: any) => setRemboursementVendeur(val)}
+                                />
+                            </Grid>
+                            <Grid item xs={12} sm={4}>
+                                <UnstyledSelectIntroduction
+                                    defaultValue={remboursementPerdant}
+                                    option={{
+                                        "100%": 1,
+                                        "75%": 0.75,
+                                        "50%": 0.5,
+                                        "25%": 0.25,
+                                        "0%": 0,
+                                    }}
+                                    helpText={`Pourcentage de la somme des futs mis en enchère qui est remboursé au cercle perdant l'enchère. Défaut: ${
+                                        data.remboursementPerdant
+                                            ? data.remboursementPerdant * 100
+                                            : 100
+                                    }%`}
+                                    change={(_event: any, val: any) => setRemboursementPerdant(val)}
+                                />
+                            </Grid>
+                            <Grid item xs={12} sm={4}>
+                                <UnstyledSelectIntroduction
+                                    defaultValue={remboursementGagnant}
+                                    option={{
+                                        "100%": 1,
+                                        "75%": 0.75,
+                                        "50%": 0.5,
+                                        "25%": 0.25,
+                                        "0%": 0,
+                                    }}
+                                    helpText={`Pourcentage de la somme des futs mis en enchère qui est remboursé au cercle gagnant l'enchère. Défaut: ${
+                                        data.remboursementGagnant
+                                            ? data.remboursementGagnant * 100
+                                            : 0
+                                    }%`}
+                                    change={(_event: any, val: any) => setRemboursementGagnant(val)}
+                                />
+                            </Grid>
 
-                        <Grid item xs={12} sm={4}>
-                            <QuantityInput
-                                title="Fûts par cercle"
-                                min={1}
-                                error={nbFutError}
-                                helpText={`Nombre de futs qu'un cercle possède initialement. Défaut: ${
-                                    data.nbFut ? data.nbFut : 100
-                                }`}
-                                change={(_event: React.FocusEvent<HTMLInputElement> | React.PointerEvent | React.KeyboardEvent,
-                                         val: number | undefined) => {
-                                    if (typeof val !== 'undefined') {
-                                        setNbFut(val);
-                                        setNbFutError(false);
-                                    } else {
-                                        setNbFutError(true);
-                                    }
-                                }}
-                            />
+                            <Grid item xs={12} sm={12}>
+                                <LoadingButton
+                                    size="large"
+                                    variant="contained"
+                                    fullWidth
+                                    loading={loading}
+                                    onClick={handleCreateEdition}
+                                >
+                                    Créer édition
+                                </LoadingButton>
+                            </Grid>
                         </Grid>
+                        {error && (
+                            <Alert sx={{mt: 3}} severity={errorType}>
+                                {error}
+                            </Alert>
+                        )}
+                    </AccordionDetails>
+                </Accordion>
+            </CardContent>
+        </Card>
 
-                        <Grid item xs={12} sm={4}>
-                            <QuantityInput
-                                title="Comitards par cercle"
-                                min={1}
-                                error={nbComitardError}
-                                helpText={`Nombre maximum de comitard qu'un cercle peut proposer à l'enchère. Défaut:  ${
-                                    data.nbComitard ? data.nbComitard : 5
-                                }`}
-                                change={(_event: React.FocusEvent<HTMLInputElement> | React.PointerEvent | React.KeyboardEvent,
-                                         val: number | undefined) => {
-                                    if (typeof val !== 'undefined') {
-                                        setNbComitard(val);
-                                        setNbComitardError(false);
-                                    } else {
-                                        setNbComitardError(true);
-                                    }
-                                }}
-                            />
-                        </Grid>
-
-                        <Grid item xs={12} sm={4}>
-                            <QuantityInput
-                                title="Durée d'une enchère"
-                                min={1}
-                                error={durationError}
-                                helpText={`Durée d'une enchère en heures. Défaut: ${
-                                    data.duration ? data.duration : 16
-                                }`}
-                                change={(_event: React.FocusEvent<HTMLInputElement> | React.PointerEvent | React.KeyboardEvent,
-                                         val: number | undefined) => {
-                                    if (typeof val !== 'undefined') {
-                                        setDuration(val);
-                                        setDurationError(false);
-                                    } else {
-                                        setDurationError(true);
-                                    }
-                                }}
-                            />
-                        </Grid>
-
-                        <Grid item xs={12} sm={6}>
-                            <QuantityInput
-                                title="Enchère minimum"
-                                min={1}
-                                error={enchereMinError}
-                                helpText={`Enchere minimum qu'il cercle peut mettre sur un comitard. Defaut: ${
-                                    data.enchereMin ? data.enchereMin : 1
-                                }`}
-                                change={(_event: React.FocusEvent<HTMLInputElement> | React.PointerEvent | React.KeyboardEvent,
-                                         val: number | undefined) => {
-                                    if (typeof val !== 'undefined') {
-                                        setEnchereMin(val);
-                                        setEnchereMinError(false);
-                                    } else {
-                                        setEnchereMinError(true);
-                                    }
-                                }}
-                            />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                            <QuantityInput
-                                title="Enchere maximum"
-                                min={1}
-                                error={enchereMaxError}
-                                helpText={`Enchere maximum qu'il cercle peut mettre sur un comitard. Defaut ${
-                                    data.enchereMax ? data.enchereMax : 100
-                                }`}
-                                change={(_event: React.FocusEvent<HTMLInputElement> | React.PointerEvent | React.KeyboardEvent,
-                                         val: number | undefined) => {
-                                    if (typeof val !== 'undefined') {
-                                        setEnchereMax(val);
-                                        setEnchereMaxError(false);
-                                    } else {
-                                        setEnchereMaxError(true);
-                                    }
-                                }}
-                            />
-                        </Grid>
-                        <Grid item xs={12} sm={4}>
-                            <UnstyledSelectIntroduction
-                                defaultValue={remboursementVendeur}
-                                option={{
-                                    "100%": 1,
-                                    "75%": 0.75,
-                                    "50%": 0.5,
-                                    "25%": 0.25,
-                                    "0%": 0,
-                                }}
-                                helpText={`Pourcentage de la somme des futs mis en enchère qui est remboursée au cercle vendant son comitard. Défaut: ${
-                                    data.remboursementVendeur
-                                        ? data.remboursementVendeur * 100
-                                        : 50
-                                }%`}
-                                change={(_event: any, val: any) => setRemboursementVendeur(val)}
-                            />
-                        </Grid>
-                        <Grid item xs={12} sm={4}>
-                            <UnstyledSelectIntroduction
-                                defaultValue={remboursementPerdant}
-                                option={{
-                                    "100%": 1,
-                                    "75%": 0.75,
-                                    "50%": 0.5,
-                                    "25%": 0.25,
-                                    "0%": 0,
-                                }}
-                                helpText={`Pourcentage de la somme des futs mis en enchère qui est remboursé au cercle perdant l'enchère. Défaut: ${
-                                    data.remboursementPerdant
-                                        ? data.remboursementPerdant * 100
-                                        : 100
-                                }%`}
-                                change={(_event: any, val: any) => setRemboursementPerdant(val)}
-                            />
-                        </Grid>
-                        <Grid item xs={12} sm={4}>
-                            <UnstyledSelectIntroduction
-                                defaultValue={remboursementGagnant}
-                                option={{
-                                    "100%": 1,
-                                    "75%": 0.75,
-                                    "50%": 0.5,
-                                    "25%": 0.25,
-                                    "0%": 0,
-                                }}
-                                helpText={`Pourcentage de la somme des futs mis en enchère qui est remboursé au cercle gagnant l'enchère. Défaut: ${
-                                    data.remboursementGagnant
-                                        ? data.remboursementGagnant * 100
-                                        : 0
-                                }%`}
-                                change={(_event: any, val: any) => setRemboursementGagnant(val)}
-                            />
-                        </Grid>
-
-                        <Grid item xs={12} sm={12}>
-                            <LoadingButton
-                                size="large"
-                                variant="contained"
-                                fullWidth
-                                loading={loading}
-                                onClick={handleCreateEdition}
-                            >
-                                Créer édition
-                            </LoadingButton>
-                        </Grid>
-                    </Grid>
-                    {error && (
-                        <Alert sx={{mt: 3}} severity={errorType}>
-                            {error}
-                        </Alert>
-                    )}
-                </CardContent>
-            </Card>
-        </>
     );
 }
 
