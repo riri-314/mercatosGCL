@@ -19,8 +19,12 @@ interface DataContextValue {
   fetchedTime: number;
 }
 
+interface AuthContextValue {
+  user: any;
+}
+
 export default function ProductsView() {
-  const user = useAuth();
+  const { user } = useAuth() as AuthContextValue;
   const { data, refetchData, fetchedTime } = useData() as DataContextValue;
   const [isInTimeFrame, setIsInTimeFrame] = useState(false);
   const [refreshTime, setRefreshTime] = useState("");
@@ -125,7 +129,7 @@ export default function ProductsView() {
               onClick={() => refresh()}
             >
               <Typography variant="body1" sx={{ marginLeft: "5px" }}>
-                Rafraîchis il y a {refreshTime}.
+                Rafraîchi il y a {refreshTime}.
               </Typography>
               <Iconify icon="material-symbols-light:refresh" />
             </Box>

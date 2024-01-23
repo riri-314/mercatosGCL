@@ -1,10 +1,8 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense } from 'react';
 import { Outlet, Navigate, useRoutes } from 'react-router-dom';
 
 import DashboardLayout from '../layouts/dashboard';
 import { useAuth } from '../auth/AuthProvider';
-import { collection, doc, getDoc } from '@firebase/firestore';
-import { db } from '../firebase_config';
 
 export const AccountPage = lazy(() => import('../pages/account'));
 export const AdminAccountPage = lazy(() => import('../pages/admin-account'));
@@ -16,36 +14,14 @@ export const Page404 = lazy(() => import('../pages/page-not-found'));
 
 // ----------------------------------------------------------------------
 
+interface AuthContextValue {
+  user: any;
+  isAdmin: () => boolean;
+}
+
 export default function Router() {
-  const [adminMap, setAdminMap] = useState<string[]>([]);
 
-  const user = useAuth();
-
-  // only fetch admin users from db if user is logged in. Anonymous users dont need to know who is admin
-  useEffect(() => {
-    if (user) {
-      const fetchAdminMap = async () => {
-        console.log("FETCH ADMIN FROM DB")
-        const adminDocRef = doc(collection(db, 'admin'), 'admin');
-        const adminDocSnap = await getDoc(adminDocRef);
-        if (adminDocSnap.exists()) {
-          const admins = adminDocSnap.data()?.admins;
-          if (admins) {
-            const adminMap: string[] = Object.values(admins);
-            setAdminMap(adminMap);
-          }
-        }
-      };
-
-      fetchAdminMap();
-    }
-  }, [user]);
-
-
-  function isAdmin(uid: string): boolean {
-    console.log("IS ADMIN?")
-    return adminMap.includes(uid);
-  }
+  const { user, isAdmin } = useAuth() as AuthContextValue;
 
   const routes = useRoutes([
     {
@@ -59,7 +35,7 @@ export default function Router() {
       children: [
         { element: <ResultPage />, index: true },
         { path: 'comitards', element: <ProductsPage /> },
-        (user? (isAdmin(user.uid) ? { path: 'account', element: <AdminAccountPage /> } : { path: 'account', element: <AccountPage /> }):{ path: 'account', element: <LoginPage /> }),
+        (user? (isAdmin() ? { path: 'account', element: <AdminAccountPage /> } : { path: 'account', element: <AccountPage /> }):{ path: 'account', element: <LoginPage /> }),
         { path: 'rules', element: <RulesPage /> },
       ],
     },
