@@ -66,7 +66,7 @@ export default function AccountPopover() {
                     width: (theme) => `${theme.spacing(8)}px`,
                     height: (theme) => `${theme.spacing(8)}px`,
                     background: (theme) =>
-                        open ? `linear-gradient(135deg, ${theme.palette.primary.light} 0%, ${theme.palette.primary.main} 100%)` : alpha(theme.palette.grey[500], 0.16),
+                        open ? `linear-gradient(135deg, ${alpha(theme.palette.primary.light, 0.5)} 0%, ${alpha(theme.palette.primary.main, 0.5)} 100%)` : alpha(theme.palette.grey[500], 0.16),
                     "&:hover": {
                         background: (theme) =>
                             open ? `linear-gradient(135deg, ${theme.palette.primary.light} 0%, ${theme.palette.primary.main} 100%)` : alpha(theme.palette.grey[500], 0.32),
