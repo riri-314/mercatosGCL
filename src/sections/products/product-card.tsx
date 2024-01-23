@@ -95,7 +95,7 @@ export default function ShopProductCard({
     }
 
     if (nbFutsLeft <= 0 || nbFutsLeft < enchereMin) {
-      console.log("Number of futs left: ", nbFutsLeft);
+      //console.log("Number of futs left: ", nbFutsLeft);
       setDisplayVote(false);
       return;
     }
