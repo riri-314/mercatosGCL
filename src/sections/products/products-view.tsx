@@ -32,7 +32,7 @@ export default function ProductsView() {
 
   function nbFutsLeft(): number {
     if (user) {
-      const nbFuts = data?.data().cercles[user?.uid].nbFut;
+      const nbFuts = data?.data().cercles[user?.uid]?.nbFut;
       if (nbFuts) {
         return nbFuts;
       } else {
