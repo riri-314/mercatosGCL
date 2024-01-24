@@ -30,7 +30,7 @@ const CustomNumberInput = React.forwardRef(function CustomNumberInput(
                     -
                 </StyledButton>
                 <StyledDiv>
-                    <TextField fullWidth error={props.error} label={props.title} {...inputProps} />
+                    <StyledTextField fullWidth error={props.error} label={props.title} {...inputProps} />
                     <FormHelperText error={props.error}>{props.helpText}</FormHelperText>
                 </StyledDiv>
 
@@ -69,6 +69,9 @@ const StyledInputRoot = styled('div')(() => ({
     width: "100%",
 }));
 
+const StyledTextField = styled(TextField)(() => ({
+}));
+
 const StyledDiv = styled('div')(({theme}) => ({
         width: "100%",
         marginLeft: theme.spacing(1),
@@ -78,5 +81,6 @@ const StyledDiv = styled('div')(({theme}) => ({
 
 const StyledButton = styled(Button)(({theme}) => ({
         height: theme.spacing(7),
+        minWidth: theme.spacing(1),
     }
 ));

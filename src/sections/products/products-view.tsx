@@ -85,7 +85,7 @@ export default function ProductsView() {
                             {data.data().cercles[cercleId].comitards &&
                                 Object.keys(data.data().cercles[cercleId].comitards).map(
                                     (comitardID: any) => (
-                                        <Grid key={comitardID} item xs={12} sm={6} md={3}>
+                                        <Grid key={comitardID} item xs={12} sm={6} md={4} xl={3}>
                                             <ProductCard
                                                 product={
                                                     data.data().cercles[cercleId].comitards[comitardID]
