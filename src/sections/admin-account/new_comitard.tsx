@@ -27,6 +27,10 @@ interface NewComitardProps {
   refetchData: () => void;
 }
 
+interface AuthContextValue {
+  user: any;
+}
+
 export default function NewComitard({
   data,
   admin,
@@ -67,7 +71,7 @@ export default function NewComitard({
   );
   const [loading, setLoading] = useState(false);
 
-  const user = useAuth();
+  const { user } = useAuth() as AuthContextValue;
 
   const txtlenght1 = 30;
   const txtlenght2 = 150;
