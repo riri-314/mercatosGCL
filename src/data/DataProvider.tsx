@@ -31,7 +31,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   const fetchData = async () => {
     const debug = true; //debug feature to always fetch the same doc. To remove when on production
     try {
-      if (debug) {
+      if (!debug) {
         const editionRef = collection(db, "editions");
         const queryDocs = query(
           editionRef,

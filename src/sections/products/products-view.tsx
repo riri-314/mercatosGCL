@@ -29,6 +29,7 @@ export default function ProductsView() {
   const [isInTimeFrame, setIsInTimeFrame] = useState(false);
   const [refreshTime, setRefreshTime] = useState("");
   const [refreshing, setRefreshing] = useState(false);
+  
   useEffect(() => {
     isInTimeFrameFN();
     const interval = setInterval(() => {
@@ -76,7 +77,7 @@ export default function ProductsView() {
         date.getTime() > start.toMillis() &&
         date.getTime() < stop.toMillis()
       ) {
-        //console.log("It is really in time frame");
+        //console.log("It is really in time frame", date.getTime() - stop.toMillis());
         setIsInTimeFrame(true);
       } else {
         //console.log("It is really NOT in time frame");
@@ -104,13 +105,14 @@ export default function ProductsView() {
     }
   }
 
-
   function refresh() {
     setRefreshing(true);
     console.log("refresh");
     refetchData();
-    const time = 4000
-    setTimeout(() => {setRefreshing(false)}, time);
+    const time = 4000;
+    setTimeout(() => {
+      setRefreshing(false);
+    }, time);
   }
 
   return (
