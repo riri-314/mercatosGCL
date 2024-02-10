@@ -22,6 +22,7 @@ const Label = forwardRef(
         ref={ref}
         component="span"
         ownerState={{ color, variant }}
+        elevation={1}
         sx={{
           ...(startIcon && { pl: 0.75 }),
           ...(endIcon && { pr: 0.75 }),
