@@ -1,19 +1,43 @@
 import { onAuthStateChanged, User } from "@firebase/auth";
 import React, { useContext, useEffect, useState } from "react";
 import { auth } from "../firebase_config";
+import { collection, doc, getDoc } from '@firebase/firestore';
+import { db } from '../firebase_config';
 
 interface AuthProviderProps {
   children: React.ReactNode;
 }
 
-export const AuthContext = React.createContext<User | null>(null);
+export const AuthContext = React.createContext<AuthContextValue | null>(null);
+
+interface AuthContextValue {
+  user: User | null;
+  isAdmin: (uid: string) => boolean;
+}
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [adminMap, setAdminMap] = useState<string[]>([]);
 
   //const [isLoading, setIsInitializing] = useState(true);
 
   useEffect(() => {
+
+    const fetchAdminMap = async () => {
+      console.log("FETCH ADMIN FROM DB")
+      const adminDocRef = doc(collection(db, 'admin'), 'admin');
+      const adminDocSnap = await getDoc(adminDocRef);
+      if (adminDocSnap.exists()) {
+        const admins = adminDocSnap.data()?.admins;
+        if (admins) {
+          const adminMap: string[] = Object.values(admins);
+          setAdminMap(adminMap);
+        }
+      }
+    };
+
+    fetchAdminMap();
+
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       setUser(firebaseUser);
       console.log("Firebase user: ", firebaseUser?.email);
@@ -24,7 +48,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
   }, [auth]);
 
-  return <AuthContext.Provider value={user}>{children}</AuthContext.Provider>;
+  const isAdmin = (): boolean => {
+    console.log("IS ADMIN?")
+    return adminMap.includes(user?.uid as string);
+  }
+
+  return <AuthContext.Provider value={{user, isAdmin}}>{children}</AuthContext.Provider>;
   //return children
 };
 

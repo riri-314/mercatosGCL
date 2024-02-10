@@ -130,6 +130,7 @@ exports.vote = onCall(async (request) => {
   }
 
   // check vote number > 0, > votemin, < votemax, <= nbFut
+  console.log("data.vote: ", data.vote);
   if (
     data.vote === undefined ||
     data.vote < 0 ||
@@ -153,8 +154,10 @@ exports.vote = onCall(async (request) => {
       );
     }
   }
-  const enchereStart = activeEditionCercle[cercleId].comitards[data.comitardId].enchereStart;
-  const enchereStop = activeEditionCercle[cercleId].comitards[data.comitardId].enchereStop;
+  const enchereStart =
+    activeEditionCercle[cercleId].comitards[data.comitardId].enchereStart;
+  const enchereStop =
+    activeEditionCercle[cercleId].comitards[data.comitardId].enchereStop;
 
   const duration = activeEditionData.data()?.duration;
 
@@ -178,30 +181,31 @@ exports.vote = onCall(async (request) => {
     const future = test.Timestamp.fromMillis(
       now.toMillis() + secondsToAdd * 1000
     );
-    console.log("future: ", future.toMillis());
+    //console.log("future: ", future.toMillis());
 
     const s = `cercles.${cercleId}.comitards.${data.comitardId}`;
     //const d = `cercles.${cercleId}.comitards.${
     //  data.comitardId
     //}.encheres.${uuidv4()}`;
     const e = `cercles.${senderId}.nbFut`;
-    console.log("fieldValue: ", test.FieldValue);
-    console.log("fieldValue: ", test.FieldValue.increment);
-    console.log("fieldValue: ", test.FieldValue.increment(4));
+    //console.log("fieldValue: ", test.FieldValue);
+    //console.log("fieldValue: ", test.FieldValue.increment);
+    //console.log("fieldValue: ", test.FieldValue.increment(4));
     const enchereId = uuidv4();
     const encherePath = `${s}.encheres.${enchereId}`;
-    
-    activeEdition.update({
-      [encherePath]: {
-        vote: data.vote,
-        sender: senderId,
-        date: now,
-      },
-      [`${s}.enchereStart`]: now,
-      [`${s}.enchereStop`]: future,
-      [e]: test.FieldValue.increment(-data.vote),
-      jobs: test.FieldValue.increment(1),
-    })
+
+    activeEdition
+      .update({
+        [encherePath]: {
+          vote: data.vote,
+          sender: senderId,
+          date: now,
+        },
+        [`${s}.enchereStart`]: now,
+        [`${s}.enchereStop`]: future,
+        [e]: test.FieldValue.increment(-data.vote),
+        jobs: test.FieldValue.increment(1),
+      })
       .catch((error: any) => {
         console.log("Error adding new enchere:", error);
         throw new HttpsError("unavailable", "Error adding new enchere!");
@@ -544,39 +548,11 @@ async function getActiveEditionBis(): Promise<FirebaseFirestore.DocumentReferenc
     .limit(1)
     .get();
 
+  const queryBis = await db.collection("editions").doc("rHiqrhsVIKrvsWCv0onw");
+  
   if (querySnapshot.empty) {
     throw new HttpsError("unavailable", "No editions found!");
   }
-
-  return querySnapshot.docs[0].ref;
+  return queryBis;
+  //return querySnapshot.docs[0].ref;
 }
-
-// TODO: active edition provider, return the active edition doc. DONE
-// TODO: add acitve edition provider to front end. DONE
-// TODO: admin provider, return admin(s) uid. DONE
-// TODO: add admin provider to front end. DONE
-// TODO: Finish signUpUser function. DONE
-// TODO: Refresh the db with correct data and correct users, using signUpUser function. DONE
-// TODO: Test resetPasswords function. DONE
-// TODO: Update new edition form. DONE
-// TODO  Update new cercle form. DONE
-// TODO: create add comitard form. DONE
-// TODO: add comitard picture. DONE
-// TODO: add comitard picture compression. DONE
-// TODO: create add comitard function
-// TODO: firestore security rules. DONE
-// TODO: cercle add vote
-// TODO: firestore security rules
-
-// admin tools: newEdition is DONE
-// edit edition: to be tested,  Done in front end
-
-// new comitard: TODO, cloud function
-// remove comitard: TODO, can be done by cercle ?
-// edit comitard: TODO, cloud function
-
-// addcercle: TRASH, cloud function. DONE
-// remove cercle: TODO, at the end
-// edit cercle: TODO, Done in front end
-
-// https://www.youtube.com/watch?v=h79xrJZAQ6I

@@ -7,32 +7,52 @@ import {useData} from "../../data/DataProvider";
 import {DocumentData} from "@firebase/firestore";
 import Loading from "../loading/loading";
 import ProductCard from "./product-card";
-import {useEffect} from "react";
+
+import { useEffect, useState } from "react";
+import { Box } from "@mui/material";
+import Iconify from "../../components/iconify/iconify";
+
 
 // ----------------------------------------------------------------------
 
 interface DataContextValue {
-    data: DocumentData | null;
-    refetchData: () => void;
+
+  data: DocumentData | null;
+  refetchData: () => void;
+  fetchedTime: number;
+}
+
+interface AuthContextValue {
+  user: any;
 }
 
 export default function ProductsView() {
-    const user = useAuth();
-    const {data} = useData() as DataContextValue;
+  const { user } = useAuth() as AuthContextValue;
+  const { data, refetchData, fetchedTime } = useData() as DataContextValue;
+  const [isInTimeFrame, setIsInTimeFrame] = useState(false);
+  const [refreshTime, setRefreshTime] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
+  
+  useEffect(() => {
+    isInTimeFrameFN();
+    const interval = setInterval(() => {
+      isInTimeFrameFN();
+      setRefreshTime(formatTime(Date.now() - fetchedTime));
+    }, 1000); // Update every second
+    return () => clearInterval(interval);
+  }, [data]);
+  //isInTimeFrameFN();
 
-    useEffect(() => {
-        if (user) {
-            isInTimeFrame();
-            const interval = setInterval(() => {
-                isInTimeFrame();
-            }, 10000); // Update every 10 seconds
-            return () => clearInterval(interval);
-        }
-    }, [user]);
-
-    function nbFutsLeft(): number {
-        const nbFuts = user?.uid && data?.data()?.cercles[user.uid]?.nbFut;
-        return nbFuts ?? 0;
+  function nbFutsLeft(): number {
+    if (user) {
+      const nbFuts = data?.data().cercles[user?.uid]?.nbFut;
+      if (nbFuts) {
+        return nbFuts;
+      } else {
+        return 0;
+      }
+    } else {
+      return 0;
     }
 
 
@@ -50,63 +70,139 @@ export default function ProductsView() {
         }
     }
 
-    function isInTimeFrame(): boolean {
-        //console.log("isInTimeFrame");
-        if (user) {
-            const date = new Date();
-            const start = data?.data().start;
-            const stop = data?.data().stop;
-            if (start && stop) {
-                if (
-                    date.getTime() > start.toMillis() &&
-                    date.getTime() < stop.toMillis()
-                ) {
-                    return true;
-                } else {
-                    return false;
-                }
-            } else {
-                return false;
-            }
-        } else {
-            return false;
-        }
+  function isInTimeFrameFN(): void {
+    //console.log("isInTimeFrameFN");
+    const date = new Date();
+    const start = data?.data().start;
+    const stop = data?.data().stop;
+    if (start && stop) {
+      if (
+        date.getTime() > start.toMillis() &&
+        date.getTime() < stop.toMillis()
+      ) {
+        //console.log("It is really in time frame", date.getTime() - stop.toMillis());
+        setIsInTimeFrame(true);
+      } else {
+        //console.log("It is really NOT in time frame");
+
+        setIsInTimeFrame(false);
+      }
+    } else {
+      //console.log("It is really NOT in time frame START OR STOP IS NULL");
+
+      setIsInTimeFrame(false);
     }
 
-    return (
-        <Container>
-            {data ? (
-                Object.keys(data.data().cercles).map((cercleId) => (
-                    <div key={cercleId} style={{marginBottom: "20px"}}>
-                        <Typography sx={{m: 3}} variant="h3">
-                            {data.data().cercles[cercleId].name}
-                        </Typography>
-                        <Grid container spacing={3}>
-                            {data.data().cercles[cercleId].comitards &&
-                                Object.keys(data.data().cercles[cercleId].comitards).map(
-                                    (comitardID: any) => (
-                                        <Grid key={comitardID} item xs={12} sm={6} md={4} xl={3}>
-                                            <ProductCard
-                                                product={
-                                                    data.data().cercles[cercleId].comitards[comitardID]
-                                                }
-                                                user={user?.uid}
-                                                cercleId={cercleId}
-                                                comitardId={comitardID}
-                                                nbFutsLeft={nbFutsLeft()}
-                                                enchereMax={enchereMinMax()[1]}
-                                                enchereMin={enchereMinMax()[0]}
-                                                isInTimeFrame={isInTimeFrame()}
-                                            />
-                                        </Grid>
-                                    )
-                                )}
-                        </Grid>
-                    </div>
-                ))
-            ) : (
-                <Loading/>
-            )}
-        </Container>
-    );
+
+  function formatTime(time: number): string {
+    const hours = Math.floor(time / (1000 * 60 * 60));
+    const minutes = Math.floor((time % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((time % (1000 * 60)) / 1000);
+
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${seconds}s`;
+    } else {
+      return `${seconds}s`;
+    }
+  }
+
+  function refresh() {
+    setRefreshing(true);
+    console.log("refresh");
+    refetchData();
+    const time = 4000;
+    setTimeout(() => {
+      setRefreshing(false);
+    }, time);
+  }
+
+  return (
+    <Container>
+      <Container>
+        {data && refreshTime && !refreshing ? (
+          <>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontStyle: "oblique",
+                m: -1,
+              }}
+              onClick={() => refresh()}
+            >
+              <Typography variant="body1" sx={{ marginLeft: "5px" }}>
+                Rafraîchi il y a {refreshTime}.
+              </Typography>
+              <Iconify icon="material-symbols-light:refresh" />
+            </Box>
+          </>
+        ) : (
+          <>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontStyle: "oblique",
+                m: -1,
+              }}
+            >
+              <Typography variant="body1" sx={{ marginLeft: "5px" }}>
+                Mise à jour...
+              </Typography>
+            </Box>
+          </>
+        )}
+      </Container>
+      {data ? (
+        Object.keys(data.data().cercles)
+          .sort((a, b) =>
+            data
+              .data()
+              .cercles[a].name.localeCompare(data.data().cercles[b].name)
+          )
+          .map((cercleId) => (
+            <div key={cercleId} style={{ marginBottom: "20px" }}>
+              <Typography sx={{ m: 3 }} variant="h3">
+                {data.data().cercles[cercleId].name}
+              </Typography>
+              <Grid container spacing={3}>
+                {data.data().cercles[cercleId].comitards &&
+                  Object.keys(data.data().cercles[cercleId].comitards)
+                    .sort((a, b) =>
+                      data
+                        .data()
+                        .cercles[cercleId].comitards[a].name.localeCompare(
+                          data.data().cercles[cercleId].comitards[b].name
+                        )
+                    )
+                    .map((comitardID: any) => (
+                      <Grid key={comitardID} item xs={12} sm={6} md={3}>
+                        <ProductCard
+                          product={
+                            data.data().cercles[cercleId].comitards[comitardID]
+                          }
+                          user={user?.uid}
+                          cercleId={cercleId}
+                          comitardId={comitardID}
+                          nbFutsLeft={nbFutsLeft()}
+                          enchereMax={enchereMinMax()[1]}
+                          enchereMin={enchereMinMax()[0]}
+                          isInTimeFrame={isInTimeFrame}
+                          refetchData={refetchData}
+                        />
+                      </Grid>
+                    ))}
+              </Grid>
+            </div>
+          ))
+      ) : (
+        <Loading />
+      )}
+    </Container>
+  );
+
 }
