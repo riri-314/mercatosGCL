@@ -17,6 +17,7 @@ import { httpsCallable } from "@firebase/functions";
 import { functions } from "../../firebase_config";
 import { Alert, AlertColor } from "@mui/material";
 import { LoadingButton } from "@mui/lab";
+import { useAuth } from "../../auth/AuthProvider";
 
 // ----------------------------------------------------------------------
 
@@ -32,11 +33,12 @@ interface ShopProductCardProps {
   refetchData: () => void;
 }
 
-
+interface AuthContextValue {
+  user: any;
+}
 
 export default function ShopProductCard({
   product,
-  user,
   cercleId,
   comitardId,
   nbFutsLeft,
@@ -56,6 +58,7 @@ export default function ShopProductCard({
   const [loading, setLoading] = useState(false);
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
+  const { user } = useAuth() as AuthContextValue;
 
   const theme = useTheme();
   const isSmallScreen = useMediaQuery(theme.breakpoints.down("sm")); // Adjust breakpoint as needed
@@ -63,6 +66,8 @@ export default function ShopProductCard({
 
   useEffect(() => {
     //console.log("isInTimeFrame: ", isInTimeFrame);
+    //console.log("Update the time left");
+
     if (isInTimeFrame) {
       if (user) {
         displayVoteFn();
@@ -74,7 +79,9 @@ export default function ShopProductCard({
 
         return () => clearInterval(interval);
       } else {
-        console.log("No suer")
+        //console.log("No suer")
+        setDisplayVote(false);
+        setVoteError("");
         displayTimeLeft();
         const interval = setInterval(() => {
           displayTimeLeft();
@@ -83,7 +90,7 @@ export default function ShopProductCard({
         return () => clearInterval(interval);
       }
     }
-  }, [isInTimeFrame, product]);
+  }, [isInTimeFrame, product, user]);
 
   // function to decide if we display the vote button or not
   // only for logged in users
@@ -125,6 +132,7 @@ export default function ShopProductCard({
     const enchereStart = product?.enchereStart?.toMillis();
     const enchereStop = product?.enchereStop?.toMillis();
     const now = new Date().getTime();
+    //if (product?.name == "Georges") {console.log("enchereStart: ", enchereStart, "enchereStop: ", enchereStop, "now: ", now)}
     if (now >= enchereStart && now <= enchereStop) {
       setTimeLeft(enchereStop - now);
       return;
@@ -168,9 +176,13 @@ export default function ShopProductCard({
           const data: any = result.data;
           //const sanitizedMessage = data.text;
           console.log("data:", data);
-          refetchData();
+          //refetchData();
+          setTimeout(() => {refetchData()}, 2000);
           setVoteErrorSeverity("success");
           setVoteError("Vote enregistré");
+          setTimeout(() => {
+            setVoteError("");
+          }, 4000);
           setLoading(false);
         })
         .catch((error) => {
