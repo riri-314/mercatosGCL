@@ -54,7 +54,7 @@ export default function ProductsView() {
     } else {
       return 0;
     }
-
+  }
 
     function enchereMinMax(): number[] {
         if (user) {
@@ -92,7 +92,7 @@ export default function ProductsView() {
 
       setIsInTimeFrame(false);
     }
-
+  }
 
   function formatTime(time: number): string {
     const hours = Math.floor(time / (1000 * 60 * 60));
