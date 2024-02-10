@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import {useEffect, useState} from "react";
 
-import { useTheme } from "@mui/material/styles";
+import {styled, useTheme} from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
 
 import Box from "@mui/material/Box";
@@ -13,15 +13,18 @@ import Iconify from "../../components/iconify/iconify";
 import Label from "../../components/label/label";
 import LazyLoad from "react-lazy-load";
 import QuantityInput from "../../components/inputs/numberInput";
+
 import { httpsCallable } from "@firebase/functions";
 import { functions } from "../../firebase_config";
 import { Alert, AlertColor } from "@mui/material";
 import { LoadingButton } from "@mui/lab";
 import { useAuth } from "../../auth/AuthProvider";
 
+
 // ----------------------------------------------------------------------
 
 interface ShopProductCardProps {
+
   product: any;
   user: string | undefined;
   cercleId: string;
@@ -92,14 +95,13 @@ export default function ShopProductCard({
     }
   }, [isInTimeFrame, product, user]);
 
-  // function to decide if we display the vote button or not
-  // only for logged in users
-  // also update the time left of the enchère
-  function displayVoteFn(): void {
-    if (!user || user === cercleId) {
-      setDisplayVote(false);
-      return;
-    }
+    useEffect(() => {
+        if (isInTimeFrame) {
+            if (user) {
+                displayVoteFn();
+                const interval = setInterval(() => {
+                    displayVoteFn();
+                }, 1000); // Update every second
 
     if (nbFutsLeft <= 0 || nbFutsLeft < enchereMin) {
       //console.log("Number of futs left: ", nbFutsLeft);
@@ -140,20 +142,21 @@ export default function ShopProductCard({
       setTimeLeft(0);
       return;
     }
-  }
 
-  function formatTimeLeft(time: number): string {
-    const hours = Math.floor(time / (1000 * 60 * 60));
-    const minutes = Math.floor((time % (1000 * 60 * 60)) / (1000 * 60));
-    const seconds = Math.floor((time % (1000 * 60)) / 1000);
+    function formatTimeLeft(time: number): string {
+        const hours = Math.floor(time / (1000 * 60 * 60));
+        const minutes = Math.floor((time % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((time % (1000 * 60)) / 1000);
 
-    if (hours > 0) {
-      return `${hours}h ${minutes}m`;
-    } else if (minutes > 0) {
-      return `${minutes}m ${seconds}s`;
-    } else {
-      return `${seconds}s`;
+        if (hours > 0) {
+            return `${hours}h ${minutes}m ${seconds}s`;
+        } else if (minutes > 0) {
+            return `${minutes}m ${seconds}s`;
+        } else {
+            return `${seconds}s`;
+        }
     }
+
   }
 
   function handleVote(): void {
@@ -198,169 +201,159 @@ export default function ShopProductCard({
       setVoteError("Veuillez entrer une enchère valide");
       setLoading(false);
     }
-  }
-  const style = {
-    position: "absolute",
-    top: "50%",
-    left: "50%",
-    transform: "translate(-50%, -50%)",
-    //width: isSmallScreen ? '90%' : '30%', // Adjust width based on screen size
-    //maxHeight: isSmallScreen ? '90%' : '85%', // Adjust maxHeight based on screen size
-    width: isSmallScreen ? "90%" : "40%", // Adjust width based on screen size
-    maxHeight: isSmallScreen ? "90%" : "80vh", // Adjust maxHeight based on screen size
 
-    boxShadow: "none", // Remove the box shadow
-    border: "none", // Remove the border
-    outline: "none", // Remove outline (focus indicator)
-  };
-
-  const renderStatus = (
-    <Label
-      variant="filled"
-      color={"error"}
-      sx={{
-        zIndex: 9,
-        top: 16,
-        right: 16,
+    const style = {
         position: "absolute",
-        textTransform: "uppercase",
-      }}
-    >
-      {formatTimeLeft(timeLeft)}
-      <Iconify icon="jam:chronometer" />
-    </Label>
-  );
+        top: "50%",
+        left: "50%",
+        transform: "translate(-50%, -50%)",
+        //width: isSmallScreen ? '90%' : '30%', // Adjust width based on screen size
+        //maxHeight: isSmallScreen ? '90%' : '85%', // Adjust maxHeight based on screen size
+        width: isSmallScreen ? "90%" : "40%", // Adjust width based on screen size
+        maxHeight: isSmallScreen ? "90%" : "80vh", // Adjust maxHeight based on screen size
 
-  const renderImg = (
-    <LazyLoad>
-      <Box
-        component="img"
-        alt={product.name}
-        src={product.picture}
-        sx={{
-          top: 0,
-          width: 1,
-          height: 1,
-          objectFit: "cover",
-          position: "absolute",
-        }}
-        loading="lazy"
-      />
-    </LazyLoad>
-  );
+        boxShadow: "none", // Remove the box shadow
+        border: "none", // Remove the border
+        outline: "none", // Remove outline (focus indicator)
+    };
 
-  return (
-    <>
-      <Card>
-        <Box onClick={handleOpen} sx={{ pt: "100%", position: "relative" }}>
-          {timeLeft > 0 && renderStatus}
+    const renderStatus = (
+        <Label
+            variant="filled"
+            color={"error"}
+            sx={{
+                zIndex: 9,
+                top: 16,
+                right: 16,
+                position: "absolute",
+                textTransform: "uppercase",
+                boxShadow: (theme) => theme.shadows[4],
+            }}
+        >
+            {formatTimeLeft(timeLeft)}
+            <Iconify icon="jam:chronometer"/>
+        </Label>
+    );
 
-          {renderImg}
-        </Box>
 
-        <Stack spacing={2} sx={{ p: 3 }}>
-          <Typography variant="h3" noWrap>
-            {product.firstname} {product.name}
-          </Typography>
 
-          {displayVote && isInTimeFrame && (
-            <>
-              <QuantityInput
-                title="Enchère"
-                min={enchereMin}
-                max={Math.min(nbFutsLeft, enchereMax)}
-                error={false}
-                helpText={""}
-                change={(_event: any, val: any) => {
-                  //console.log(val);
-                  setVote(val);
+    const renderImg = (
+        <LazyLoad>
+            <Box
+                component="img"
+                alt={product.name}
+                src={product.picture}
+                sx={{
+                    top: 0,
+                    width: 1,
+                    height: 1,
+                    objectFit: "cover",
+                    position: "absolute",
                 }}
-              />
-              <LoadingButton
-                onClick={() => handleVote()}
-                loading={loading}
-                variant="contained"
-                color="inherit"
-                startIcon={<Iconify icon="octicon:check-16" />}
-              >
-                Enchérir
-              </LoadingButton>
+                loading="lazy"
+            />
+        </LazyLoad>
+    );
 
-            </>
-          )}
-                        {voteError && (
+    
+
+    return (
+        <>
+            <Card>
+                <Box onClick={handleOpen} sx={{pt: "100%", position: "relative"}}>
+                    {/*{timeLeft > 0 && renderStatus}*/}
+                    {/*{encheres.top.vote > 0 && renderPrice}*/}
+
+
+                    {renderImg}
+                </Box>
+
+
+                <Stack spacing={2} sx={{p: 3}}>
+                    <Typography variant="h6" noWrap>
+                        {product.firstname} "{product.nickname}" {product.name}
+                    </Typography>
+
+                    {(displayVote && isInTimeFrame) && (
+                    <>
+                        <QuantityInput
+                            title="Enchère"
+                            min={enchereMin}
+                            max={Math.min(nbFutsLeft, enchereMax)}
+                            error={false}
+                            helpText={""}
+                            change={(_event: any, val: any) => {
+                                console.log(val);
+                                setVote(val);
+                            }}
+                        />
+                        <Button
+                            onClick={() => handleVote()}
+                            variant="contained"
+                            size="large"
+                            color="primary"
+                            startIcon={<Iconify icon="solar:user-hand-up-bold-duotone"/>}
+                        >
+                            Enchérir
+                        </Button>
+                    </>
+                    )}
+                                         {voteError && (
                 <Alert sx={{ mt: 3 }} severity={voteErrorSeverity}>
                   {voteError}
                 </Alert>
               )}
-        </Stack>
-      </Card>
-      <Modal
-        open={open}
-        onClose={handleClose}
-        aria-labelledby="modal-modal-title"
-        aria-describedby="modal-modal-description"
-      >
-        <Card sx={style}>
-          <Box sx={{ pt: "50%", position: "relative" }}>
-            {timeLeft > 0 && renderStatus}
-            {renderImg}
-          </Box>
-          <Typography variant="h1" sx={{ pl: 3, pt: 2 }}>
-            {product.firstname} {product.name}
-            <Divider variant="middle" />
-          </Typography>
-          <Box sx={{ maxHeight: "calc(80vh - 120px)", overflowY: "auto" }}>
-            <div style={{ maxHeight: "300px", overflowY: "auto" }}>
-              <Stack spacing={0} sx={{ p: 3, pt: 1, maxHeight: "80vh" }}>
-                <Typography variant="body1">
-                  <strong>Surnom:</strong> {product.nickname}
-                  <br />
-                  <strong>Poste</strong> : {product.post}
-                  <br />
-                  <strong>Maison d'appartenance </strong>: Todo
-                  <br />
-                  <strong>Teneur en taule</strong> : {product.teneurTaule}
-                  <br />
-                  <strong>État civil</strong> : {product.etatCivil}
-                  <br />
-                  <strong>Age</strong> : {product.age}
-                  <br />
-                  <strong>Nombre d'étoiles</strong> : {product.nbEtoiles}
-                  <br />
-                  <strong>Point fort</strong> : {product.pointFort}
-                  <br />
-                  <strong>Point faible </strong>: {product.pointFaible}
-                  <br />
-                  <strong>Est le seul</strong> : {product.estLeSeul}
-                </Typography>
-              </Stack>
-            </div>
-          </Box>
-        </Card>
-      </Modal>
-    </>
-  );
+                </Stack>
+            </Card>
+
+
+            <Modal
+                open={open}
+                onClose={handleClose}
+                aria-labelledby="modal-modal-title"
+                aria-describedby="modal-modal-description"
+            >
+                <Card sx={style}>
+                    <Box sx={{pt: "50%", position: "relative"}}>
+                        {timeLeft > 0 && renderStatus}
+                        {renderImg}
+                    </Box>
+                    <Typography variant="h1" sx={{pl: 3, pt: 2}}>
+                        {product.firstname} {product.name}
+                        <Divider variant="middle"/>
+                    </Typography>
+                    <Box sx={{maxHeight: "calc(80vh - 120px)", overflowY: "auto"}}>
+                        <div style={{maxHeight: "300px", overflowY: "auto"}}>
+                            <Stack spacing={0} sx={{p: 3, pt: 1, maxHeight: "80vh"}}>
+                                <Typography variant="body1">
+                                    <strong>Surnom:</strong> {product.nickname}
+                                    <br/>
+                                    <strong>Poste</strong> : {product.post}
+                                    <br/>
+                                    <strong>Maison d'appartenance </strong>: Todo
+                                    <br/>
+                                    <strong>Teneur en taule</strong> : {product.teneurTaule}
+                                    <br/>
+                                    <strong>État civil</strong> : {product.etatCivil}
+                                    <br/>
+                                    <strong>Age</strong> : {product.age}
+                                    <br/>
+                                    <strong>Nombre d'étoiles</strong> : {product.nbEtoiles}
+                                    <br/>
+                                    <strong>Point fort</strong> : {product.pointFort}
+                                    <br/>
+                                    <strong>Point faible </strong>: {product.pointFaible}
+                                    <br/>
+                                    <strong>Est le seul</strong> : {product.estLeSeul}
+                                </Typography>
+                            </Stack>
+                        </div>
+                    </Box>
+                </Card>
+            </Modal>
+        </>
+    );
+
 }
 
-//<>
-//<TextField
-//  size="small"
-//  label="Entez une enchère"
-//  inputProps={{ type: "number" }}
-///>
-//<Button
-//  onClick={() => {
-//    console.log("voteee");
-//  }}
-//  variant="contained"
-//  color="inherit"
-//  startIcon={<Iconify icon="octicon:check-16" />}
-//>
-//  Enchérir
-//</Button>
-//{/*
-//<Alert severity="success">Vote enregistré</Alert>
-//<Alert severity="error">Erreur</Alert>
-//*/}
-//</>
+
