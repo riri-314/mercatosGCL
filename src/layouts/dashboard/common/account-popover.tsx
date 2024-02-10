@@ -15,6 +15,9 @@ import {DocumentData} from "@firebase/firestore";
 import {Popover} from "@mui/material";
 
 // ----------------------------------------------------------------------
+interface AuthContextValue {
+  user: any;
+}
 
 
 interface DataContextValue {
@@ -23,6 +26,7 @@ interface DataContextValue {
 }
 
 export default function AccountPopover() {
+
     const [open, setOpen] = useState(null);
     const [loading, setLoading] = useState(false);
 
