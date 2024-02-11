@@ -25,10 +25,6 @@ import { styled } from "@mui/material/styles";
 import { useData } from "../../data/DataProvider";
 
 // ----------------------------------------------------------------------
-interface AuthContextValue {
-  user: any;
-}
-
 
 export default function Nav({ openNav, onCloseNav }: any) {
   const pathname = usePathname();
@@ -77,7 +73,7 @@ export default function Nav({ openNav, onCloseNav }: any) {
     />
   );
 
-  const { user } = useAuth() as AuthContextValue;
+  const { user } = useAuth();
 
   let navConfig = [
     {

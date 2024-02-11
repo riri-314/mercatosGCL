@@ -24,12 +24,8 @@ interface AdminAccountProps {
   refetchData: () => void;
 }
 
-interface AuthContextValue {
-  user: any;
-}
-
 export default function AdminAccount({ data, refetchData }: AdminAccountProps) {
-  const { user } = useAuth() as AuthContextValue;
+  const { user } = useAuth();
   
 
   const [open, setOpen] = useState(false);

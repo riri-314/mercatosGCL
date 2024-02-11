@@ -12,7 +12,7 @@ export const AuthContext = React.createContext<AuthContextValue | null>(null);
 
 interface AuthContextValue {
   user: User | null;
-  isAdmin: (uid: string) => boolean;
+  isAdmin: () => boolean;
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
@@ -58,5 +58,5 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 };
 
 export const useAuth = () => {
-  return useContext(AuthContext);
+  return useContext(AuthContext) as AuthContextValue;
 };

@@ -14,17 +14,12 @@ import { useData } from "../../../data/DataProvider.tsx";
 import { Popover } from "@mui/material";
 
 // ----------------------------------------------------------------------
-interface AuthContextValue {
-  user: any;
-}
-
-
 
 export default function AccountPopover() {
   const [open, setOpen] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const { user } = useAuth() as AuthContextValue;
+  const { user } = useAuth();
 
   const { data } = useData();
 

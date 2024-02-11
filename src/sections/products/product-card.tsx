@@ -34,10 +34,6 @@ interface ShopProductCardProps {
   refetchData: () => void;
 }
 
-interface AuthContextValue {
-  user: any;
-}
-
 export default function ShopProductCard({
   product,
   cercleId,
@@ -59,7 +55,7 @@ export default function ShopProductCard({
   const [loading, setLoading] = useState(false);
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
-  const { user } = useAuth() as AuthContextValue;
+  const { user } = useAuth();
 
   const theme = useTheme();
   const isSmallScreen = useMediaQuery(theme.breakpoints.down("sm")); // Adjust breakpoint as needed
