@@ -14,14 +14,9 @@ export const Page404 = lazy(() => import('../pages/page-not-found'));
 
 // ----------------------------------------------------------------------
 
-interface AuthContextValue {
-  user: any;
-  isAdmin: () => boolean;
-}
-
 export default function Router() {
 
-  const { user, isAdmin } = useAuth() as AuthContextValue;
+  const { user, isAdmin } = useAuth();
 
   const routes = useRoutes([
     {

@@ -13,13 +13,8 @@ import Iconify from "../../components/iconify/iconify";
 
 
 // ----------------------------------------------------------------------
-
-interface AuthContextValue {
-  user: any;
-}
-
 export default function ProductsView() {
-  const { user } = useAuth() as AuthContextValue;
+  const { user } = useAuth();
   const { data, refetchData, fetchedTime } = useData();
   const [isInTimeFrame, setIsInTimeFrame] = useState(false);
   const [refreshTime, setRefreshTime] = useState("");

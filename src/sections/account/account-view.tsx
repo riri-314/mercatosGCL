@@ -12,12 +12,9 @@ interface AccountProps {
   refetchData: () => void;
 }
 
-interface AuthContextValue {
-  user: any;
-}
 
 export default function Account({ data, refetchData }: AccountProps) {
-  const { user } = useAuth() as AuthContextValue;
+  const { user } = useAuth();
 
   return (
     <>
