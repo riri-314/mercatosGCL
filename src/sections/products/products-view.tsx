@@ -4,7 +4,6 @@ import Typography from "@mui/material/Typography";
 
 import {useAuth} from "../../auth/AuthProvider";
 import {useData} from "../../data/DataProvider";
-import {DocumentData} from "@firebase/firestore";
 import Loading from "../loading/loading";
 import ProductCard from "./product-card";
 
@@ -15,20 +14,13 @@ import Iconify from "../../components/iconify/iconify";
 
 // ----------------------------------------------------------------------
 
-interface DataContextValue {
-
-  data: DocumentData | null;
-  refetchData: () => void;
-  fetchedTime: number;
-}
-
 interface AuthContextValue {
   user: any;
 }
 
 export default function ProductsView() {
   const { user } = useAuth() as AuthContextValue;
-  const { data, refetchData, fetchedTime } = useData() as DataContextValue;
+  const { data, refetchData, fetchedTime } = useData();
   const [isInTimeFrame, setIsInTimeFrame] = useState(false);
   const [refreshTime, setRefreshTime] = useState("");
   const [refreshing, setRefreshing] = useState(false);

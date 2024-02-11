@@ -78,5 +78,5 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
 };
 
 export const useData = () => {
-  return useContext(DataContext);
+  return useContext(DataContext) as DataContextValue;
 };
