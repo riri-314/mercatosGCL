@@ -22,7 +22,6 @@ import LinearProgress, {
   linearProgressClasses,
 } from "@mui/material/LinearProgress";
 import { styled } from "@mui/material/styles";
-import { DocumentData } from "@firebase/firestore";
 import { useData } from "../../data/DataProvider";
 
 // ----------------------------------------------------------------------
@@ -30,16 +29,11 @@ interface AuthContextValue {
   user: any;
 }
 
-interface DataContextValue {
-  data: DocumentData | null;
-  refetchData: () => void;
-  fetchedTime: number;
-}
 
 export default function Nav({ openNav, onCloseNav }: any) {
   const pathname = usePathname();
   
-  const { data } = useData() as DataContextValue;
+  const { data } = useData();
 
   const upLg = useResponsive("lg", "tt", "up"); //fix
 

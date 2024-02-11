@@ -11,7 +11,6 @@ import LoadingButton from "@mui/lab/LoadingButton";
 import { auth } from "../../../firebase_config";
 import { useAuth } from "../../../auth/AuthProvider";
 import { useData } from "../../../data/DataProvider.tsx";
-import { DocumentData } from "@firebase/firestore";
 import { Popover } from "@mui/material";
 
 // ----------------------------------------------------------------------
@@ -19,10 +18,7 @@ interface AuthContextValue {
   user: any;
 }
 
-interface DataContextValue {
-  data: DocumentData | null;
-  refetchData: () => void;
-}
+
 
 export default function AccountPopover() {
   const [open, setOpen] = useState(null);
@@ -30,7 +26,7 @@ export default function AccountPopover() {
 
   const { user } = useAuth() as AuthContextValue;
 
-  const { data } = useData() as DataContextValue;
+  const { data } = useData();
 
   function nbFutsLeft(): number {
     const nbFuts = user?.uid && data?.data()?.cercles[user.uid]?.nbFut;

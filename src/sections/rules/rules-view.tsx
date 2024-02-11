@@ -4,18 +4,11 @@ import Card from "@mui/material/Card";
 import {CardContent} from "@mui/material";
 import Loading from "../loading/loading.tsx";
 import {useData} from "../../data/DataProvider.tsx";
-import {DocumentData} from "@firebase/firestore";
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeRaw from 'rehype-raw'
 import Iconify from "../../components/iconify/iconify.tsx";
 import Box from "@mui/material/Box";
-
-
-interface DataContextValue {
-    data: DocumentData | null;
-    refetchData: () => void;
-}
 
 function timestampToString(date: number | Date) {
     return new Intl.DateTimeFormat('fr-BE', {
@@ -29,7 +22,7 @@ function timestampToString(date: number | Date) {
 
 export default function Rules() {
 
-    const {data} = useData() as DataContextValue;
+    const {data} = useData();
     console.log(data);
 
     return (
@@ -55,7 +48,7 @@ export default function Rules() {
                             <hr/>
 
                             <Box sx={{display: "flex", alignItems: "center", mt: 2, gap: (theme) => theme.spacing(1)}}>
-                                <Iconify sx={{color: (theme) => theme.palette.primary.main}} icon="solar:playback-speed-bold-duotone"/>
+                                <Iconify sx={{color: (theme: any) => theme.palette.primary.main}} icon="solar:playback-speed-bold-duotone"/>
                                 <Typography variant="h5">Contexte initial</Typography>
                             </Box>
                             <ul>
@@ -70,7 +63,7 @@ export default function Rules() {
                             </ul>
 
                             <Box sx={{display: "flex", alignItems: "center", mt: 2, gap: (theme) => theme.spacing(1)}}>
-                                <Iconify sx={{color: (theme) => theme.palette.primary.main}} icon="solar:clock-circle-line-duotone"/>
+                                <Iconify sx={{color: (theme: any) => theme.palette.primary.main}} icon="solar:clock-circle-line-duotone"/>
                                 <Typography variant="h5">Durée du mercato</Typography>
                             </Box>
 
@@ -85,7 +78,7 @@ export default function Rules() {
 
 
                             <Box sx={{display: "flex", alignItems: "center", mt: 2, gap: (theme) => theme.spacing(1)}}>
-                                <Iconify sx={{color: (theme) => theme.palette.primary.main}} icon="solar:user-hand-up-bold-duotone"/>
+                                <Iconify sx={{color: (theme: any) => theme.palette.primary.main}} icon="solar:user-hand-up-bold-duotone"/>
                                 <Typography variant="h5">Enchères</Typography>
                             </Box>
 
@@ -105,7 +98,7 @@ export default function Rules() {
                             </ul>
 
                             <Box sx={{display: "flex", alignItems: "center", mt: 2, gap: (theme) => theme.spacing(1)}}>
-                                <Iconify sx={{color: (theme) => theme.palette.primary.main}} icon="solar:chart-2-bold-duotone"/>
+                                <Iconify sx={{color: (theme: any) => theme.palette.primary.main}} icon="solar:chart-2-bold-duotone"/>
                                 <Typography variant="h5">Gains/remboursements par enchère</Typography>
                             </Box>
 
