@@ -16,18 +16,18 @@ import { functions } from "../../firebase_config";
 import NewEdition from "./new_edition";
 import NewComitard from "./new_comitard";
 import { DocumentData } from "@firebase/firestore";
-import AskConfirmationBeforeSave from "./edit_edition";
 import { useState } from "react";
+import QuickFilteringGrid from "./edition_table";
 
 interface AdminAccountProps {
-  data: DocumentData;
+  data: DocumentData[];
   refetchData: () => void;
+  activeData: DocumentData;
 }
 
-export default function AdminAccount({ data, refetchData }: AdminAccountProps) {
+export default function AdminAccount({ data, refetchData, activeData }: AdminAccountProps) {
   const { user } = useAuth();
   
-
   const [open, setOpen] = useState(false);
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
@@ -45,14 +45,14 @@ export default function AdminAccount({ data, refetchData }: AdminAccountProps) {
         </Typography>
       </Stack>
 
-      <NewEdition data={data} refetchData={refetchData} />
+      <NewEdition data={activeData} refetchData={refetchData} />
 
       <Card sx={{ width: "100%", mb: 4 }}>
         <CardContent>
           <Typography variant="h5" sx={{ mb: 1 }}>
             Éditer édition
           </Typography>
-          <AskConfirmationBeforeSave />
+          <QuickFilteringGrid data={data}/>
         </CardContent>
       </Card>
 
@@ -86,10 +86,10 @@ export default function AdminAccount({ data, refetchData }: AdminAccountProps) {
           mr: "auto",
         }}
       >
-        <NewComitard data={data} admin={true} refetchData={refetchData} />
+        <NewComitard data={activeData} admin={true} refetchData={refetchData} />
       </Modal>
 
-      <NewComitard data={data} admin={true} refetchData={refetchData} />
+      <NewComitard data={activeData} admin={true} refetchData={refetchData} />
 
       <Card sx={{ width: "100%", mb: 4 }}>
         <CardContent>
