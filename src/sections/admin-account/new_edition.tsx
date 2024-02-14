@@ -201,7 +201,7 @@ export default function NewEdition({data, refetchData}: DataContextValue) {
                                 </Grid>
                             </LocalizationProvider>
 
-                            <Grid item xs={12} sm={4}>
+                            <Grid item xs={12} sm={6} md={4}>
                                 <QuantityInput
                                     title="Fûts par cercle"
                                     min={1}
@@ -221,7 +221,7 @@ export default function NewEdition({data, refetchData}: DataContextValue) {
                                 />
                             </Grid>
 
-                            <Grid item xs={12} sm={4}>
+                            <Grid item xs={12} sm={6} md={4}>
                                 <QuantityInput
                                     title="Comitards par cercle"
                                     min={1}
@@ -241,7 +241,7 @@ export default function NewEdition({data, refetchData}: DataContextValue) {
                                 />
                             </Grid>
 
-                            <Grid item xs={12} sm={4}>
+                            <Grid item xs={12} sm={6} md={4}>
                                 <QuantityInput
                                     title="Durée d'une enchère"
                                     min={1}
@@ -261,7 +261,7 @@ export default function NewEdition({data, refetchData}: DataContextValue) {
                                 />
                             </Grid>
 
-                            <Grid item xs={12} sm={6}>
+                            <Grid item xs={12} sm={6} md={6}>
                                 <QuantityInput
                                     title="Enchère minimum"
                                     min={1}
@@ -280,7 +280,7 @@ export default function NewEdition({data, refetchData}: DataContextValue) {
                                     }}
                                 />
                             </Grid>
-                            <Grid item xs={12} sm={6}>
+                            <Grid item xs={12} sm={6} md={6}>
                                 <QuantityInput
                                     title="Enchere maximum"
                                     min={1}
@@ -299,7 +299,7 @@ export default function NewEdition({data, refetchData}: DataContextValue) {
                                     }}
                                 />
                             </Grid>
-                            <Grid item xs={12} sm={4}>
+                            <Grid item xs={12} sm={6} md={4}>
                                 <UnstyledSelectIntroduction
                                     defaultValue={remboursementVendeur}
                                     option={{
@@ -317,7 +317,7 @@ export default function NewEdition({data, refetchData}: DataContextValue) {
                                     change={(_event: any, val: any) => setRemboursementVendeur(val)}
                                 />
                             </Grid>
-                            <Grid item xs={12} sm={4}>
+                            <Grid item xs={12} sm={6} md={4}>
                                 <UnstyledSelectIntroduction
                                     defaultValue={remboursementPerdant}
                                     option={{
@@ -335,7 +335,7 @@ export default function NewEdition({data, refetchData}: DataContextValue) {
                                     change={(_event: any, val: any) => setRemboursementPerdant(val)}
                                 />
                             </Grid>
-                            <Grid item xs={12} sm={4}>
+                            <Grid item xs={12} sm={6} md={4}>
                                 <UnstyledSelectIntroduction
                                     defaultValue={remboursementGagnant}
                                     option={{
@@ -358,6 +358,9 @@ export default function NewEdition({data, refetchData}: DataContextValue) {
                                 <LoadingButton
                                     size="large"
                                     variant="contained"
+                                    sx={{
+                                        padding: (theme) => `${theme.spacing(2)}`,
+                                    }}
                                     fullWidth
                                     loading={loading}
                                     onClick={handleCreateEdition}
