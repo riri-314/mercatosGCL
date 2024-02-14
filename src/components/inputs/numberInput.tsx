@@ -50,14 +50,15 @@ interface QuantityInputProps {
     max?: number;
     helpText?: string;
     error?: boolean;
+    defaultValue?: number; 
     change: (event: React.FocusEvent<HTMLInputElement> | React.PointerEvent | React.KeyboardEvent, val: number | undefined) => void;
 }
 
-export default function UseNumberInputWithTitle({title, min, max, error, change, helpText}: QuantityInputProps) {
+export default function UseNumberInputWithTitle({title, min, max, error, change, helpText, defaultValue}: QuantityInputProps) {
     return (
         <>
             <CustomNumberInput aria-label="Quantity Input" title={title} min={min} onChange={change} max={max}
-                               error={error} helpText={helpText}/>
+                               error={error} helpText={helpText} defaultValue={defaultValue}/>
         </>
 
     );
