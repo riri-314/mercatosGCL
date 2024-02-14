@@ -1,17 +1,17 @@
 import { Helmet } from 'react-helmet-async';
-import ProductsView from '../sections/products/products-view';
+import ComitardsView from '../sections/products/comitards-view.tsx';
 
 
 // ----------------------------------------------------------------------
 
-export default function ProductsPage() {
+export default function ComitardsPage() {
   return (
     <>
       <Helmet>
         <title> Comitards </title>
       </Helmet>
 
-      <ProductsView />
+      <ComitardsView />
     </>
   );
 }
