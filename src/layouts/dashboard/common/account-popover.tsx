@@ -30,7 +30,6 @@ export default function AccountPopover() {
 
   const handleOpen = (event: any) => {
     setOpen(event.currentTarget);
-    console.log("user: ", user);
   };
 
   const handleClose = () => {
