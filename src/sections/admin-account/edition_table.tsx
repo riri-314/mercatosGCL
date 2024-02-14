@@ -9,12 +9,26 @@ import {
 } from "@mui/x-data-grid";
 import Iconify from "../../components/iconify/iconify";
 import { DocumentData } from "@firebase/firestore";
+import { setActiveEdition } from "../../utils/admin-tools";
+import { LoadingButton } from "@mui/lab";
+import { Alert } from '@mui/material'
+import { useState } from "react";
 
 interface EditionTableProps {
   data: DocumentData[];
+  refetchData: () => void;
+  error: (error: string) => void;
+  handleOpenModalEdition: (id: number) => void;
 }
 
-export default function QuickFilteringGrid({ data }: EditionTableProps) {
+export default function QuickFilteringGrid({
+  data,
+  refetchData,
+  error,
+  handleOpenModalEdition,
+}: EditionTableProps) {
+  const [loading, setLoading] = useState<boolean>(false);
+
   const columns: GridColDef[] = [
     { field: "edition", headerName: "ID", width: 90 },
     {
@@ -144,7 +158,7 @@ export default function QuickFilteringGrid({ data }: EditionTableProps) {
     {
       field: "actions",
       type: "actions",
-      headerName: "Actions",
+      headerName: "Éditer",
       width: 100,
       cellClassName: "actions",
       getActions: (params: GridRowParams) => {
@@ -154,14 +168,38 @@ export default function QuickFilteringGrid({ data }: EditionTableProps) {
             icon={<Iconify icon="ic:outline-edit" />}
             label="Edit"
             className="textPrimary"
-            onClick={() => console.log("edit", rowData)}
+            onClick={() => handleOpenModalEdition(rowData)}
             color="inherit"
           />,
         ];
       },
     },
+    {
+      field: "setActive",
+      headerName: "Set Active",
+      width: 150,
+      editable: false,
+      renderCell: (params: GridRenderCellParams<any, string>) => (
+        <LoadingButton
+          disabled={params.row.active}
+          loading={loading}
+          onClick={async () => {
+            setLoading(true);
+            error("");
+            const ret = await setActiveEdition(params.row.edition);
+            if (!ret) {
+                error("Error while setting active edition");
+            }
+            refetchData();
+            setLoading(false);
+          }}
+          variant="contained"
+        >
+          Set Active
+        </LoadingButton>
+      ),
+    },
   ];
-
 
   return (
     <Box sx={{ height: 400, width: 1 }}>
@@ -179,6 +217,7 @@ export default function QuickFilteringGrid({ data }: EditionTableProps) {
         }}
         getRowId={(row: any) => row.edition}
       />
+
     </Box>
   );
 }

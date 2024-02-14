@@ -7,7 +7,7 @@ import SvgColor from "../svg-color/svg-color.tsx";
 
 // ----------------------------------------------------------------------
 
-const Logo = forwardRef(({disabledLink = false, sx}: any) => {
+const Logo = forwardRef(({disabledLink = false}: any) => {
 
     const logo = (
         <StyledLogo src="/assets/images/gcl.svg" sx={{

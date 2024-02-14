@@ -1,7 +1,14 @@
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import Card from "@mui/material/Card";
-import { Button, CardContent, Modal } from "@mui/material";
+import {
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
+  Alert,
+  CardContent,
+  Modal,
+} from "@mui/material";
 import { useAuth } from "../../auth/AuthProvider";
 import { LoadingButton } from "@mui/lab";
 import {
@@ -25,12 +32,17 @@ interface AdminAccountProps {
   activeData: DocumentData;
 }
 
-export default function AdminAccount({ data, refetchData, activeData }: AdminAccountProps) {
+export default function AdminAccount({
+  data,
+  refetchData,
+  activeData,
+}: AdminAccountProps) {
   const { user } = useAuth();
-  
-  const [open, setOpen] = useState(false);
-  const handleOpen = () => setOpen(true);
-  const handleClose = () => setOpen(false);
+  const [errorEditionEdit, setErrorEditionEdit] = useState("");
+  const [openModalEdition, setOpenModalEdition] = useState(false);
+  const handleOpenModalEdition = () => setOpenModalEdition(true);
+  const handleCloseModalEdition = () => setOpenModalEdition(false);
+  const [modalEditionData, setModalEditionData] = useState<any | null>(null);
 
   return (
     <>
@@ -45,16 +57,69 @@ export default function AdminAccount({ data, refetchData, activeData }: AdminAcc
         </Typography>
       </Stack>
 
-      <NewEdition data={activeData} refetchData={refetchData} />
+      <Card sx={{ width: "100%", mb: 4 }}>
+        <CardContent>
+          <Accordion>
+            <AccordionSummary
+              expandIcon={<Typography variant="h3">🢃</Typography>}
+            >
+              <Typography variant="h5">Créer une nouvelle édition</Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <NewEdition data={activeData.data()} refetchData={refetchData} />
+            </AccordionDetails>
+          </Accordion>
+        </CardContent>
+      </Card>
 
       <Card sx={{ width: "100%", mb: 4 }}>
         <CardContent>
           <Typography variant="h5" sx={{ mb: 1 }}>
             Éditer édition
           </Typography>
-          <QuickFilteringGrid data={data}/>
+          <QuickFilteringGrid
+            data={data}
+            refetchData={refetchData}
+            error={(error) => setErrorEditionEdit(error)}
+            handleOpenModalEdition={(data: any) => {
+              console.log("modal open:", data);
+              setModalEditionData(data);
+              handleOpenModalEdition();
+            }}
+          />
+      {errorEditionEdit && (
+        <Alert sx={{ mt: 3 }} severity={"error"}>
+          {errorEditionEdit}
+        </Alert>
+      )}
         </CardContent>
       </Card>
+
+      <Modal
+        open={openModalEdition}
+        onClose={handleCloseModalEdition}
+        aria-labelledby="modal-modal-title"
+        aria-describedby="modal-modal-description"
+        sx={{
+          m: 3,
+          overflow: "scroll",
+          maxWidth: 800,
+          ml: "auto",
+          mr: "auto",
+        }}
+      >
+        <Card sx={{ width: "100%", mb: 4 }}>
+          <CardContent>
+            <Typography variant="h5">Créer une nouvelle édition</Typography>
+            <NewEdition
+              data={modalEditionData}
+              refetchData={refetchData}
+              updateMode={true}
+              close={handleCloseModalEdition}
+            />
+          </CardContent>
+        </Card>
+      </Modal>
 
       <NewCerle refetchData={refetchData} />
 
@@ -72,22 +137,6 @@ export default function AdminAccount({ data, refetchData, activeData }: AdminAcc
           Let change the fut count
         </CardContent>
       </Card>
-      <Button onClick={handleOpen}>Open modal</Button>
-      <Modal
-        open={open}
-        onClose={handleClose}
-        aria-labelledby="modal-modal-title"
-        aria-describedby="modal-modal-description"
-        sx={{
-          m: 3,
-          overflow:'scroll',
-          maxWidth: 800,
-          ml: "auto",
-          mr: "auto",
-        }}
-      >
-        <NewComitard data={activeData} admin={true} refetchData={refetchData} />
-      </Modal>
 
       <NewComitard data={activeData} admin={true} refetchData={refetchData} />
 
@@ -102,8 +151,6 @@ export default function AdminAccount({ data, refetchData, activeData }: AdminAcc
           Edit/Remove auctions <br />
         </CardContent>
       </Card>
-
-
 
       <Card sx={{ width: "100%", mb: 4 }}>
         <CardContent>

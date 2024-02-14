@@ -29,8 +29,9 @@ export default function AdminAccountPage() {
 
   useEffect(() => {
     fetchAllData();
-  }, [])
+  }, [refetchData]); 
 
+  // FILEPATH: /home/riri/git/mercatosGCL/src/pages/admin-account.tsx
   return (
     <>
       <Container maxWidth="xl">
