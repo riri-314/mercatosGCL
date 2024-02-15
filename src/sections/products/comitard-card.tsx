@@ -19,10 +19,11 @@ import { functions } from "../../firebase_config";
 import { Alert, AlertColor } from "@mui/material";
 import { LoadingButton } from "@mui/lab";
 import { useAuth } from "../../auth/AuthProvider";
+import LinearProgress from "@mui/material/LinearProgress";
 
 // ----------------------------------------------------------------------
 
-interface ShopProductCardProps {
+interface ComitardCardProps {
   product: any;
   user: string | undefined;
   cercleId: string;
@@ -34,7 +35,7 @@ interface ShopProductCardProps {
   refetchData: () => void;
 }
 
-export default function ShopProductCard({
+export default function ComitardCard({
   product,
   cercleId,
   comitardId,
@@ -43,7 +44,7 @@ export default function ShopProductCard({
   enchereMax,
   isInTimeFrame,
   refetchData,
-}: ShopProductCardProps) {
+}: ComitardCardProps) {
   const [open, setOpen] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
   const [displayVote, setDisplayVote] = useState(false);
@@ -128,7 +129,6 @@ export default function ShopProductCard({
     const enchereStart = product?.enchereStart?.toMillis();
     const enchereStop = product?.enchereStop?.toMillis();
     const now = new Date().getTime();
-    //if (product?.name == "Georges") {console.log("enchereStart: ", enchereStart, "enchereStop: ", enchereStop, "now: ", now)}
     if (now >= enchereStart && now <= enchereStop) {
       setTimeLeft(enchereStop - now);
       return;
@@ -231,6 +231,24 @@ export default function ShopProductCard({
     </Label>
   );
 
+  const renderPrice = (
+    <Label
+      variant="filled"
+      color={"info"}
+      sx={{
+        zIndex: 9,
+        top: 16,
+        left: 16,
+        position: "absolute",
+        textTransform: "uppercase",
+        boxShadow: (theme: any) => theme.shadows[4],
+      }}
+    >
+      <Iconify icon="ic:round-show-chart" />
+       15 fûts
+    </Label>
+  );
+
   const renderImg = (
     <LazyLoad>
       <Box
@@ -249,16 +267,18 @@ export default function ShopProductCard({
     </LazyLoad>
   );
 
+
+
   return (
     <>
       <Card>
         <Box onClick={handleOpen} sx={{ pt: "100%", position: "relative" }}>
           {timeLeft > 0 && renderStatus}
           {/*{encheres.top.vote > 0 && renderPrice}*/}
-
+          {renderPrice}
           {renderImg}
         </Box>
-
+        {timeLeft > 0 && <LinearProgress color={"error"}/>}
         <Stack spacing={2} sx={{ p: 3 }}>
           <Typography variant="h6" noWrap>
             {product.firstname} "{product.nickname}" {product.name}
@@ -305,8 +325,10 @@ export default function ShopProductCard({
         <Card sx={style}>
           <Box sx={{ pt: "50%", position: "relative" }}>
             {timeLeft > 0 && renderStatus}
+
             {renderImg}
           </Box>
+          {timeLeft > 0 && <LinearProgress color={"error"}/>}
           <Typography variant="h1" sx={{ pl: 3, pt: 2 }}>
             {product.firstname} {product.name}
             <Divider variant="middle" />
