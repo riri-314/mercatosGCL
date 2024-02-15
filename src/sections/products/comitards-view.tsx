@@ -5,7 +5,7 @@ import Typography from "@mui/material/Typography";
 import {useAuth} from "../../auth/AuthProvider";
 import {useData} from "../../data/DataProvider";
 import Loading from "../loading/loading";
-import ProductCard from "./product-card";
+import ComitardCard from "./comitard-card.tsx";
 
 import { useEffect, useState } from "react";
 import { Box } from "@mui/material";
@@ -13,7 +13,7 @@ import Iconify from "../../components/iconify/iconify";
 
 
 // ----------------------------------------------------------------------
-export default function ProductsView() {
+export default function ComitardsView() {
   const { user } = useAuth();
   const { data, refetchData, fetchedTime } = useData();
   const [isInTimeFrame, setIsInTimeFrame] = useState(false);
@@ -168,7 +168,7 @@ export default function ProductsView() {
                     )
                     .map((comitardID: any) => (
                       <Grid key={comitardID} item xs={12} sm={6} md={3}>
-                        <ProductCard
+                        <ComitardCard
                           product={
                             data.data().cercles[cercleId].comitards[comitardID]
                           }
