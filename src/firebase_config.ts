@@ -6,8 +6,8 @@ import { initializeApp } from "@firebase/app";
 import { getFirestore } from "@firebase/firestore";
 import { getAuth } from "@firebase/auth";
 import { getStorage } from "@firebase/storage";
-//import { connectFunctionsEmulator, getFunctions } from "@firebase/functions";
-import { getFunctions } from "@firebase/functions";
+import { connectFunctionsEmulator, getFunctions } from "@firebase/functions";
+//import { getFunctions } from "@firebase/functions";
 
 // https://firebase.google.com/docs/web/setup#available-libraries
 
@@ -40,7 +40,7 @@ export const storage = getStorage(app);
 export const functions = getFunctions(app);
 
 
-//connectFunctionsEmulator(functions, "127.0.0.1", 5001);
+connectFunctionsEmulator(functions, "127.0.0.1", 5001);
 
 //const analytics = getAnalytics(app);
 

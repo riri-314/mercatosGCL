@@ -455,6 +455,57 @@ function generateRandomPassword(): string {
   return "123456";
 }
 
+
+
+exports.deactivateUser = onCall(async (request) => {
+  const auth = request.auth;
+  const data = request.data;
+  const uid = data.uid;
+
+  if (!auth || !(await getAdminUid(auth.uid))) {
+    throw new HttpsError("permission-denied", "Unauthorized request!");
+  }
+
+  await deleteUserAuth(uid);
+  return { message: "User deleted" };
+});
+
+exports.deleteUser = onCall(async (request) => {
+  const auth = request.auth;
+  const data = request.data;
+  const uid = data.uid;
+
+  if (!auth || !(await getAdminUid(auth.uid))) {
+    throw new HttpsError("permission-denied", "Unauthorized request!");
+  }
+
+  await deleteUserAuth(uid);
+
+
+  // Remove the map assigned with the user ID in all editions' cercles
+  const editionsSnapshot = await admin.firestore().collection("editions").get();
+  const batch = admin.firestore().batch();
+
+  editionsSnapshot.forEach((editionDoc) => {
+    const cercles = editionDoc.data().cercles || {};
+    Object.keys(cercles).forEach((cercleId) => {
+      if (cercleId === uid) {
+        delete cercles[cercleId];
+      }      
+    });
+    const editionRef = admin.firestore().collection("editions").doc(editionDoc.id);
+    batch.update(editionRef, { cercles });
+  });
+
+  await batch.commit();
+  
+  
+  return { message: "User deleted" };
+
+});
+
+
+
 exports.signUpUser = onCall(async (request) => {
   const auth = request.auth;
   const data = request.data;
@@ -519,6 +570,18 @@ exports.signUpUser = onCall(async (request) => {
   return { message: "User created and added to edition map" };
 });
 
+async function deleteUserAuth(uid: string): Promise<void> {
+  const admin_auth = admin.auth();
+  // Delete the user
+  try {
+    await admin_auth.deleteUser(uid);
+  } catch (error: any) {
+    throw new HttpsError("internal", "Failed to delete user: " + error.message);
+  }
+
+  return; 
+}
+
 /**
  * Retrieves the active edition from Firestore.
  * @returns {Firestore.DocumentReference} The Firestore document reference for the active edition.
@@ -549,7 +612,7 @@ async function getActiveEditionBis(): Promise<FirebaseFirestore.DocumentReferenc
     .get();
 
   const queryBis = await db.collection("editions").doc("rHiqrhsVIKrvsWCv0onw");
-  
+
   if (querySnapshot.empty) {
     throw new HttpsError("unavailable", "No editions found!");
   }
