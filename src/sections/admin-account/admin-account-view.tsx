@@ -25,6 +25,8 @@ import NewComitard from "./new_comitard";
 import { DocumentData } from "@firebase/firestore";
 import { useState } from "react";
 import QuickFilteringGrid from "./edition_table";
+import CercleTable from "./cercle_table";
+import EditCerle from "./edit_cercle";
 
 interface AdminAccountProps {
   data: DocumentData[];
@@ -43,6 +45,10 @@ export default function AdminAccount({
   const handleOpenModalEdition = () => setOpenModalEdition(true);
   const handleCloseModalEdition = () => setOpenModalEdition(false);
   const [modalEditionData, setModalEditionData] = useState<any | null>(null);
+
+  const [openModalCercle, setOpenModalCercle] = useState(false);
+  const [modalCercleData, setModalCercleData] = useState<any | null>(null);
+
 
   return (
     <>
@@ -87,11 +93,11 @@ export default function AdminAccount({
               handleOpenModalEdition();
             }}
           />
-      {errorEditionEdit && (
-        <Alert sx={{ mt: 3 }} severity={"error"}>
-          {errorEditionEdit}
-        </Alert>
-      )}
+          {errorEditionEdit && (
+            <Alert sx={{ mt: 3 }} severity={"error"}>
+              {errorEditionEdit}
+            </Alert>
+          )}
         </CardContent>
       </Card>
 
@@ -128,15 +134,34 @@ export default function AdminAccount({
           <Typography variant="h5" sx={{ mb: 1 }}>
             Éditer, supprimer cercle
           </Typography>
-          Table with cercle data. Column with edit button and delete button{" "}
-          <br />
-          Delete button raise a generic warning pop up and also delete the user
-          login <br />
-          Edit button raise a edit form in form of a modal, change email adress{" "}
-          <br />
-          Let change the fut count
+          <CercleTable
+            data={activeData}
+            refetchData={refetchData}
+            error={(error) => console.log("error: ", error)}
+            handleOpenModalCercle={(data: any) => {
+              setOpenModalCercle(true);
+              setModalCercleData(data);
+              //console.log("modal open:", data);
+            }}
+          />
         </CardContent>
       </Card>
+
+      <Modal
+        open={openModalCercle}
+        onClose={() => setOpenModalCercle(false)}
+        aria-labelledby="modal-modal-title"
+        aria-describedby="modal-modal-description"
+        sx={{
+          m: 3,
+          overflow: "scroll",
+          maxWidth: 800,
+          ml: "auto",
+          mr: "auto",
+        }}
+      >
+        <EditCerle refetchData={refetchData} data={modalCercleData} close={() => setOpenModalCercle(false)} editionId={activeData.id}/>
+      </Modal>
 
       <NewComitard data={activeData} admin={true} refetchData={refetchData} />
 
