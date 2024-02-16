@@ -40,9 +40,9 @@ export default function AccountPopover() {
         setLoading(true);
         try {
             await signOut(auth);
-            console.log("logout succes, user: ", auth.currentUser);
+            // console.log("logout succes, user: ", auth.currentUser);
         } catch {
-            console.log("logout error");
+            // console.log("logout error");
         }
         setLoading(false);
         setOpen(null);

@@ -19,7 +19,6 @@ function timestampToString(date: number | Date) {
 export default function Rules() {
 
     const {data} = useData();
-    console.log(data);
 
     return (<>
             <Stack

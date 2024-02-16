@@ -21,7 +21,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({children}) => {
     useEffect(() => {
 
         const fetchAdminMap = async () => {
-            console.log("FETCH ADMIN FROM DB")
+            // console.log("FETCH ADMIN FROM DB")
             const adminDocRef = doc(collection(db, 'admin'), 'admin');
             const adminDocSnap = await getDoc(adminDocRef);
             if (adminDocSnap.exists()) {
@@ -37,8 +37,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({children}) => {
 
         const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
             setUser(firebaseUser);
-            console.log("Firebase user: ", firebaseUser?.email);
-            console.log("Firebase user full: ", firebaseUser?.uid);
+            //console.log("Firebase user: ", firebaseUser?.email);
+            //console.log("Firebase user full: ", firebaseUser?.uid);
         });
         return () => {
             unsubscribe();
@@ -46,7 +46,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({children}) => {
     }, [auth]);
 
     const isAdmin = (): boolean => {
-        console.log("IS ADMIN?")
+        // console.log("IS ADMIN?")
         return adminMap.includes(user?.uid as string);
     }
 

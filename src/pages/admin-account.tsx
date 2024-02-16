@@ -22,7 +22,7 @@ export default function AdminAccountPage() {
         const dataArray = docs.docs.map((doc) => doc);
         const activeData = dataArray.filter((item) => item.data().active === true);
         //console.log("Active data: ", activeData[0].data());
-        console.log("data array: ", dataArray.map((doc) => doc.data()))
+        // console.log("data array: ", dataArray.map((doc) => doc.data()))
         setData(dataArray);
         setActiveData(activeData[0])
     }
