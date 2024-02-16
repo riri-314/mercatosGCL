@@ -14,8 +14,7 @@ const SPACING = 8;
 export default function Main({children, sx, ...other}: any) {
     const lgUp = useResponsive('lg', 'tt', 'up');
 
-    return (
-        <Box
+    return (<Box
             component="main"
             sx={{
                 position: 'relative',
@@ -31,7 +30,7 @@ export default function Main({children, sx, ...other}: any) {
                     maskRepeat: 'no-repeat',
                     maskPosition: 'center',
                     maskSize: 'contain',
-                    backgroundColor : (theme) => theme.palette.primary.main,
+                    backgroundColor: (theme) => theme.palette.primary.main,
                     opacity: (theme) => theme.palette.action.hoverOpacity,
                     zIndex: -1,
                 },
@@ -41,22 +40,16 @@ export default function Main({children, sx, ...other}: any) {
                 minHeight: 1,
                 display: 'flex',
                 flexDirection: 'column',
-                py: `${HEADER.H_MOBILE + SPACING}px`,
-                ...(lgUp && {
-                    px: 2,
-                    py: `${HEADER.H_DESKTOP + SPACING}px`,
-                    width: `calc(100% - ${NAV.WIDTH}px)`,
-                }),
-                ...sx,
+                py: `${HEADER.H_MOBILE + SPACING}px`, ...(lgUp && {
+                    px: 2, py: `${HEADER.H_DESKTOP + SPACING}px`, width: `calc(100% - ${NAV.WIDTH}px)`,
+                }), ...sx,
             }}
             {...other}
         >
             {children}
-        </Box>
-    );
+        </Box>);
 }
 
 Main.propTypes = {
-    children: PropTypes.node,
-    sx: PropTypes.object,
+    children: PropTypes.node, sx: PropTypes.object,
 };

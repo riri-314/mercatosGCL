@@ -1,7 +1,8 @@
 import LoadingButton from "@mui/lab/LoadingButton";
 import {
     Accordion,
-    AccordionDetails, AccordionSummary,
+    AccordionDetails,
+    AccordionSummary,
     Alert,
     AlertColor,
     CardContent,
@@ -30,9 +31,7 @@ interface NewComitardProps {
 }
 
 export default function NewComitard({
-                                        data,
-                                        admin,
-                                        refetchData,
+                                        data, admin, refetchData,
                                     }: NewComitardProps) {
     const [name, setName] = useState("");
     const [nameError, setNameError] = useState(false);
@@ -60,13 +59,9 @@ export default function NewComitard({
     const [estLeSeulError, setEstLeSeulError] = useState(false);
     const [picture, setPicture] = useState<ImageListType>([]);
     const [pictureError, setPictureError] = useState(false);
-    const [pictureUpload, setPictureUpload] = useState<number | undefined>(
-        undefined
-    );
+    const [pictureUpload, setPictureUpload] = useState<number | undefined>(undefined);
     const [error, setError] = useState("");
-    const [errorSeverity, setErrorSeverity] = useState<AlertColor | undefined>(
-        "error"
-    );
+    const [errorSeverity, setErrorSeverity] = useState<AlertColor | undefined>("error");
     const [loading, setLoading] = useState(false);
 
     const {user} = useAuth();
@@ -173,85 +168,76 @@ export default function NewComitard({
             console.log("Check user input ok");
             const storageRef = ref(storage, `${data.id}/${user?.uid}/${uuidv4()}`);
 
-            const uploadTask = uploadBytesResumable(
-                storageRef,
-                picture[0].file as File
-            );
-            uploadTask.on(
-                "state_changed",
-                (snapshot) => {
-                    // Observe state change events such as progress, pause, and resume
-                    // Get task progress, including the number of bytes uploaded and the total number of bytes to be uploaded
-                    const progress =
-                        (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                    console.log("Upload is " + progress + "% done");
-                    setPictureUpload(progress);
-                    switch (snapshot.state) {
-                        case "paused":
-                            console.log("Upload is paused");
-                            break;
-                        case "running":
-                            console.log("Upload is running");
-                            break;
-                    }
-                },
-                (error) => {
-                    // Handle unsuccessful uploads
-                    console.log("error uploading file: ", error);
-                    setPictureUpload(undefined);
-                    setErrorSeverity("error");
-                    setError("Une erreur est survenue lors de l'upload de l'image.");
-                    setLoading(false);
+            const uploadTask = uploadBytesResumable(storageRef, picture[0].file as File);
+            uploadTask.on("state_changed", (snapshot) => {
+                // Observe state change events such as progress, pause, and resume
+                // Get task progress, including the number of bytes uploaded and the total number of bytes to be uploaded
+                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                console.log("Upload is " + progress + "% done");
+                setPictureUpload(progress);
+                switch (snapshot.state) {
+                    case "paused":
+                        console.log("Upload is paused");
+                        break;
+                    case "running":
+                        console.log("Upload is running");
+                        break;
+                }
+            }, (error) => {
+                // Handle unsuccessful uploads
+                console.log("error uploading file: ", error);
+                setPictureUpload(undefined);
+                setErrorSeverity("error");
+                setError("Une erreur est survenue lors de l'upload de l'image.");
+                setLoading(false);
 
-                    return;
-                },
-                () => {
-                    getDownloadURL(uploadTask.snapshot.ref)
-                        .then((downloadURL) => {
-                            console.log("File available at", downloadURL);
-                            const data = {
-                                name: name,
-                                firstname: firstname,
-                                nickname: nickname,
-                                post: post,
-                                cercle: cercle ? cercle : null,
-                                teneurTaule: teneurTaule,
-                                etatCivil: etatCivil,
-                                age: age,
-                                nbEtoiles: nbEtoiles,
-                                pointFort: pointFort,
-                                pointFaible: pointFaible,
-                                estLeSeul: estLeSeul,
-                                picture: downloadURL,
-                            };
-                            const addMessage = httpsCallable(functions, "addComitard");
-                            addMessage(data).then((result) => {
-                                const data: any = result.data;
-                                // reload data
-                                refetchData();
-                                console.log("data:", data);
-                                setPictureUpload(undefined);
-                                setErrorSeverity("success");
-                                setError("Comitard créé avec succès");
-                                setLoading(false);
-                            }).catch((error) => {
-                                console.log("error:", error);
-                                setPictureUpload(undefined);
-                                setErrorSeverity("error");
-                                setError("Une erreur est survenue lors de la création du comitard. serveur error.");
-                                setLoading(false);
-                            });
-                            // call cloud function with all arguments and wait for response
-                        })
-                        .catch((error) => {
-                            console.log("error uploading file: ", error);
+                return;
+            }, () => {
+                getDownloadURL(uploadTask.snapshot.ref)
+                    .then((downloadURL) => {
+                        console.log("File available at", downloadURL);
+                        const data = {
+                            name: name,
+                            firstname: firstname,
+                            nickname: nickname,
+                            post: post,
+                            cercle: cercle ? cercle : null,
+                            teneurTaule: teneurTaule,
+                            etatCivil: etatCivil,
+                            age: age,
+                            nbEtoiles: nbEtoiles,
+                            pointFort: pointFort,
+                            pointFaible: pointFaible,
+                            estLeSeul: estLeSeul,
+                            picture: downloadURL,
+                        };
+                        const addMessage = httpsCallable(functions, "addComitard");
+                        addMessage(data).then((result) => {
+                            const data: any = result.data;
+                            // reload data
+                            refetchData();
+                            console.log("data:", data);
+                            setPictureUpload(undefined);
+                            setErrorSeverity("success");
+                            setError("Comitard créé avec succès");
+                            setLoading(false);
+                        }).catch((error) => {
+                            console.log("error:", error);
                             setPictureUpload(undefined);
                             setErrorSeverity("error");
-                            setError("Une erreur est survenue lors de l'upload de l'image.");
+                            setError("Une erreur est survenue lors de la création du comitard. serveur error.");
                             setLoading(false);
                         });
-                }
-            );
+                        // call cloud function with all arguments and wait for response
+                    })
+                    .catch((error) => {
+                        console.log("error uploading file: ", error);
+                        setPictureUpload(undefined);
+                        setErrorSeverity("error");
+                        setError("Une erreur est survenue lors de l'upload de l'image.");
+                        setLoading(false);
+                    });
+            });
         } else {
             setLoading(false);
             setErrorSeverity("error");
@@ -259,8 +245,7 @@ export default function NewComitard({
         }
     }
 
-    return (
-        <>
+    return (<>
             <Card sx={{width: "100%", mb: 4}}>
                 <CardContent>
                     <Accordion>
@@ -361,8 +346,7 @@ export default function NewComitard({
                                         {txtlenght1}
                                     </FormHelperText>
                                 </Grid>
-                                {admin && (
-                                    <Grid item xs={12} sm={6}>
+                                {admin && (<Grid item xs={12} sm={6}>
                                         <UnstyledSelectIntroduction
                                             isError={cercleError}
                                             option={cerclesOption()}
@@ -372,8 +356,7 @@ export default function NewComitard({
                                                 setCercleError(false);
                                             }}
                                         />
-                                    </Grid>
-                                )}
+                                    </Grid>)}
                                 <Grid item xs={12} sm={6}>
                                     <QuantityInput
                                         title="Teneur en taule du comitard"
@@ -550,15 +533,12 @@ export default function NewComitard({
                                     </LoadingButton>
                                 </Grid>
                             </Grid>
-                            {error && (
-                                <Alert sx={{mt: 3}} severity={errorSeverity}>
+                            {error && (<Alert sx={{mt: 3}} severity={errorSeverity}>
                                     {error}
-                                </Alert>
-                            )}
+                                </Alert>)}
                         </AccordionDetails>
                     </Accordion>
                 </CardContent>
             </Card>
-        </>
-    );
+        </>);
 }

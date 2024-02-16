@@ -57,9 +57,7 @@ export default function ComitardCard({
     const [displayVote, setDisplayVote] = useState(false);
     const [vote, setVote] = useState(0);
     const [voteError, setVoteError] = useState("");
-    const [voteErrorSeverity, setVoteErrorSeverity] = useState<
-        AlertColor | undefined
-    >("error");
+    const [voteErrorSeverity, setVoteErrorSeverity] = useState<AlertColor | undefined>("error");
     const [loading, setLoading] = useState(false);
     const handleOpen = () => setOpen(true);
     const handleClose = () => setOpen(false);
@@ -165,13 +163,7 @@ export default function ComitardCard({
         setVoteError("");
         setVoteErrorSeverity("error");
         console.log("vote: ", vote);
-        if (
-            vote &&
-            vote > 0 &&
-            vote >= enchereMin &&
-            enchereMax >= vote &&
-            vote <= nbFutsLeft
-        ) {
+        if (vote && vote > 0 && vote >= enchereMin && enchereMax >= vote && vote <= nbFutsLeft) {
             const Vote = httpsCallable(functions, "vote");
             Vote({vote: vote, comitardId: comitardId})
                 .then((result) => {
@@ -219,8 +211,7 @@ export default function ComitardCard({
         outline: "none", // Remove outline (focus indicator)
     };
 
-    const renderStatus = (
-        <Label
+    const renderStatus = (<Label
             variant="filled"
             color={"error"}
             sx={{
@@ -234,17 +225,13 @@ export default function ComitardCard({
         >
             {formatTimeLeft(timeLeft)}
             <Iconify icon="jam:chronometer"/>
-        </Label>
-    );
+        </Label>);
 
-    const firstEnchere = product.encheres
-        ? Object.values(product.encheres)
-            .filter((enchere) => enchere !== null)
-            .sort((a, b) => b.date.seconds - a.date.seconds)[0]
-        : null;
+    const firstEnchere = product.encheres ? Object.values(product.encheres)
+        .filter((enchere) => enchere !== null)
+        .sort((a, b) => b.date.seconds - a.date.seconds)[0] : null;
 
-    const renderPrice = (
-        <Label
+    const renderPrice = (<Label
             variant="filled"
             color={"info"}
             sx={{
@@ -259,29 +246,21 @@ export default function ComitardCard({
             <Iconify icon="ic:round-show-chart"/>
             {(!(timeLeft > 0) && product.encheres !== null) && <span>win</span>}
             {firstEnchere ? `${firstEnchere.vote} fûts` : 'No data'}
-        </Label>
-    );
+        </Label>);
 
-    const renderImg = (
-        <LazyLoad>
+    const renderImg = (<LazyLoad>
             <Box
                 component="img"
                 alt={product.name}
                 src={product.picture}
                 sx={{
-                    top: 0,
-                    width: 1,
-                    height: 1,
-                    objectFit: "cover",
-                    position: "absolute",
+                    top: 0, width: 1, height: 1, objectFit: "cover", position: "absolute",
                 }}
                 loading="lazy"
             />
-        </LazyLoad>
-    );
+        </LazyLoad>);
 
-    const renderWinner = (
-        <Label
+    const renderWinner = (<Label
             variant="filled"
             color={"success"}
             sx={{
@@ -295,12 +274,10 @@ export default function ComitardCard({
         >
             <Iconify icon="solar:cup-bold"/>
             {firstEnchere ? `${cerclesData[firstEnchere.sender].name}` : 'No data'}
-        </Label>
-    );
+        </Label>);
 
 
-    return (
-        <>
+    return (<>
             <Card>
                 <Box onClick={handleOpen} sx={{pt: "100%", position: "relative"}}>
                     {timeLeft > 0 && renderStatus}
@@ -314,8 +291,7 @@ export default function ComitardCard({
                         {product.firstname} "{product.nickname}" {product.name}
                     </Typography>
 
-                    {displayVote && isInTimeFrame && (
-                        <>
+                    {displayVote && isInTimeFrame && (<>
                             <QuantityInput
                                 title="Enchère"
                                 min={enchereMin}
@@ -337,13 +313,10 @@ export default function ComitardCard({
                             >
                                 Enchérir
                             </LoadingButton>
-                        </>
-                    )}
-                    {voteError && (
-                        <Alert sx={{mt: 3}} severity={voteErrorSeverity}>
+                        </>)}
+                    {voteError && (<Alert sx={{mt: 3}} severity={voteErrorSeverity}>
                             {voteError}
-                        </Alert>
-                    )}
+                        </Alert>)}
                 </Stack>
             </Card>
 
@@ -382,8 +355,7 @@ export default function ComitardCard({
                                     <br/>
                                     <strong>Nombre
                                         d'étoiles</strong> : {Array.from({length: product.nbEtoiles}, (_, i) => (
-                                    <span key={i}>★</span>
-                                ))}
+                                    <span key={i}>★</span>))}
                                     <br/>
                                     <strong>Point fort</strong> : {product.pointFort}
                                     <br/>
@@ -415,13 +387,10 @@ export default function ComitardCard({
                                         >
                                             Enchérir
                                         </LoadingButton>
-                                        {voteError && (
-                                            <Alert sx={{mt: 3}} severity={voteErrorSeverity}>
+                                        {voteError && (<Alert sx={{mt: 3}} severity={voteErrorSeverity}>
                                                 {voteError}
-                                            </Alert>
-                                        )}
-                                    </Stack>
-                                )}
+                                            </Alert>)}
+                                    </Stack>)}
 
                                 <EncheresList encheres={product.encheres} cerclesData={cerclesData}
                                               won={timeLeft <= 0 && product.encheres}/>
@@ -430,6 +399,5 @@ export default function ComitardCard({
                     </Box>
                 </Card>
             </Modal>
-        </>
-    );
+        </>);
 }
