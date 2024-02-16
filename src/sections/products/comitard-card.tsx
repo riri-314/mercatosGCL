@@ -227,9 +227,9 @@ export default function ComitardCard({
             <Iconify icon="jam:chronometer"/>
         </Label>);
 
-    const firstEnchere = product.encheres ? Object.values(product.encheres)
+    const firstEnchere: any = product.encheres ? Object.values(product.encheres)
         .filter((enchere) => enchere !== null)
-        .sort((a, b) => b.date.seconds - a.date.seconds)[0] : null;
+        .sort((a: any, b: any) => b.date.seconds - a.date.seconds)[0] : null;
 
     const renderPrice = (<Label
             variant="filled"
@@ -245,7 +245,8 @@ export default function ComitardCard({
         >
             <Iconify icon="ic:round-show-chart"/>
             {(!(timeLeft > 0) && product.encheres !== null) && <span>win</span>}
-            {firstEnchere ? `${firstEnchere.vote} fûts` : 'No data'}
+            {firstEnchere ? `${(firstEnchere as { vote: number }).vote} fûts` : 'No data'}
+
         </Label>);
 
     const renderImg = (<LazyLoad>
@@ -273,7 +274,7 @@ export default function ComitardCard({
             }}
         >
             <Iconify icon="solar:cup-bold"/>
-            {firstEnchere ? `${cerclesData[firstEnchere.sender].name}` : 'No data'}
+            {firstEnchere ? `${(cerclesData[firstEnchere.sender as string] as { name: string }).name}` : 'No data'}
         </Label>);
 
 
