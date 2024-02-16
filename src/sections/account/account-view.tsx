@@ -4,7 +4,6 @@ import Card from "@mui/material/Card";
 
 import { Alert, CardContent, Modal } from "@mui/material";
 import { useAuth } from "../../auth/AuthProvider";
-import {CardContent} from "@mui/material";
 
 
 import {DocumentData} from "@firebase/firestore";

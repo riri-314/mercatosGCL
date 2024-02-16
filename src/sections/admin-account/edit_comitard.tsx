@@ -275,8 +275,8 @@ export default function EditComitard({
             setLoading(false);
             setErrorSeverity("error");
             setError("Certains champs sont incorrects. Petit con.");
-        }
-    }
+        })
+    }}}
   return (
     <>
       <Card sx={{ width: "100%", mb: 4 }}>

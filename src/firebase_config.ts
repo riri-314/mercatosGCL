@@ -6,8 +6,8 @@ import { initializeApp } from "@firebase/app";
 import { getFirestore } from "@firebase/firestore";
 import { getAuth } from "@firebase/auth";
 import { getStorage } from "@firebase/storage";
-import { connectFunctionsEmulator, getFunctions } from "@firebase/functions";
-//import { getFunctions } from "@firebase/functions";
+//import { connectFunctionsEmulator, getFunctions } from "@firebase/functions";
+import { getFunctions } from "@firebase/functions";
 
 // https://firebase.google.com/docs/web/setup#available-libraries
 
