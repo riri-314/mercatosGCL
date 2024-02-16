@@ -1,93 +1,77 @@
 import LoadingButton from "@mui/lab/LoadingButton";
-import {
-  Alert,
-  AlertColor,
-  CardContent,
-  FormHelperText,
-  Grid,
-  TextField,
-} from "@mui/material";
+import {Alert, AlertColor, CardContent, FormHelperText, Grid, TextField,} from "@mui/material";
 import Card from "@mui/material/Card";
 import Typography from "@mui/material/Typography";
 import UnstyledSelectIntroduction from "../../components/inputs/select";
 import QuantityInput from "../../components/inputs/numberInput";
-import { useState } from "react";
+import {useState} from "react";
 import PictureInput from "../../components/inputs/pictureInput";
-import { ImageListType } from "react-images-uploading";
-import { functions, storage } from "../../firebase_config";
-import { getDownloadURL, ref, uploadBytesResumable } from "@firebase/storage";
-import { v4 as uuidv4 } from "uuid";
-import { DocumentData } from "@firebase/firestore";
-import { useAuth } from "../../auth/AuthProvider";
-import { httpsCallable } from "@firebase/functions";
+import {ImageListType} from "react-images-uploading";
+import {functions, storage} from "../../firebase_config";
+import {getDownloadURL, ref, uploadBytesResumable} from "@firebase/storage";
+import {v4 as uuidv4} from "uuid";
+import {DocumentData} from "@firebase/firestore";
+import {useAuth} from "../../auth/AuthProvider";
+import {httpsCallable} from "@firebase/functions";
 
 interface EditComitardProps {
-  data: DocumentData;
-  activeData: DocumentData;
-  admin: Boolean;
-  close: () => void;
-  refetchData: () => void;
+    data: DocumentData;
+    activeData: DocumentData;
+    admin: Boolean;
+    close: () => void;
+    refetchData: () => void;
 }
 
 export default function EditComitard({
-  data,
-  activeData,
-  admin,
-  close,
-  refetchData,
-}: EditComitardProps) {
-  const [name, setName] = useState(data.name);
-  const [nameError, setNameError] = useState(false);
-  const [firstname, setFirstname] = useState(data.firstname);
-  const [firstnameError, setFirstnameError] = useState(false);
-  const [nickname, setNickname] = useState(data.nickname);
-  const [nicknameError, setNicknameError] = useState(false);
-  const [post, setPost] = useState(data.post);
-  const [postError, setPostError] = useState(false);
-  const [cercle, setCercle] = useState(data.cercle);
-  const [cercleError, setCercleError] = useState(false);
-  const [teneurTaule, setTeneurTaule] = useState(data.teneurTaule);
-  const [teneurTauleError, setTeneurTauleError] = useState(false);
-  const [etatCivil, setEtatCivil] = useState(data.etatCivil);
-  const [etatCivilError, setEtatCivilError] = useState(false);
-  const [age, setAge] = useState(data.age);
-  const [ageError, setAgeError] = useState(false);
-  const [nbEtoiles, setNbEtoiles] = useState(data.nbEtoiles);
-  const [nbEtoilesError, setNbEtoilesError] = useState(false);
-  const [pointFort, setPointFort] = useState(data.pointFort);
-  const [pointFortError, setPointFortError] = useState(false);
-  const [pointFaible, setPointFaible] = useState(data.pointFaible);
-  const [pointFaibleError, setPointFaibleError] = useState(false);
-  const [estLeSeul, setEstLeSeul] = useState(data.estLeSeul);
-  const [estLeSeulError, setEstLeSeulError] = useState(false);
-  const [picture, setPicture] = useState<ImageListType>([]);
-  const [pictureUpdated, setPictureUpdated] = useState(false);
-  const [pictureError, setPictureError] = useState(false);
-  const [pictureUpload, setPictureUpload] = useState<number | undefined>(
-    undefined
-  );
-  const [error, setError] = useState("");
-  const [errorSeverity, setErrorSeverity] = useState<AlertColor | undefined>(
-    "error"
-  );
-  const [loading, setLoading] = useState(false);
+                                         data, activeData, admin, close, refetchData,
+                                     }: EditComitardProps) {
+    const [name, setName] = useState(data.name);
+    const [nameError, setNameError] = useState(false);
+    const [firstname, setFirstname] = useState(data.firstname);
+    const [firstnameError, setFirstnameError] = useState(false);
+    const [nickname, setNickname] = useState(data.nickname);
+    const [nicknameError, setNicknameError] = useState(false);
+    const [post, setPost] = useState(data.post);
+    const [postError, setPostError] = useState(false);
+    const [cercle, setCercle] = useState(data.cercle);
+    const [cercleError, setCercleError] = useState(false);
+    const [teneurTaule, setTeneurTaule] = useState(data.teneurTaule);
+    const [teneurTauleError, setTeneurTauleError] = useState(false);
+    const [etatCivil, setEtatCivil] = useState(data.etatCivil);
+    const [etatCivilError, setEtatCivilError] = useState(false);
+    const [age, setAge] = useState(data.age);
+    const [ageError, setAgeError] = useState(false);
+    const [nbEtoiles, setNbEtoiles] = useState(data.nbEtoiles);
+    const [nbEtoilesError, setNbEtoilesError] = useState(false);
+    const [pointFort, setPointFort] = useState(data.pointFort);
+    const [pointFortError, setPointFortError] = useState(false);
+    const [pointFaible, setPointFaible] = useState(data.pointFaible);
+    const [pointFaibleError, setPointFaibleError] = useState(false);
+    const [estLeSeul, setEstLeSeul] = useState(data.estLeSeul);
+    const [estLeSeulError, setEstLeSeulError] = useState(false);
+    const [picture, setPicture] = useState<ImageListType>([]);
+    const [pictureUpdated, setPictureUpdated] = useState(false);
+    const [pictureError, setPictureError] = useState(false);
+    const [pictureUpload, setPictureUpload] = useState<number | undefined>(undefined);
+    const [error, setError] = useState("");
+    const [errorSeverity, setErrorSeverity] = useState<AlertColor | undefined>("error");
+    const [loading, setLoading] = useState(false);
 
-  const { user } = useAuth();
+    const {user} = useAuth();
 
-  const txtlenght1 = 30;
-  const txtlenght2 = 150;
+    const txtlenght1 = 30;
+    const txtlenght2 = 150;
 
-  console.log("data in modal: ", data);
 
-  function cerclesOption() {
-    const out: { [key: string]: string } = {}; // Add type annotation to the 'out' object
-    for (const [key, value] of Object.entries(activeData.data().cercles)) {
-      if (typeof value === "object" && value !== null) {
-        out[(value as { name: string }).name] = key; // Add type assertion to 'value'
-      }
+    function cerclesOption() {
+        const out: { [key: string]: string } = {}; // Add type annotation to the 'out' object
+        for (const [key, value] of Object.entries(activeData.data().cercles)) {
+            if (typeof value === "object" && value !== null) {
+                out[(value as { name: string }).name] = key; // Add type assertion to 'value'
+            }
+        }
+        return out;
     }
-    return out;
-  }
 
   async function handleEditComitard() {
     setLoading(true);
@@ -174,40 +158,34 @@ export default function EditComitard({
     //  setPictureError(true);
     //}
 
-    if (!error) {
-      console.log("Check user input ok");
-      if (pictureUpdated) {
-        const storageRef = ref(storage, `${data.id}/${user?.uid}/${uuidv4()}`);
 
-        const uploadTask = uploadBytesResumable(
-          storageRef,
-          picture[0].file as File
-        );
-        uploadTask.on(
-          "state_changed",
-          (snapshot) => {
-            // Observe state change events such as progress, pause, and resume
-            // Get task progress, including the number of bytes uploaded and the total number of bytes to be uploaded
-            const progress =
-              (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-            console.log("Upload is " + progress + "% done");
-            setPictureUpload(progress);
-            switch (snapshot.state) {
-              case "paused":
-                console.log("Upload is paused");
-                break;
-              case "running":
-                console.log("Upload is running");
-                break;
-            }
-          },
-          (error) => {
-            // Handle unsuccessful uploads
-            console.log("error uploading file: ", error);
-            setPictureUpload(undefined);
-            setErrorSeverity("error");
-            setError("Une erreur est survenue lors de l'upload de l'image.");
-            setLoading(false);
+        if (!error) {
+            console.log("Check user input ok");
+            if (pictureUpdated) {
+                const storageRef = ref(storage, `${data.id}/${user?.uid}/${uuidv4()}`);
+
+                const uploadTask = uploadBytesResumable(storageRef, picture[0].file as File);
+                uploadTask.on("state_changed", (snapshot) => {
+                    // Observe state change events such as progress, pause, and resume
+                    // Get task progress, including the number of bytes uploaded and the total number of bytes to be uploaded
+                    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                    console.log("Upload is " + progress + "% done");
+                    setPictureUpload(progress);
+                    switch (snapshot.state) {
+                        case "paused":
+                            console.log("Upload is paused");
+                            break;
+                        case "running":
+                            console.log("Upload is running");
+                            break;
+                    }
+                }, (error) => {
+                    // Handle unsuccessful uploads
+                    console.log("error uploading file: ", error);
+                    setPictureUpload(undefined);
+                    setErrorSeverity("error");
+                    setError("Une erreur est survenue lors de l'upload de l'image.");
+                    setLoading(false);
 
             return;
           },
@@ -295,24 +273,10 @@ export default function EditComitard({
             setErrorSeverity("success");
             setError("Comitard créé avec succès");
             setLoading(false);
-          })
-          .catch((error) => {
-            console.log("error:", error);
-            setPictureUpload(undefined);
             setErrorSeverity("error");
-            setError(
-              "Une erreur est survenue lors de la création du comitard. serveur error."
-            );
-            setLoading(false);
-          });
-      }
-    } else {
-      setLoading(false);
-      setErrorSeverity("error");
-      setError("Certains champs sont incorrects. Petit con.");
+            setError("Certains champs sont incorrects. Petit con.");
+        }
     }
-  }
-
   return (
     <>
       <Card sx={{ width: "100%", mb: 4 }}>
@@ -597,17 +561,18 @@ export default function EditComitard({
               </Grid>
             )}
 
-            <Grid item xs={12} sm={12}>
-              <LoadingButton
-                size="large"
-                variant="contained"
-                fullWidth
-                onClick={close}
-                color="error"
-              >
-                Annuler
-              </LoadingButton>
-            </Grid>
+                        <Grid item xs={12} sm={12}>
+                            <LoadingButton
+                                size="large"
+                                variant="contained"
+                                fullWidth
+                                onClick={close}
+                                color="error"
+                            >
+                                Annuler
+                            </LoadingButton>
+                        </Grid>
+
 
             <Grid item xs={12} sm={12}>
               <LoadingButton
@@ -630,4 +595,5 @@ export default function EditComitard({
       </Card>
     </>
   );
+
 }

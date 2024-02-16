@@ -1,4 +1,4 @@
-import { Helmet } from 'react-helmet-async';
+import {Helmet} from 'react-helmet-async';
 import Container from '@mui/material/Container';
 import Rules from '../sections/rules/rules-view';
 
@@ -6,16 +6,14 @@ import Rules from '../sections/rules/rules-view';
 // ----------------------------------------------------------------------
 
 export default function RulesPage() {
-  return (
-    <>
-    <Container maxWidth="xl">
+    return (<>
+            <Container maxWidth="xl">
 
-      <Helmet>
-        <title> Règlement </title>
-      </Helmet>
+                <Helmet>
+                    <title> Règlement </title>
+                </Helmet>
 
-      <Rules />
-    </Container>
-    </>
-  );
+                <Rules/>
+            </Container>
+        </>);
 }

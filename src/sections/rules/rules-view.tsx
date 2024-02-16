@@ -12,21 +12,15 @@ import Box from "@mui/material/Box";
 
 function timestampToString(date: number | Date) {
     return new Intl.DateTimeFormat('fr-BE', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit'
+        year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
     }).format(date)
 }
 
 export default function Rules() {
 
     const {data} = useData();
-    console.log(data);
 
-    return (
-        <>
+    return (<>
             <Stack
                 direction="row"
                 alignItems="center"
@@ -40,15 +34,15 @@ export default function Rules() {
 
             <Card sx={{width: "100%", mb: 4}}>
                 <CardContent sx={{ml: 2}}>
-                    {data ? (
-                        <>
+                    {data ? (<>
                             <Markdown remarkPlugins={[remarkGfm]}
                                       rehypePlugins={[rehypeRaw]}>{data.data().rules}</Markdown>
 
                             <hr/>
 
                             <Box sx={{display: "flex", alignItems: "center", mt: 2, gap: (theme) => theme.spacing(1)}}>
-                                <Iconify sx={{color: (theme: any) => theme.palette.primary.main}} icon="solar:playback-speed-bold-duotone"/>
+                                <Iconify sx={{color: (theme: any) => theme.palette.primary.main}}
+                                         icon="solar:playback-speed-bold-duotone"/>
                                 <Typography variant="h5">Contexte initial</Typography>
                             </Box>
                             <ul>
@@ -63,7 +57,8 @@ export default function Rules() {
                             </ul>
 
                             <Box sx={{display: "flex", alignItems: "center", mt: 2, gap: (theme) => theme.spacing(1)}}>
-                                <Iconify sx={{color: (theme: any) => theme.palette.primary.main}} icon="solar:clock-circle-line-duotone"/>
+                                <Iconify sx={{color: (theme: any) => theme.palette.primary.main}}
+                                         icon="solar:clock-circle-line-duotone"/>
                                 <Typography variant="h5">Durée du mercato</Typography>
                             </Box>
 
@@ -78,7 +73,8 @@ export default function Rules() {
 
 
                             <Box sx={{display: "flex", alignItems: "center", mt: 2, gap: (theme) => theme.spacing(1)}}>
-                                <Iconify sx={{color: (theme: any) => theme.palette.primary.main}} icon="solar:user-hand-up-bold-duotone"/>
+                                <Iconify sx={{color: (theme: any) => theme.palette.primary.main}}
+                                         icon="solar:user-hand-up-bold-duotone"/>
                                 <Typography variant="h5">Enchères</Typography>
                             </Box>
 
@@ -98,7 +94,8 @@ export default function Rules() {
                             </ul>
 
                             <Box sx={{display: "flex", alignItems: "center", mt: 2, gap: (theme) => theme.spacing(1)}}>
-                                <Iconify sx={{color: (theme: any) => theme.palette.primary.main}} icon="solar:chart-2-bold-duotone"/>
+                                <Iconify sx={{color: (theme: any) => theme.palette.primary.main}}
+                                         icon="solar:chart-2-bold-duotone"/>
                                 <Typography variant="h5">Gains/remboursements par enchère</Typography>
                             </Box>
 
@@ -116,13 +113,9 @@ export default function Rules() {
                                     {data?.data().remboursementGagnant * 100}% du prix d'achat
                                 </li>
                             </ul>
-                        </>
-                    ) : (
-                        <Loading/>
-                    )}
+                        </>) : (<Loading/>)}
                 </CardContent>
 
             </Card>
-        </>
-    );
+        </>);
 }

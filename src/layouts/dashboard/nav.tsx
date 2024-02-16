@@ -7,7 +7,6 @@ import { alpha } from "@mui/material/styles";
 import ListItemButton from "@mui/material/ListItemButton";
 
 import { NAV } from "./config-layout";
-//import navConfig from './config-navigation';
 
 import { useResponsive } from "../../hooks/use-responsive";
 import { useAuth } from "../../auth/AuthProvider";
@@ -75,7 +74,7 @@ export default function Nav({ openNav, onCloseNav }: any) {
 
   const { user } = useAuth();
 
-  let navConfig = [
+  const navConfig = [
     {
       title: "résultats",
       path: "/",

@@ -1,15 +1,15 @@
 import {Helmet} from 'react-helmet-async';
-import LoginView from '../sections/login/login-view';
+import ComitardsView from '../sections/products/comitards-view.tsx';
 
 
 // ----------------------------------------------------------------------
 
-export default function LoginPage() {
+export default function ComitardsPage() {
     return (<>
             <Helmet>
-                <title> Connection </title>
+                <title> Comitards </title>
             </Helmet>
 
-            <LoginView/>
+            <ComitardsView/>
         </>);
 }

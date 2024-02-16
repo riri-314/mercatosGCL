@@ -1,19 +1,25 @@
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import Card from "@mui/material/Card";
+
 import { Alert, CardContent, Modal } from "@mui/material";
 import { useAuth } from "../../auth/AuthProvider";
+import {CardContent} from "@mui/material";
 
-import { DocumentData } from "@firebase/firestore";
+
+import {DocumentData} from "@firebase/firestore";
 import NewComitard from "../admin-account/new_comitard";
+
 import ComitardTable from "../admin-account/comitard_table";
 import { useState } from "react";
 import EditComitard from "../admin-account/edit_comitard";
 
+
 interface AccountProps {
-  data: DocumentData;
-  refetchData: () => void;
+    data: DocumentData;
+    refetchData: () => void;
 }
+
 
 export default function Account({ data, refetchData }: AccountProps) {
   const { user } = useAuth();
@@ -92,4 +98,5 @@ export default function Account({ data, refetchData }: AccountProps) {
       </Card>
     </>
   );
+
 }
