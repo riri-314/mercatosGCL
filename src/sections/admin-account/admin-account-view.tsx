@@ -47,8 +47,13 @@ export default function AdminAccount({
   const handleCloseModalEdition = () => setOpenModalEdition(false);
   const [modalEditionData, setModalEditionData] = useState<any | null>(null);
 
+  const [errorCercleEdit, setErrorCercleEdit] = useState("");
   const [openModalCercle, setOpenModalCercle] = useState(false);
   const [modalCercleData, setModalCercleData] = useState<any | null>(null);
+
+  const [errorComitardEdit, setErrorComitardEdit] = useState("");
+  const [openModalComitard, setOpenModalComitard] = useState(false);
+  const [modalComitardData, setModalComitardData] = useState<any | null>(null);
 
   return (
     <>
@@ -137,13 +142,18 @@ export default function AdminAccount({
           <CercleTable
             data={activeData}
             refetchData={refetchData}
-            error={(error) => console.log("error: ", error)}
+            error={(error) => setErrorCercleEdit(error)}
             handleOpenModalCercle={(data: any) => {
               setOpenModalCercle(true);
               setModalCercleData(data);
               //console.log("modal open:", data);
             }}
           />
+          {errorCercleEdit && (
+            <Alert sx={{ mt: 3 }} severity={"error"}>
+              {errorCercleEdit}
+            </Alert>
+          )}
         </CardContent>
       </Card>
 
@@ -178,11 +188,17 @@ export default function AdminAccount({
           <ComitardTable
             data={activeData}
             refetchData={refetchData}
-            error={(error) => console.log("error: ", error)}
+            admin={true}
+            error={(error) => setErrorComitardEdit(error)}
             handleOpenModalComitard={(data: any) => {
               console.log("modal open:", data);
             }}
           />
+          {errorComitardEdit && (
+            <Alert sx={{ mt: 3 }} severity={"error"}>
+              {errorComitardEdit}
+            </Alert>
+          )}
         </CardContent>
       </Card>
 
