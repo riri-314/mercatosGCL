@@ -32,7 +32,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({children}) => {
                     const latestDoc = docs.docs[0];
                     setFetchedTime(Date.now());
                     setData(latestDoc);
-                    console.log("Loaded edition number: ", latestDoc.data().edition);
+                    //console.log("Loaded edition number : ", latestDoc.data().edition);
                 }
             } else {
                 const docRef = doc(db, "editions", "rHiqrhsVIKrvsWCv0onw");
