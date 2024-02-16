@@ -64,10 +64,7 @@ export default function ComitardsView() {
         const start = data?.data().start;
         const stop = data?.data().stop;
         if (start && stop) {
-            if (
-                date.getTime() > start.toMillis() &&
-                date.getTime() < stop.toMillis()
-            ) {
+            if (date.getTime() > start.toMillis() && date.getTime() < stop.toMillis()) {
                 //console.log("It is really in time frame", date.getTime() - stop.toMillis());
                 setIsInTimeFrame(true);
             } else {
@@ -116,11 +113,9 @@ export default function ComitardsView() {
         return cerclesWithNames;
     }
 
-    return (
-        <Container>
+    return (<Container>
             <Container>
-                {data && refreshTime && !refreshing ? (
-                    <>
+                {data && refreshTime && !refreshing ? (<>
                         <Box
                             sx={{
                                 display: "flex",
@@ -136,9 +131,7 @@ export default function ComitardsView() {
                             </Typography>
                             <Iconify icon="material-symbols-light:refresh"/>
                         </Box>
-                    </>
-                ) : (
-                    <>
+                    </>) : (<>
                         <Box
                             sx={{
                                 display: "flex",
@@ -152,55 +145,34 @@ export default function ComitardsView() {
                                 Mise à jour...
                             </Typography>
                         </Box>
-                    </>
-                )}
+                    </>)}
             </Container>
-            {data ? (
-                Object.keys(data.data().cercles)
-                    .sort((a, b) =>
-                        data
-                            .data()
-                            .cercles[a].name.localeCompare(data.data().cercles[b].name)
-                    )
-                    .map((cercleId) => (
-                        <div key={cercleId} style={{marginBottom: "20px"}}>
+            {data ? (Object.keys(data.data().cercles)
+                    .sort((a, b) => data
+                        .data().cercles[a].name.localeCompare(data.data().cercles[b].name))
+                    .map((cercleId) => (<div key={cercleId} style={{marginBottom: "20px"}}>
                             <Typography sx={{m: 3}} variant="h3">
                                 {data.data().cercles[cercleId].name}
                             </Typography>
                             <Grid container spacing={3}>
-                                {data.data().cercles[cercleId].comitards &&
-                                    Object.keys(data.data().cercles[cercleId].comitards)
-                                        .sort((a, b) =>
-                                            data
-                                                .data()
-                                                .cercles[cercleId].comitards[a].name.localeCompare(
-                                                data.data().cercles[cercleId].comitards[b].name
-                                            )
-                                        )
-                                        .map((comitardID: any) => (
-                                            <Grid key={comitardID} item xs={12} sm={6} md={3}>
-                                                <ComitardCard
-                                                    product={
-                                                        data.data().cercles[cercleId].comitards[comitardID]
-                                                    }
-                                                    user={user?.uid}
-                                                    cercleId={cercleId}
-                                                    comitardId={comitardID}
-                                                    nbFutsLeft={nbFutsLeft()}
-                                                    enchereMax={enchereMinMax()[1]}
-                                                    enchereMin={enchereMinMax()[0]}
-                                                    isInTimeFrame={isInTimeFrame}
-                                                    refetchData={refetchData}
-                                                    cerclesData={getCerclesDataWithNames(data.data().cercles)}/>
-                                            </Grid>
-                                        ))}
+                                {data.data().cercles[cercleId].comitards && Object.keys(data.data().cercles[cercleId].comitards)
+                                    .sort((a, b) => data
+                                        .data().cercles[cercleId].comitards[a].name.localeCompare(data.data().cercles[cercleId].comitards[b].name))
+                                    .map((comitardID: any) => (<Grid key={comitardID} item xs={12} sm={6} md={3}>
+                                            <ComitardCard
+                                                product={data.data().cercles[cercleId].comitards[comitardID]}
+                                                user={user?.uid}
+                                                cercleId={cercleId}
+                                                comitardId={comitardID}
+                                                nbFutsLeft={nbFutsLeft()}
+                                                enchereMax={enchereMinMax()[1]}
+                                                enchereMin={enchereMinMax()[0]}
+                                                isInTimeFrame={isInTimeFrame}
+                                                refetchData={refetchData}
+                                                cerclesData={getCerclesDataWithNames(data.data().cercles)}/>
+                                        </Grid>))}
                             </Grid>
-                        </div>
-                    ))
-            ) : (
-                <Loading/>
-            )}
-        </Container>
-    );
+                        </div>))) : (<Loading/>)}
+        </Container>);
 
 }

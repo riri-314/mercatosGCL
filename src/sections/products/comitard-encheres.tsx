@@ -30,8 +30,7 @@ const EncheresList: React.FC<EncheresListProps> = ({encheres, cerclesData, won})
     if (encheres === null || encheres == undefined) {
         return <h3>Il n'y a pas encore d'enchère sur ce comitard</h3>;
     }
-    return (
-        <div>
+    return (<div>
             <h3>Historique des enchères :</h3>
             <TableContainer component={Paper}>
                 <Table>
@@ -46,8 +45,7 @@ const EncheresList: React.FC<EncheresListProps> = ({encheres, cerclesData, won})
                     <TableBody>
                         {Object.entries(encheres)
                             .sort(([, a], [, b]) => b.date.seconds - a.date.seconds)
-                            .map(([id, encheresData], index) => (
-                                <TableRow
+                            .map(([id, encheresData], index) => (<TableRow
                                     key={index}
                                     sx={{backgroundColor: (theme) => index === 0 ? `${theme.palette.info.lighter}` : ''}}
                                 >
@@ -59,13 +57,11 @@ const EncheresList: React.FC<EncheresListProps> = ({encheres, cerclesData, won})
                                     </TableCell>
                                     <TableCell>{encheresData.date.toDate().toLocaleString()}</TableCell>
                                     <TableCell>{encheresData.vote}</TableCell>
-                                </TableRow>
-                            ))}
+                                </TableRow>))}
                     </TableBody>
                 </Table>
             </TableContainer>
-        </div>
-    );
+        </div>);
 };
 
 export default EncheresList;
