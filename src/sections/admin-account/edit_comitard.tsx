@@ -283,7 +283,7 @@ export default function EditComitard({
             <Card sx={{width: "100%", mb: 4}}>
                 <CardContent>
                     <Typography variant="h5" sx={{mb: 1}}>
-                        Créer nouveau comitard
+                        Éditer le comitard
                     </Typography>
                     <Grid container spacing={2}>
                         <Grid item xs={12} sm={6}>
@@ -467,7 +467,7 @@ export default function EditComitard({
                                 }}
                             />
                         </Grid>
-                        <Grid item xs={12} sm={6}>
+                        <Grid item xs={12} sm={12}>
                             <TextField
                                 label="Point fort"
                                 fullWidth
@@ -492,7 +492,7 @@ export default function EditComitard({
                                 {pointFort.length}/{txtlenght2}
                             </FormHelperText>
                         </Grid>
-                        <Grid item xs={12} sm={6}>
+                        <Grid item xs={12} sm={12}>
                             <TextField
                                 label="Point faible"
                                 fullWidth
@@ -517,7 +517,7 @@ export default function EditComitard({
                                 {pointFaible.length}/{txtlenght2}
                             </FormHelperText>
                         </Grid>
-                        <Grid item xs={12} sm={6}>
+                        <Grid item xs={12} sm={12}>
                             <TextField
                                 label="Est le seul"
                                 fullWidth
