@@ -62,6 +62,7 @@ export default function EditComitard({
     const txtlenght1 = 30;
     const txtlenght2 = 150;
 
+
     function cerclesOption() {
         const out: { [key: string]: string } = {}; // Add type annotation to the 'out' object
         for (const [key, value] of Object.entries(activeData.data().cercles)) {
@@ -72,90 +73,91 @@ export default function EditComitard({
         return out;
     }
 
-    async function handleEditComitard() {
-        setLoading(true);
-        let error = false;
-        setError("");
-        if (name.length === 0 || name.length > txtlenght1) {
-            setNameError(true);
-            error = true;
-        } else {
-            setNameError(false);
-        }
-        if (firstname.length === 0 || firstname.length > txtlenght1) {
-            error = true;
-            setFirstnameError(true);
-        } else {
-            setFirstnameError(false);
-        }
-        if (nickname.length === 0 || nickname.length > txtlenght1) {
-            error = true;
-            setNicknameError(true);
-        } else {
-            setNicknameError(false);
-        }
-        if (post.length === 0 || post.length > txtlenght1) {
-            error = true;
-            setPostError(true);
-        } else {
-            setPostError(false);
-        }
-        if (admin) {
-            if (!cercle) {
-                error = true;
-                setCercleError(true);
-            } else {
-                setCercleError(false);
-            }
-        }
-        if (teneurTaule == undefined || teneurTaule < 0 || teneurTaule > 10) {
-            error = true;
-            setTeneurTauleError(true);
-        } else {
-            setTeneurTauleError(false);
-        }
-        if (etatCivil.length === 0 || etatCivil.length > txtlenght2) {
-            error = true;
-            setEtatCivilError(true);
-        } else {
-            setEtatCivilError(false);
-        }
-        if (age == undefined || age < 0 || age > 99) {
-            error = true;
-            setAgeError(true);
-        } else {
-            setAgeError(false);
-        }
-        if (nbEtoiles == undefined || nbEtoiles < 0 || nbEtoiles > 10) {
-            error = true;
-            setNbEtoilesError(true);
-        } else {
-            setNbEtoilesError(false);
-        }
-        if (pointFort.length === 0 || pointFort.length > txtlenght2) {
-            error = true;
-            setPointFortError(true);
-        } else {
-            setPointFortError(false);
-        }
-        if (pointFaible.length === 0 || pointFaible.length > txtlenght2) {
-            error = true;
-            setPointFaibleError(true);
-        } else {
-            setPointFaibleError(false);
-        }
-        if (estLeSeul.length === 0 || estLeSeul.length > txtlenght2) {
-            error = true;
-            setEstLeSeulError(true);
-        } else {
-            setEstLeSeulError(false);
-        }
-        if (picture[0] != null && picture[0].file !== undefined) {
-            setPictureError(false);
-        } else {
-            error = true;
-            setPictureError(true);
-        }
+  async function handleEditComitard() {
+    setLoading(true);
+    let error = false;
+    setError("");
+    if (name.length === 0 || name.length > txtlenght1) {
+      setNameError(true);
+      error = true;
+    } else {
+      setNameError(false);
+    }
+    if (firstname.length === 0 || firstname.length > txtlenght1) {
+      error = true;
+      setFirstnameError(true);
+    } else {
+      setFirstnameError(false);
+    }
+    if (nickname.length === 0 || nickname.length > txtlenght1) {
+      error = true;
+      setNicknameError(true);
+    } else {
+      setNicknameError(false);
+    }
+    if (post.length === 0 || post.length > txtlenght1) {
+      error = true;
+      setPostError(true);
+    } else {
+      setPostError(false);
+    }
+    if (admin) {
+      if (!cercle) {
+        error = true;
+        setCercleError(true);
+      } else {
+        setCercleError(false);
+      }
+    }
+    if (teneurTaule == undefined || teneurTaule < 0 || teneurTaule > 10) {
+      error = true;
+      setTeneurTauleError(true);
+    } else {
+      setTeneurTauleError(false);
+    }
+    if (etatCivil.length === 0 || etatCivil.length > txtlenght2) {
+      error = true;
+      setEtatCivilError(true);
+    } else {
+      setEtatCivilError(false);
+    }
+    if (age == undefined || age < 0 || age > 99) {
+      error = true;
+      setAgeError(true);
+    } else {
+      setAgeError(false);
+    }
+    if (nbEtoiles == undefined || nbEtoiles < 0 || nbEtoiles > 10) {
+      error = true;
+      setNbEtoilesError(true);
+    } else {
+      setNbEtoilesError(false);
+    }
+    if (pointFort.length === 0 || pointFort.length > txtlenght2) {
+      error = true;
+      setPointFortError(true);
+    } else {
+      setPointFortError(false);
+    }
+    if (pointFaible.length === 0 || pointFaible.length > txtlenght2) {
+      error = true;
+      setPointFaibleError(true);
+    } else {
+      setPointFaibleError(false);
+    }
+    if (estLeSeul.length === 0 || estLeSeul.length > txtlenght2) {
+      error = true;
+      setEstLeSeulError(true);
+    } else {
+      setEstLeSeulError(false);
+    }
+    //if (picture[0] != null && picture[0].file !== undefined) {
+    //  setPictureError(false);
+    //} else {
+    //  error = true;
+    //  setPictureError(true);
+    //}
+
 
         if (!error) {
             console.log("Check user input ok");
@@ -185,378 +187,379 @@ export default function EditComitard({
                     setError("Une erreur est survenue lors de l'upload de l'image.");
                     setLoading(false);
 
-                    return;
-                }, () => {
-                    getDownloadURL(uploadTask.snapshot.ref)
-                        .then((downloadURL) => {
-                            console.log("File available at", downloadURL);
-                            const data = {
-                                name: name,
-                                firstname: firstname,
-                                nickname: nickname,
-                                post: post,
-                                cercle: cercle ? cercle : null,
-                                teneurTaule: teneurTaule,
-                                etatCivil: etatCivil,
-                                age: age,
-                                nbEtoiles: nbEtoiles,
-                                pointFort: pointFort,
-                                pointFaible: pointFaible,
-                                estLeSeul: estLeSeul,
-                                picture: downloadURL,
-                            };
-                            // call another cloud function to update the doc
-                            const addMessage = httpsCallable(functions, "nope");
-                            addMessage(data)
-                                .then((result) => {
-                                    const data: any = result.data;
-                                    // reload data
-                                    refetchData();
-                                    console.log("data:", data);
-                                    setPictureUpload(undefined);
-                                    setErrorSeverity("success");
-                                    setError("Comitard créé avec succès");
-                                    setLoading(false);
-                                })
-                                .catch((error) => {
-                                    console.log("error:", error);
-                                    setPictureUpload(undefined);
-                                    setErrorSeverity("error");
-                                    setError("Une erreur est survenue lors de la création du comitard. serveur error.");
-                                    setLoading(false);
-                                });
-                            // call cloud function with all arguments and wait for response
-                        })
-                        .catch((error) => {
-                            console.log("error uploading file: ", error);
-                            setPictureUpload(undefined);
-                            setErrorSeverity("error");
-                            setError("Une erreur est survenue lors de l'upload de l'image.");
-                            setLoading(false);
-                        });
-                });
-            } else {
-                console.log("do not change the picture");
-                const data = {
-                    name: name,
-                    firstname: firstname,
-                    nickname: nickname,
-                    post: post,
-                    cercle: cercle ? cercle : null,
-                    teneurTaule: teneurTaule,
-                    etatCivil: etatCivil,
-                    age: age,
-                    nbEtoiles: nbEtoiles,
-                    pointFort: pointFort,
-                    pointFaible: pointFaible,
-                    estLeSeul: estLeSeul,
+            return;
+          },
+          () => {
+            getDownloadURL(uploadTask.snapshot.ref)
+              .then((downloadURL) => {
+                console.log("File available at", downloadURL);
+                const data1 = {
+                  comitardId: data.id,
+                  name: name,
+                  firstname: firstname,
+                  nickname: nickname,
+                  post: post,
+                  cercle: cercle ? cercle : null,
+                  teneurTaule: teneurTaule,
+                  etatCivil: etatCivil,
+                  age: age,
+                  nbEtoiles: nbEtoiles,
+                  pointFort: pointFort,
+                  pointFaible: pointFaible,
+                  estLeSeul: estLeSeul,
+                  picture: downloadURL,
                 };
                 // call another cloud function to update the doc
-                const addMessage = httpsCallable(functions, "nope");
-                addMessage(data)
-                    .then((result) => {
-                        const data: any = result.data;
-                        // reload data
-                        refetchData();
-                        console.log("data:", data);
-                        setPictureUpload(undefined);
-                        setErrorSeverity("success");
-                        setError("Comitard créé avec succès");
-                        setLoading(false);
-                    })
-                    .catch((error) => {
-                        console.log("error:", error);
-                        setPictureUpload(undefined);
-                        setErrorSeverity("error");
-                        setError("Une erreur est survenue lors de la création du comitard. serveur error.");
-                        setLoading(false);
-                    });
-            }
-        } else {
+                const addMessage = httpsCallable(functions, "editComitard");
+                addMessage(data1)
+                  .then((result) => {
+                    const data: any = result.data;
+                    // reload data
+                    refetchData();
+                    console.log("data:", data);
+                    setPictureUpload(undefined);
+                    setErrorSeverity("success");
+                    setError("Comitard créé avec succès");
+                    setLoading(false);
+                  })
+                  .catch((error) => {
+                    console.log("error:", error);
+                    setPictureUpload(undefined);
+                    setErrorSeverity("error");
+                    setError(
+                      "Une erreur est survenue lors de la création du comitard. serveur error."
+                    );
+                    setLoading(false);
+                  });
+                // call cloud function with all arguments and wait for response
+              })
+              .catch((error) => {
+                console.log("error uploading file: ", error);
+                setPictureUpload(undefined);
+                setErrorSeverity("error");
+                setError(
+                  "Une erreur est survenue lors de l'upload de l'image."
+                );
+                setLoading(false);
+              });
+          }
+        );
+      } else {
+        console.log("do not change the picture");
+        const data1 = {
+          comitardID: data.id,
+          name: name,
+          firstname: firstname,
+          nickname: nickname,
+          post: post,
+          cercle: cercle ? cercle : null,
+          teneurTaule: teneurTaule,
+          etatCivil: etatCivil,
+          age: age,
+          nbEtoiles: nbEtoiles,
+          pointFort: pointFort,
+          pointFaible: pointFaible,
+          estLeSeul: estLeSeul,
+        };
+        // call another cloud function to update the doc
+        const addMessage = httpsCallable(functions, "editComitard");
+        addMessage(data1)
+          .then((result) => {
+            const data: any = result.data;
+            // reload data
+            refetchData();
+            console.log("data:", data);
+            setPictureUpload(undefined);
+            setErrorSeverity("success");
+            setError("Comitard créé avec succès");
             setLoading(false);
             setErrorSeverity("error");
             setError("Certains champs sont incorrects. Petit con.");
         }
     }
-
-    return (<>
-            <Card sx={{width: "100%", mb: 4}}>
-                <CardContent>
-                    <Typography variant="h5" sx={{mb: 1}}>
-                        Créer nouveau comitard
-                    </Typography>
-                    <Grid container spacing={2}>
-                        <Grid item xs={12} sm={6}>
-                            <TextField
-                                error={nameError}
-                                label="Nom"
-                                value={name}
-                                fullWidth
-                                onChange={(e) => {
-                                    let value = e.target.value;
-                                    if (value.length <= txtlenght1) {
-                                        setName(value);
-                                    }
-                                    if (value.length == 0) {
-                                        setNameError(true);
-                                    } else {
-                                        setNameError(false);
-                                    }
-                                }}
-                            />
-                            <FormHelperText>
-                                Nom civil du comitard. Max {txtlenght1} caractères.{" "}
-                                {name.length}/{txtlenght1}
-                            </FormHelperText>
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                            <TextField
-                                label="Prénom"
-                                error={firstnameError}
-                                fullWidth
-                                value={firstname}
-                                onChange={(e) => {
-                                    let value = e.target.value;
-                                    if (value.length <= txtlenght1) {
-                                        setFirstname(value);
-                                    }
-                                    if (value.length == 0) {
-                                        setFirstnameError(true);
-                                    } else {
-                                        setFirstnameError(false);
-                                    }
-                                }}
-                            />
-                            <FormHelperText>
-                                Prénom civil du comitard. Max {txtlenght1} caractères.{" "}
-                                {firstname.length}/{txtlenght1}
-                            </FormHelperText>
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                            <TextField
-                                label="Surnom"
-                                error={nicknameError}
-                                fullWidth
-                                value={nickname}
-                                onChange={(e) => {
-                                    let value = e.target.value;
-                                    if (value.length <= txtlenght1) {
-                                        setNickname(value);
-                                    }
-                                    if (value.length == 0) {
-                                        setNicknameError(true);
-                                    } else {
-                                        setNicknameError(false);
-                                    }
-                                }}
-                            />
-                            <FormHelperText>
-                                Surnom du comitard. Max {txtlenght1} caractères.{" "}
-                                {nickname.length}/{txtlenght1}
-                            </FormHelperText>
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                            <TextField
-                                label="Post"
-                                error={postError}
-                                fullWidth
-                                value={post}
-                                onChange={(e) => {
-                                    let value = e.target.value;
-                                    if (value.length <= txtlenght1) {
-                                        setPost(value);
-                                    }
-                                    if (value.length == 0) {
-                                        setPostError(true);
-                                    } else {
-                                        setPostError(false);
-                                    }
-                                }}
-                            />
-                            <FormHelperText>
-                                Post du comitard. Max {txtlenght1} caractères. {post.length}/
-                                {txtlenght1}
-                            </FormHelperText>
-                        </Grid>
-                        {admin && (<Grid item xs={12} sm={6}>
-                                <UnstyledSelectIntroduction
-                                    isError={cercleError}
-                                    defaultValue={cercle}
-                                    option={cerclesOption()}
-                                    helpText={"Cercle du comitard"}
-                                    change={(_event: any, val: any) => {
-                                        setCercle(val);
-                                        setCercleError(false);
-                                    }}
-                                />
-                            </Grid>)}
-                        <Grid item xs={12} sm={6}>
-                            <QuantityInput
-                                title="Teneur en taule du comitard"
-                                min={0}
-                                max={10}
-                                error={teneurTauleError}
-                                defaultValue={teneurTaule}
-                                helpText={`Teneur en taule du comitard de 0 à 10`}
-                                change={(_event: any, val: any) => {
-                                    setTeneurTaule(val);
-                                    if (val == undefined) {
-                                        setTeneurTauleError(true);
-                                    } else {
-                                        setTeneurTauleError(false);
-                                    }
-                                }}
-                            />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                            <TextField
-                                label="État civil"
-                                fullWidth
-                                value={etatCivil}
-                                error={etatCivilError}
-                                onChange={(e) => {
-                                    let value = e.target.value;
-                                    if (value.length <= txtlenght2) {
-                                        setEtatCivil(value);
-                                    }
-                                    if (value.length == 0) {
-                                        setEtatCivilError(true);
-                                    } else {
-                                        setEtatCivilError(false);
-                                    }
-                                }}
-                            />
-                            <FormHelperText>
-                                État civil du comitard. Max {txtlenght2} caractères.{" "}
-                                {etatCivil.length}/{txtlenght2}
-                            </FormHelperText>
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                            <QuantityInput
-                                title="Age du comitard"
-                                min={0}
-                                max={99}
-                                error={ageError}
-                                defaultValue={age}
-                                helpText={`Age du comitard de 0 à 99`}
-                                change={(_event: any, val: any) => {
-                                    setAge(val);
-                                    if (val == undefined) {
-                                        setAgeError(true);
-                                    } else {
-                                        setAgeError(false);
-                                    }
-                                }}
-                            />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                            <QuantityInput
-                                title="Nombre d'étoiles du comitard"
-                                min={0}
-                                max={10}
-                                error={nbEtoilesError}
-                                defaultValue={nbEtoiles}
-                                helpText={`Nombre d'étoiles du comitard de 0 à 10 (plus que 10 étoiles faut décrocher)`}
-                                change={(_event: any, val: any) => {
-                                    setNbEtoiles(val);
-                                    if (val == undefined) {
-                                        setNbEtoilesError(true);
-                                    } else {
-                                        setNbEtoilesError(false);
-                                    }
-                                }}
-                            />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                            <TextField
-                                label="Point fort"
-                                fullWidth
-                                multiline
-                                maxRows={4}
-                                error={pointFortError}
-                                value={pointFort}
-                                onChange={(e) => {
-                                    let value = e.target.value;
-                                    if (value.length <= txtlenght2) {
-                                        setPointFort(value);
-                                    }
-                                    if (value.length == 0) {
-                                        setPointFortError(true);
-                                    } else {
-                                        setPointFortError(false);
-                                    }
-                                }}
-                            />
-                            <FormHelperText>
-                                Point fort du comitard. Max {txtlenght2} caractères.{" "}
-                                {pointFort.length}/{txtlenght2}
-                            </FormHelperText>
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                            <TextField
-                                label="Point faible"
-                                fullWidth
-                                multiline
-                                maxRows={4}
-                                error={pointFaibleError}
-                                value={pointFaible}
-                                onChange={(e) => {
-                                    let value = e.target.value;
-                                    if (value.length <= txtlenght2) {
-                                        setPointFaible(value);
-                                    }
-                                    if (value.length == 0) {
-                                        setPointFaibleError(true);
-                                    } else {
-                                        setPointFaibleError(false);
-                                    }
-                                }}
-                            />
-                            <FormHelperText>
-                                Point faible du comitard. Max {txtlenght2} caractères.{" "}
-                                {pointFaible.length}/{txtlenght2}
-                            </FormHelperText>
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                            <TextField
-                                label="Est le seul"
-                                fullWidth
-                                multiline
-                                maxRows={4}
-                                error={estLeSeulError}
-                                value={estLeSeul}
-                                onChange={(e) => {
-                                    let value = e.target.value;
-                                    if (value.length <= txtlenght2) {
-                                        setEstLeSeul(value);
-                                    }
-                                    if (value.length == 0) {
-                                        setEstLeSeulError(true);
-                                    } else {
-                                        setEstLeSeulError(false);
-                                    }
-                                }}
-                            />
-                            <FormHelperText>
-                                Est le seul... Max {txtlenght2} caractères. {estLeSeul.length}/
-                                {txtlenght2}
-                            </FormHelperText>
-                        </Grid>
-                        <Grid item xs={12} sm={12}>
-                            <PictureInput
-                                change={(images: ImageListType) => {
-                                    setPictureUpdated(true);
-                                    setPicture(images);
-                                    if (images.length > 0) {
-                                        setPictureError(false);
-                                    } else {
-                                        setPictureError(true);
-                                    }
-                                }}
-                                error={pictureError}
-                                upload={pictureUpload}
-                            />
-                        </Grid>
+  return (
+    <>
+      <Card sx={{ width: "100%", mb: 4 }}>
+        <CardContent>
+          <Typography variant="h5" sx={{ mb: 1 }}>
+            Créer nouveau comitard
+          </Typography>
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                error={nameError}
+                label="Nom"
+                value={name}
+                fullWidth
+                onChange={(e) => {
+                  let value = e.target.value;
+                  if (value.length <= txtlenght1) {
+                    setName(value);
+                  }
+                  if (value.length == 0) {
+                    setNameError(true);
+                  } else {
+                    setNameError(false);
+                  }
+                }}
+              />
+              <FormHelperText>
+                Nom civil du comitard. Max {txtlenght1} caractères.{" "}
+                {name.length}/{txtlenght1}
+              </FormHelperText>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Prénom"
+                error={firstnameError}
+                fullWidth
+                value={firstname}
+                onChange={(e) => {
+                  let value = e.target.value;
+                  if (value.length <= txtlenght1) {
+                    setFirstname(value);
+                  }
+                  if (value.length == 0) {
+                    setFirstnameError(true);
+                  } else {
+                    setFirstnameError(false);
+                  }
+                }}
+              />
+              <FormHelperText>
+                Prénom civil du comitard. Max {txtlenght1} caractères.{" "}
+                {firstname.length}/{txtlenght1}
+              </FormHelperText>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Surnom"
+                error={nicknameError}
+                fullWidth
+                value={nickname}
+                onChange={(e) => {
+                  let value = e.target.value;
+                  if (value.length <= txtlenght1) {
+                    setNickname(value);
+                  }
+                  if (value.length == 0) {
+                    setNicknameError(true);
+                  } else {
+                    setNicknameError(false);
+                  }
+                }}
+              />
+              <FormHelperText>
+                Surnom du comitard. Max {txtlenght1} caractères.{" "}
+                {nickname.length}/{txtlenght1}
+              </FormHelperText>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Post"
+                error={postError}
+                fullWidth
+                value={post}
+                onChange={(e) => {
+                  let value = e.target.value;
+                  if (value.length <= txtlenght1) {
+                    setPost(value);
+                  }
+                  if (value.length == 0) {
+                    setPostError(true);
+                  } else {
+                    setPostError(false);
+                  }
+                }}
+              />
+              <FormHelperText>
+                Post du comitard. Max {txtlenght1} caractères. {post.length}/
+                {txtlenght1}
+              </FormHelperText>
+            </Grid>
+            {false && (
+              <Grid item xs={12} sm={6}>
+                <UnstyledSelectIntroduction
+                  isError={cercleError}
+                  defaultValue={cercle}
+                  option={cerclesOption()}
+                  helpText={"Cercle du comitard"}
+                  change={(_event: any, val: any) => {
+                    setCercle(val);
+                    setCercleError(false);
+                  }}
+                />
+              </Grid>
+            )}
+            <Grid item xs={12} sm={6}>
+              <QuantityInput
+                title="Teneur en taule du comitard"
+                min={0}
+                max={10}
+                error={teneurTauleError}
+                defaultValue={teneurTaule}
+                helpText={`Teneur en taule du comitard de 0 à 10`}
+                change={(_event: any, val: any) => {
+                  setTeneurTaule(val);
+                  if (val == undefined) {
+                    setTeneurTauleError(true);
+                  } else {
+                    setTeneurTauleError(false);
+                  }
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="État civil"
+                fullWidth
+                value={etatCivil}
+                error={etatCivilError}
+                onChange={(e) => {
+                  let value = e.target.value;
+                  if (value.length <= txtlenght2) {
+                    setEtatCivil(value);
+                  }
+                  if (value.length == 0) {
+                    setEtatCivilError(true);
+                  } else {
+                    setEtatCivilError(false);
+                  }
+                }}
+              />
+              <FormHelperText>
+                État civil du comitard. Max {txtlenght2} caractères.{" "}
+                {etatCivil.length}/{txtlenght2}
+              </FormHelperText>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <QuantityInput
+                title="Age du comitard"
+                min={0}
+                max={99}
+                error={ageError}
+                defaultValue={age}
+                helpText={`Age du comitard de 0 à 99`}
+                change={(_event: any, val: any) => {
+                  setAge(val);
+                  if (val == undefined) {
+                    setAgeError(true);
+                  } else {
+                    setAgeError(false);
+                  }
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <QuantityInput
+                title="Nombre d'étoiles du comitard"
+                min={0}
+                max={10}
+                error={nbEtoilesError}
+                defaultValue={nbEtoiles}
+                helpText={`Nombre d'étoiles du comitard de 0 à 10 (plus que 10 étoiles faut décrocher)`}
+                change={(_event: any, val: any) => {
+                  setNbEtoiles(val);
+                  if (val == undefined) {
+                    setNbEtoilesError(true);
+                  } else {
+                    setNbEtoilesError(false);
+                  }
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Point fort"
+                fullWidth
+                multiline
+                maxRows={4}
+                error={pointFortError}
+                value={pointFort}
+                onChange={(e) => {
+                  let value = e.target.value;
+                  if (value.length <= txtlenght2) {
+                    setPointFort(value);
+                  }
+                  if (value.length == 0) {
+                    setPointFortError(true);
+                  } else {
+                    setPointFortError(false);
+                  }
+                }}
+              />
+              <FormHelperText>
+                Point fort du comitard. Max {txtlenght2} caractères.{" "}
+                {pointFort.length}/{txtlenght2}
+              </FormHelperText>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Point faible"
+                fullWidth
+                multiline
+                maxRows={4}
+                error={pointFaibleError}
+                value={pointFaible}
+                onChange={(e) => {
+                  let value = e.target.value;
+                  if (value.length <= txtlenght2) {
+                    setPointFaible(value);
+                  }
+                  if (value.length == 0) {
+                    setPointFaibleError(true);
+                  } else {
+                    setPointFaibleError(false);
+                  }
+                }}
+              />
+              <FormHelperText>
+                Point faible du comitard. Max {txtlenght2} caractères.{" "}
+                {pointFaible.length}/{txtlenght2}
+              </FormHelperText>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Est le seul"
+                fullWidth
+                multiline
+                maxRows={4}
+                error={estLeSeulError}
+                value={estLeSeul}
+                onChange={(e) => {
+                  let value = e.target.value;
+                  if (value.length <= txtlenght2) {
+                    setEstLeSeul(value);
+                  }
+                  if (value.length == 0) {
+                    setEstLeSeulError(true);
+                  } else {
+                    setEstLeSeulError(false);
+                  }
+                }}
+              />
+              <FormHelperText>
+                Est le seul... Max {txtlenght2} caractères. {estLeSeul.length}/
+                {txtlenght2}
+              </FormHelperText>
+            </Grid>
+            {false && (
+              <Grid item xs={12} sm={12}>
+                <PictureInput
+                  change={(images: ImageListType) => {
+                    setPictureUpdated(true);
+                    setPicture(images);
+                    if (images.length > 0) {
+                      setPictureError(false);
+                    } else {
+                      setPictureError(true);
+                    }
+                  }}
+                  error={pictureError}
+                  upload={pictureUpload}
+                />
+              </Grid>
+            )}
 
                         <Grid item xs={12} sm={12}>
                             <LoadingButton
@@ -570,22 +573,27 @@ export default function EditComitard({
                             </LoadingButton>
                         </Grid>
 
-                        <Grid item xs={12} sm={12}>
-                            <LoadingButton
-                                size="large"
-                                variant="contained"
-                                fullWidth
-                                onClick={handleEditComitard}
-                                loading={loading}
-                            >
-                                Créer comitard
-                            </LoadingButton>
-                        </Grid>
-                    </Grid>
-                    {error && (<Alert sx={{mt: 3}} severity={errorSeverity}>
-                            {error}
-                        </Alert>)}
-                </CardContent>
-            </Card>
-        </>);
+
+            <Grid item xs={12} sm={12}>
+              <LoadingButton
+                size="large"
+                variant="contained"
+                fullWidth
+                onClick={handleEditComitard}
+                loading={loading}
+              >
+                Mettre à jour comitard
+              </LoadingButton>
+            </Grid>
+          </Grid>
+          {error && (
+            <Alert sx={{ mt: 3 }} severity={errorSeverity}>
+              {error}
+            </Alert>
+          )}
+        </CardContent>
+      </Card>
+    </>
+  );
+
 }
