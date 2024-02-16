@@ -159,7 +159,7 @@ export default function NewEdition({
                 </Grid>
 
                 <LocalizationProvider dateAdapter={AdapterDayjs}>
-                    <Grid item xs={12} sm={6}>
+                    <Grid item xs={12} sm={updateMode ? 12 : 6}>
                         <DateTimePicker
                             label="Début du mercato"
                             sx={{width: "100%", color: "red"}}
@@ -167,7 +167,7 @@ export default function NewEdition({
                             onChange={(e: Dayjs | null) => setStart(e)}
                         />
                     </Grid>
-                    <Grid item xs={12} sm={6}>
+                    <Grid item xs={12} sm={updateMode ? 12 : 6}>
                         <DateTimePicker
                             label="Fin du mercato"
                             onChange={(e: Dayjs | null) => setStop(e)}
@@ -177,7 +177,7 @@ export default function NewEdition({
                     </Grid>
                 </LocalizationProvider>
 
-                <Grid item xs={12} sm={4}>
+                <Grid item xs={12} sm={updateMode ? 6 : 4}>
                     <QuantityInput
                         title="Fûts par cercle"
                         min={1}
@@ -195,7 +195,7 @@ export default function NewEdition({
                     />
                 </Grid>
 
-                <Grid item xs={12} sm={4}>
+                <Grid item xs={12} sm={updateMode ? 6 : 4}>
                     <QuantityInput
                         title="Comitards par cercle"
                         min={1}
@@ -213,7 +213,7 @@ export default function NewEdition({
                     />
                 </Grid>
 
-                <Grid item xs={12} sm={4}>
+                <Grid item xs={12} sm={updateMode ? 6 : 4}>
                     <QuantityInput
                         title="Durée d'une enchère"
                         min={1}
@@ -265,7 +265,7 @@ export default function NewEdition({
                         }}
                     />
                 </Grid>
-                <Grid item xs={12} sm={4}>
+                <Grid item xs={12} sm={updateMode ? 6 : 4}>
                     <UnstyledSelectIntroduction
                         defaultValue={remboursementVendeur}
                         option={{
@@ -275,7 +275,7 @@ export default function NewEdition({
                         change={(_event: any, val: any) => setRemboursementVendeur(val)}
                     />
                 </Grid>
-                <Grid item xs={12} sm={4}>
+                <Grid item xs={12} sm={updateMode ? 6 : 4}>
                     <UnstyledSelectIntroduction
                         defaultValue={remboursementPerdant}
                         option={{
@@ -285,7 +285,7 @@ export default function NewEdition({
                         change={(_event: any, val: any) => setRemboursementPerdant(val)}
                     />
                 </Grid>
-                <Grid item xs={12} sm={4}>
+                <Grid item xs={12} sm={updateMode ? 6 : 4}>
                     <UnstyledSelectIntroduction
                         defaultValue={remboursementGagnant}
                         option={{

@@ -3,6 +3,8 @@ import { Outlet, Navigate, useRoutes } from 'react-router-dom';
 
 import DashboardLayout from '../layouts/dashboard';
 import { useAuth } from '../auth/AuthProvider';
+import WipPage from "../pages/work-in-progress.tsx";
+import {Portal} from "@mui/material";
 
 export const AccountPage = lazy(() => import('../pages/account'));
 export const AdminAccountPage = lazy(() => import('../pages/admin-account'));
@@ -28,7 +30,8 @@ export default function Router() {
         </DashboardLayout>
       ),
       children: [
-        { element: <ResultPage />, index: true },
+        { element: <WipPage />, index: true },
+        /*{ element: <ResultPage />, index: true },*/
         { path: 'comitards', element: <ComitardsPage /> },
         (user? (isAdmin() ? { path: 'account', element: <AdminAccountPage /> } : { path: 'account', element: <AccountPage /> }):{ path: 'account', element: <LoginPage /> }),
         { path: 'rules', element: <RulesPage /> },
@@ -41,6 +44,10 @@ export default function Router() {
     {
       path: '404',
       element: <Page404 />,
+    },
+      {
+      path: 'wip',
+      element: <WipPage />,
     },
     {
       path: '*',

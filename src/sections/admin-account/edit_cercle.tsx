@@ -1,6 +1,4 @@
-import {Alert, AlertColor, Box, CardContent, FormHelperText, Grid, TextField,} from "@mui/material";
-import Card from "@mui/material/Card";
-import Typography from "@mui/material/Typography";
+import {Alert, AlertColor, Box, FormHelperText, Grid, TextField,} from "@mui/material";
 import {useState} from "react";
 import {LoadingButton} from "@mui/lab";
 import {db} from "../../firebase_config";
@@ -97,109 +95,102 @@ export default function EditCerle({
 
     return (
         <>
-            <Card sx={{width: "100%", mb: 4}}>
-                <CardContent>
-                    <Typography variant="h5" sx={{mb: 1}}>
-                        Créer nouveau cercle
-                    </Typography>
-                    <Box component="form" noValidate autoComplete="off">
-                        <Grid container spacing={2}>
-                            <Grid item xs={12} sm={6}>
-                                <QuantityInput
-                                    defaultValue={data.nbFut}
-                                    title="Nombre de futs"
-                                    min={1}
-                                    error={nbFutError}
-                                    helpText={`Nombre de futs restants`}
-                                    change={(
-                                        _event:
-                                            | React.FocusEvent<HTMLInputElement>
-                                            | React.PointerEvent
-                                            | React.KeyboardEvent,
-                                        val: number | undefined
-                                    ) => {
-                                        if (typeof val !== "undefined") {
-                                            setNbFut(val);
-                                            setNbFutError(false);
-                                        } else {
-                                            setNbFutError(true);
-                                        }
-                                    }}
-                                />
-                            </Grid>
-                            <Grid item xs={12} sm={6}>
-                                <TextField
-                                    defaultValue={data.name}
-                                    label="Nom du cercle"
-                                    fullWidth
-                                    error={cercleNameError}
-                                    onChange={(e) => {
-                                        setCercleName(e.target.value);
-                                        if (e.target.value === "") {
-                                            setCercleNameError(true);
-                                        } else {
-                                            setCercleNameError(false);
-                                        }
-                                    }}
-                                />
-                            </Grid>
-                            <Grid item xs={12} sm={6}>
-                                <TextField
-                                    defaultValue={data.description}
-                                    label="Description"
-                                    multiline
-                                    maxRows={4}
-                                    error={cercleDescriptionError}
-                                    fullWidth
-                                    onChange={(e) => {
-                                        if (e.target.value.length < textLenght) {
-                                            setCercleDescription(e.target.value);
-                                        }
-                                        if (e.target.value === "") {
-                                            setCercleDescriptionError(true);
-                                        } else {
-                                            setCercleDescriptionError(false);
-                                        }
-                                    }}
-                                />
-                                <FormHelperText>
-                                    Courte description du cercle. Max {textLenght}.{" "}
-                                    {cercleDescription.length}/{textLenght}
-                                </FormHelperText>
-                            </Grid>
+            <Box component="form" noValidate autoComplete="off">
+                <Grid container spacing={2}>
+                    <Grid item xs={12} sm={6}>
+                        <QuantityInput
+                            defaultValue={data.nbFut}
+                            title="Nombre de futs"
+                            min={1}
+                            error={nbFutError}
+                            helpText={`Nombre de futs restants`}
+                            change={(
+                                _event:
+                                    | React.FocusEvent<HTMLInputElement>
+                                    | React.PointerEvent
+                                    | React.KeyboardEvent,
+                                val: number | undefined
+                            ) => {
+                                if (typeof val !== "undefined") {
+                                    setNbFut(val);
+                                    setNbFutError(false);
+                                } else {
+                                    setNbFutError(true);
+                                }
+                            }}
+                        />
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                        <TextField
+                            defaultValue={data.name}
+                            label="Nom du cercle"
+                            fullWidth
+                            error={cercleNameError}
+                            onChange={(e) => {
+                                setCercleName(e.target.value);
+                                if (e.target.value === "") {
+                                    setCercleNameError(true);
+                                } else {
+                                    setCercleNameError(false);
+                                }
+                            }}
+                        />
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                        <TextField
+                            defaultValue={data.description}
+                            label="Description"
+                            multiline
+                            maxRows={4}
+                            error={cercleDescriptionError}
+                            fullWidth
+                            onChange={(e) => {
+                                if (e.target.value.length < textLenght) {
+                                    setCercleDescription(e.target.value);
+                                }
+                                if (e.target.value === "") {
+                                    setCercleDescriptionError(true);
+                                } else {
+                                    setCercleDescriptionError(false);
+                                }
+                            }}
+                        />
+                        <FormHelperText>
+                            Courte description du cercle. Max {textLenght}.{" "}
+                            {cercleDescription.length}/{textLenght}
+                        </FormHelperText>
+                    </Grid>
 
-                            <Grid item xs={12} sm={12}>
-                                <LoadingButton
-                                    color="error"
-                                    size="large"
-                                    variant="contained"
-                                    fullWidth
-                                    onClick={close}
-                                >
-                                    Annuler
-                                </LoadingButton>
-                            </Grid>
+                    <Grid item xs={12} sm={12}>
+                        <LoadingButton
+                            color="error"
+                            size="large"
+                            variant="contained"
+                            fullWidth
+                            onClick={close}
+                        >
+                            Annuler
+                        </LoadingButton>
+                    </Grid>
 
-                            <Grid item xs={12} sm={12}>
-                                <LoadingButton
-                                    size="large"
-                                    variant="contained"
-                                    fullWidth
-                                    onClick={() => handleNewCercle()}
-                                    loading={loading}
-                                >
-                                    Mettre à jour cercle
-                                </LoadingButton>
-                            </Grid>
-                        </Grid>
-                        {cercleError && (
-                            <Alert sx={{mt: 3}} severity={cercleErrorSeverity}>
-                                {cercleError}
-                            </Alert>
-                        )}
-                    </Box>
-                </CardContent>
-            </Card>
+                    <Grid item xs={12} sm={12}>
+                        <LoadingButton
+                            size="large"
+                            variant="contained"
+                            fullWidth
+                            onClick={() => handleNewCercle()}
+                            loading={loading}
+                        >
+                            Mettre à jour cercle
+                        </LoadingButton>
+                    </Grid>
+                </Grid>
+                {cercleError && (
+                    <Alert sx={{mt: 3}} severity={cercleErrorSeverity}>
+                        {cercleError}
+                    </Alert>
+                )}
+            </Box>
         </>
     );
 }
