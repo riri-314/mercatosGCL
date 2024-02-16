@@ -17,7 +17,6 @@ import CercleTable from "./cercle_table";
 import EditCerle from "./edit_cercle";
 import ComitardTable from "./comitard_table";
 import EditComitard from "./edit_comitard";
-import Box from "@mui/material/Box";
 import Container from "@mui/material/Container";
 
 interface AdminAccountProps {
@@ -103,7 +102,7 @@ export default function AdminAccount({
         >
             <Card sx={{width: "100%", mb: 4}}>
                 <CardContent>
-                    <Typography variant="h5">Créer une nouvelle édition</Typography>
+                    <Typography variant="h5">Éditer l'édition</Typography>
                     <NewEdition
                         data={modalEditionData}
                         refetchData={refetchData}
@@ -145,12 +144,19 @@ export default function AdminAccount({
                 m: 3, overflow: "scroll", maxWidth: 800, ml: "auto", mr: "auto",
             }}
         >
-            <EditCerle
-                refetchData={refetchData}
-                data={modalCercleData}
-                close={() => setOpenModalCercle(false)}
-                editionId={activeData.id}
-            />
+            <Card sx={{width: "100%", mb: 4}}>
+                <CardContent>
+                    <Typography variant="h5" sx={{mb: 1}}>
+                        Éditer le cercle
+                    </Typography>
+                    <EditCerle
+                        refetchData={refetchData}
+                        data={modalCercleData}
+                        close={() => setOpenModalCercle(false)}
+                        editionId={activeData.id}
+                    />
+                </CardContent>
+            </Card>
         </Modal>
 
         <NewComitard data={activeData} admin={true} refetchData={refetchData}/>
