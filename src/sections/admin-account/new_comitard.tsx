@@ -498,7 +498,7 @@ export default function NewComitard({
                                         {pointFaible.length}/{txtlenght2}
                                     </FormHelperText>
                                 </Grid>
-                                <Grid item xs={12} sm={6}>
+                                <Grid item xs={12} sm={admin ? 6 : 12}>
                                     <TextField
                                         label="Est le seul"
                                         fullWidth
