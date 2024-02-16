@@ -11,8 +11,7 @@ import Card from "@mui/material/Card";
 import Typography from "@mui/material/Typography";
 import { useState } from "react";
 import { LoadingButton } from "@mui/lab";
-import { httpsCallable } from "@firebase/functions";
-import { db, functions } from "../../firebase_config";
+import { db } from "../../firebase_config";
 import QuantityInput from "../../components/inputs/numberInput.tsx";
 import { doc, updateDoc } from "@firebase/firestore";
 
