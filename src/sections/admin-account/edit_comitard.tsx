@@ -77,6 +77,8 @@ export default function EditComitard({
   const txtlenght1 = 30;
   const txtlenght2 = 150;
 
+  console.log("data in modal: ", data);
+
   function cerclesOption() {
     const out: { [key: string]: string } = {}; // Add type annotation to the 'out' object
     for (const [key, value] of Object.entries(activeData.data().cercles)) {
@@ -165,12 +167,12 @@ export default function EditComitard({
     } else {
       setEstLeSeulError(false);
     }
-    if (picture[0] != null && picture[0].file !== undefined) {
-      setPictureError(false);
-    } else {
-      error = true;
-      setPictureError(true);
-    }
+    //if (picture[0] != null && picture[0].file !== undefined) {
+    //  setPictureError(false);
+    //} else {
+    //  error = true;
+    //  setPictureError(true);
+    //}
 
     if (!error) {
       console.log("Check user input ok");
@@ -213,7 +215,8 @@ export default function EditComitard({
             getDownloadURL(uploadTask.snapshot.ref)
               .then((downloadURL) => {
                 console.log("File available at", downloadURL);
-                const data = {
+                const data1 = {
+                  comitardId: data.id,
                   name: name,
                   firstname: firstname,
                   nickname: nickname,
@@ -229,8 +232,8 @@ export default function EditComitard({
                   picture: downloadURL,
                 };
                 // call another cloud function to update the doc
-                const addMessage = httpsCallable(functions, "nope");
-                addMessage(data)
+                const addMessage = httpsCallable(functions, "editComitard");
+                addMessage(data1)
                   .then((result) => {
                     const data: any = result.data;
                     // reload data
@@ -265,7 +268,8 @@ export default function EditComitard({
         );
       } else {
         console.log("do not change the picture");
-        const data = {
+        const data1 = {
+          comitardID: data.id,
           name: name,
           firstname: firstname,
           nickname: nickname,
@@ -280,8 +284,8 @@ export default function EditComitard({
           estLeSeul: estLeSeul,
         };
         // call another cloud function to update the doc
-        const addMessage = httpsCallable(functions, "nope");
-        addMessage(data)
+        const addMessage = httpsCallable(functions, "editComitard");
+        addMessage(data1)
           .then((result) => {
             const data: any = result.data;
             // reload data
@@ -409,7 +413,7 @@ export default function EditComitard({
                 {txtlenght1}
               </FormHelperText>
             </Grid>
-            {admin && (
+            {false && (
               <Grid item xs={12} sm={6}>
                 <UnstyledSelectIntroduction
                   isError={cercleError}
@@ -575,21 +579,23 @@ export default function EditComitard({
                 {txtlenght2}
               </FormHelperText>
             </Grid>
-            <Grid item xs={12} sm={12}>
-              <PictureInput
-                change={(images: ImageListType) => {
+            {false && (
+              <Grid item xs={12} sm={12}>
+                <PictureInput
+                  change={(images: ImageListType) => {
                     setPictureUpdated(true);
-                  setPicture(images);
-                  if (images.length > 0) {
-                    setPictureError(false);
-                  } else {
-                    setPictureError(true);
-                  }
-                }}
-                error={pictureError}
-                upload={pictureUpload}
-              />
-            </Grid>
+                    setPicture(images);
+                    if (images.length > 0) {
+                      setPictureError(false);
+                    } else {
+                      setPictureError(true);
+                    }
+                  }}
+                  error={pictureError}
+                  upload={pictureUpload}
+                />
+              </Grid>
+            )}
 
             <Grid item xs={12} sm={12}>
               <LoadingButton
@@ -611,7 +617,7 @@ export default function EditComitard({
                 onClick={handleEditComitard}
                 loading={loading}
               >
-                Créer comitard
+                Mettre à jour comitard
               </LoadingButton>
             </Grid>
           </Grid>
