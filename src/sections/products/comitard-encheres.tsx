@@ -45,9 +45,9 @@ const EncheresList: React.FC<EncheresListProps> = ({encheres, cerclesData, won})
                     <TableBody>
                         {Object.entries(encheres)
                             .sort(([, a], [, b]) => b.date.seconds - a.date.seconds)
-                            .map(([id, encheresData], index) => (<TableRow
+                            .map(([_id, encheresData], index) => (<TableRow
                                     key={index}
-                                    sx={{backgroundColor: (theme) => index === 0 ? `${theme.palette.info.lighter}` : ''}}
+                                    sx={{backgroundColor: (theme) => index === 0 ? `${theme.palette.info.light}` : ''}}
                                 >
                                     <TableCell>
                                         <Stack direction="row" spacing={1}>
