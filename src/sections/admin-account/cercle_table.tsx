@@ -13,6 +13,7 @@ import { LoadingButton } from "@mui/lab";
 import { useState } from "react";
 import { httpsCallable } from "@firebase/functions";
 import { functions } from "../../firebase_config";
+import WarningModal from "../../components/modal/warning_modal";
 
 interface CercleTableProps {
   data: DocumentData;
@@ -27,11 +28,33 @@ export default function CercleTable({
   error,
   handleOpenModalCercle,
 }: CercleTableProps) {
+
   const [loading, setLoading] = useState<boolean>(false);
+  const [openModal, setOpenModal] = useState<boolean>(false);
+  const [modalData, setModalData] = useState<any | null>([]);
+
   const cercleDataArray = Object.keys(data.data().cercles).map(
     (id: string) => ({ id, ...data.data().cercles[id] })
   );
   //console.log(cercleDataArray);
+
+  function handleClick(uid: string, functionName: string) { //delete th elogin of the user, not it's data
+    setLoading(true);
+    const addMessage = httpsCallable(functions, functionName);
+    addMessage({ uid: uid })
+      .then((result) => {
+        console.log("result: ", result);
+        refetchData();
+        setLoading(false);
+        setOpenModal(false);
+      })
+      .catch((errorMessage) => {
+        console.log("error:", errorMessage);
+        error("Error while deleting cercle");
+        setLoading(false);
+        setOpenModal(false);
+      });
+  }
 
   const columns: GridColDef[] = [
     { field: "id", headerName: "ID", width: 90 },
@@ -81,22 +104,10 @@ export default function CercleTable({
     renderCell: (params: GridRenderCellParams<any, string>) => (
       <LoadingButton
         disabled={params.row.active}
-        loading={loading}
         color="secondary"
-        onClick={async () => {
-          setLoading(true);
-          const addMessage = httpsCallable(functions, "deactivateUser");
-          addMessage({ uid: params.row.id })
-            .then((result) => {
-              console.log("result: ", result);
-              refetchData();
-              setLoading(false);
-            })
-            .catch((errorMessage) => {
-              console.log("error:", errorMessage);
-              error("Error while deleting cercle");
-              setLoading(false);
-            });
+        onClick={() => {
+          setOpenModal(true);
+          setModalData([params.row.id, "deactivateCercle", "Êtes-vous sûr de vouloir désactiver ce cercle? Cela va uniquement désactiver le cercle, pas les données associées. Le cercle ne pourra plus se connecter. Cette action est irreversible"]);
         }}
         variant="contained"
       >
@@ -112,22 +123,10 @@ export default function CercleTable({
       renderCell: (params: GridRenderCellParams<any, string>) => (
         <LoadingButton
           disabled={params.row.active}
-          loading={loading}
           color="error"
-          onClick={async () => {
-            setLoading(true);
-            const addMessage = httpsCallable(functions, "deleteUser");
-            addMessage({ uid: params.row.id })
-              .then((result) => {
-                console.log("result: ", result);
-                refetchData();
-                setLoading(false);
-              })
-              .catch((errorMessage) => {
-                console.log("error:", errorMessage);
-                error("Error while deleting cercle");
-                setLoading(false);
-              });
+          onClick={() => {
+            setOpenModal(true);
+            setModalData([params.row.id, "deleteCercle", "Êtes-vous sûr de vouloir supprimer ce cercle? Cela va supprimer le cercle et toutes les données associées. Cette action est irreversible et dangeureuse."]);
           }}
           variant="contained"
         >
@@ -138,6 +137,7 @@ export default function CercleTable({
   ];
 
   return (
+    <>
     <Box sx={{ height: 400, width: 1 }}>
       <DataGrid
         rows={cercleDataArray}
@@ -154,5 +154,7 @@ export default function CercleTable({
         getRowId={(row: any) => row.id}
       />
     </Box>
+    <WarningModal  loading={loading} title="Attention!" message={modalData[2]} open={openModal} close={() => setOpenModal(false)} onProceed={() => handleClick(modalData[0], modalData[1])}/>
+    </>
   );
 }
