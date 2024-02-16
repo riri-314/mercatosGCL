@@ -677,6 +677,7 @@ exports.signUpUser = onCall(async (request) => {
             description: description,
             nbFut: activeEditionVotes,
             name: data.displayName,
+            comitards: {},
           },
         })
         .catch((error: any) => {
