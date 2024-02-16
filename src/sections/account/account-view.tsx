@@ -7,13 +7,6 @@ import {useAuth} from "../../auth/AuthProvider";
 import {DocumentData} from "@firebase/firestore";
 import NewComitard from "../admin-account/new_comitard";
 import {MyComitards} from "./my_comitards.tsx";
-import Paper from "@mui/material/Paper";
-import Table from "@mui/material/Table";
-import TableHead from "@mui/material/TableHead";
-import TableRow from "@mui/material/TableRow";
-import TableCell from "@mui/material/TableCell";
-import TableBody from "@mui/material/TableBody";
-import TableContainer from "@mui/material/TableContainer";
 
 interface AccountProps {
     data: DocumentData;
@@ -49,7 +42,7 @@ export default function Account({data, refetchData}: AccountProps) {
 
             <Card sx={{width: "100%", mb: 4}}>
                 <CardContent>
-                    enchères
+                    Table with all encheres made by the cercle
                 </CardContent>
             </Card>
 
