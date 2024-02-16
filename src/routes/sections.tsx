@@ -4,7 +4,6 @@ import { Outlet, Navigate, useRoutes } from 'react-router-dom';
 import DashboardLayout from '../layouts/dashboard';
 import { useAuth } from '../auth/AuthProvider';
 import WipPage from "../pages/work-in-progress.tsx";
-import {Portal} from "@mui/material";
 
 export const AccountPage = lazy(() => import('../pages/account'));
 export const AdminAccountPage = lazy(() => import('../pages/admin-account'));
