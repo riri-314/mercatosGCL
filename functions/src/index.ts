@@ -262,6 +262,135 @@ function getCercleId(
   return cercleIdFound;
 }
 
+exports.editComitard = onCall(async (request) => {
+  const context_auth = request.auth;
+  const data = request.data;
+  let admin = false;
+  const txtlenght1 = 30;
+  const txtlenght2 = 150;
+
+  const activeEdition = await getActiveEdition();
+  const activeEditionData = await activeEdition.get();
+  const activeEditionCercle = activeEditionData.data()?.cercles || {};
+
+  if (Object.keys(activeEditionCercle).length === 0) {
+    // No editions found
+    throw new HttpsError("unavailable", "No cercles found in edition!");
+  }
+
+  // Check if the request is made by an admin
+  if (!context_auth) {
+    throw new HttpsError("permission-denied", "Unauthorized request!"); // return error if not connected
+  } else {
+    admin = await getAdminUid(context_auth.uid);
+    if (!activeEditionCercle[context_auth.uid] && !admin) {
+      throw new HttpsError("permission-denied", "Unauthorized request!"); // return error if not admin or not a active cercle
+    }
+  }
+  // check if user only update his comitard
+  if (
+    !activeEditionCercle[context_auth.uid]?.comitards[data.comitardID] &&
+    !admin
+  ) {
+    console.log("!activeEditionCercle[context_auth.uid]?.comitards[data.comitardId]: ", !activeEditionCercle[context_auth.uid]?.comitards[data.comitardId])
+    // if comitard does not exist or user try to update not is comitard
+    throw new HttpsError("permission-denied", "Unauthorized request!");
+  }
+
+  let cercle = context_auth.uid;
+
+  // Check if the request contains the required data
+  if (
+    data.comitardID === undefined ||
+    data.comitardID.lenght == 0 ||
+    data.name?.length == 0 ||
+    data.name?.length > txtlenght1 ||
+    data.firstname?.length == 0 ||
+    data.firstname?.length > txtlenght1 ||
+    data.nickname?.length == 0 ||
+    data.nickname?.length > txtlenght1 ||
+    data.post?.length == 0 ||
+    data.post?.length > txtlenght1 ||
+    data.teneurTaule?.length < 0 ||
+    data.teneurTaule?.length > 10 ||
+    data.etatCivil?.length == 0 ||
+    data.etatCivil?.length > txtlenght2 ||
+    data.age?.length < 0 ||
+    data.age?.length > 99 ||
+    data.nbEtoiles?.length < 0 ||
+    data.nbEtoiles?.length > 15 ||
+    data.pointFort?.length == 0 ||
+    data.pointFort?.length > txtlenght2 ||
+    data.pointFaible?.length == 0 ||
+    data.pointFaible?.length > txtlenght2 ||
+    data.estLeSeul?.length == 0 ||
+    data.estLeSeul?.length > txtlenght2
+  ) {
+
+    throw new HttpsError("invalid-argument", "Missing data!");
+  }
+  if (false) {
+    if (data.cercle === undefined || data.cercle.length == 0) {
+      throw new HttpsError("invalid-argument", "Missing data!");
+    } else {
+      // Check if the cercle exists
+      if (!activeEditionCercle[data.cercle]) {
+        throw new HttpsError("invalid-argument", "Cercle does not exist!");
+      } else {
+        cercle = data.cercle;
+      }
+    }
+  }
+
+  const s = `cercles.${cercle}.comitards.${data.comitardID}`;
+  const updateData: any = {};
+
+  if (data.name) {
+    updateData[`${s}.name`] = data.name;
+  }
+  if (data.firstname) {
+    updateData[`${s}.firstname`] = data.firstname;
+  }
+  if (data.nickname) {
+    updateData[`${s}.nickname`] = data.nickname;
+  }
+  if (data.post) {
+    updateData[`${s}.post`] = data.post;
+  }
+  if (data.teneurTaule) {
+    updateData[`${s}.teneurTaule`] = data.teneurTaule;
+  }
+  if (data.etatCivil) {
+    updateData[`${s}.etatCivil`] = data.etatCivil;
+  }
+  if (data.age) {
+    updateData[`${s}.age`] = data.age;
+  }
+  if (data.nbEtoiles) {
+    updateData[`${s}.nbEtoiles`] = data.nbEtoiles;
+  }
+  if (data.pointFort) {
+    updateData[`${s}.pointFort`] = data.pointFort;
+  }
+  if (data.pointFaible) {
+    updateData[`${s}.pointFaible`] = data.pointFaible;
+  }
+  if (data.estLeSeul) {
+    updateData[`${s}.estLeSeul`] = data.estLeSeul;
+  }
+
+  activeEdition
+    .update(updateData)
+    .catch((error: any) => {
+      console.log("Error updating comitard:", error);
+      throw new HttpsError("unavailable", "Error updating comitard!");
+    })
+    .then(() => {
+      return { message: "Comitard updated in edition map" };
+    });
+  return { message: "Comitard updated in edition map" };
+});
+
 exports.addComitard = onCall(async (request) => {
   const context_auth = request.auth;
   const data = request.data;
@@ -455,8 +584,6 @@ function generateRandomPassword(): string {
   return "123456";
 }
 
-
-
 exports.deactivateUser = onCall(async (request) => {
   const auth = request.auth;
   const data = request.data;
@@ -470,7 +597,6 @@ exports.deactivateUser = onCall(async (request) => {
   return { message: "User deleted" };
 });
 
-
 exports.deleteUser = onCall(async (request) => {
   const auth = request.auth;
   const data = request.data;
@@ -482,7 +608,6 @@ exports.deleteUser = onCall(async (request) => {
 
   await deleteUserAuth(uid);
 
-
   // Remove the map assigned with the user ID in all editions' cercles
   const editionsSnapshot = await admin.firestore().collection("editions").get();
   const batch = admin.firestore().batch();
@@ -492,21 +617,20 @@ exports.deleteUser = onCall(async (request) => {
     Object.keys(cercles).forEach((cercleId) => {
       if (cercleId === uid) {
         delete cercles[cercleId];
-      }      
+      }
     });
     // need to delete auctions from this cercle. TODO later
-    const editionRef = admin.firestore().collection("editions").doc(editionDoc.id);
+    const editionRef = admin
+      .firestore()
+      .collection("editions")
+      .doc(editionDoc.id);
     batch.update(editionRef, { cercles });
   });
 
   await batch.commit();
-  
-  
+
   return { message: "User deleted" };
-
 });
-
-
 
 exports.signUpUser = onCall(async (request) => {
   const auth = request.auth;
@@ -581,7 +705,7 @@ async function deleteUserAuth(uid: string): Promise<void> {
     throw new HttpsError("internal", "Failed to delete user: " + error.message);
   }
 
-  return; 
+  return;
 }
 
 /**
