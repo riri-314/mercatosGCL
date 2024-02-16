@@ -64,10 +64,10 @@ export default function Rules() {
 
                             <ul>
                                 <li><strong>Début du mercato : </strong>
-                                    {timestampToString(data?.data.start)}</li>
+                                    {new Date(data?.data().start.seconds * 1000).toLocaleString()}</li>
                                 <li>
                                     <strong>Fin du mercato : </strong>
-                                    {timestampToString(data?.data.stop)}
+                                    {new Date(data?.data().stop.seconds * 1000).toLocaleString()}
                                 </li>
                             </ul>
 
