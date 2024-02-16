@@ -27,6 +27,7 @@ import { useState } from "react";
 import QuickFilteringGrid from "./edition_table";
 import CercleTable from "./cercle_table";
 import EditCerle from "./edit_cercle";
+import ComitardTable from "./comitard_table";
 
 interface AdminAccountProps {
   data: DocumentData[];
@@ -48,7 +49,6 @@ export default function AdminAccount({
 
   const [openModalCercle, setOpenModalCercle] = useState(false);
   const [modalCercleData, setModalCercleData] = useState<any | null>(null);
-
 
   return (
     <>
@@ -147,8 +147,6 @@ export default function AdminAccount({
         </CardContent>
       </Card>
 
-      
-
       <Modal
         open={openModalCercle}
         onClose={() => setOpenModalCercle(false)}
@@ -162,14 +160,29 @@ export default function AdminAccount({
           mr: "auto",
         }}
       >
-        <EditCerle refetchData={refetchData} data={modalCercleData} close={() => setOpenModalCercle(false)} editionId={activeData.id}/>
+        <EditCerle
+          refetchData={refetchData}
+          data={modalCercleData}
+          close={() => setOpenModalCercle(false)}
+          editionId={activeData.id}
+        />
       </Modal>
 
       <NewComitard data={activeData} admin={true} refetchData={refetchData} />
 
       <Card sx={{ width: "100%", mb: 4 }}>
         <CardContent>
-          Edit/Remove comitard <br />
+          <Typography variant="h5" sx={{ mb: 1 }}>
+            Éditer, supprimer comitard
+          </Typography>
+          <ComitardTable
+            data={activeData}
+            refetchData={refetchData}
+            error={(error) => console.log("error: ", error)}
+            handleOpenModalComitard={(data: any) => {
+              console.log("modal open:", data);
+            }}
+          />
         </CardContent>
       </Card>
 
