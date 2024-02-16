@@ -25,6 +25,8 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_measurementId,
 };
 
+console.log("firebaseConfig:", firebaseConfig);
+
 firebaseConfig.storageBucket = firebaseConfig.storageBucket.replace(/"/g, '');
 
 // Initialize Firebase
