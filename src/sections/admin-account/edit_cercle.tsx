@@ -42,6 +42,7 @@ export default function EditCerle({
 }: NewCerleProps) {
   console.log("data:", data);
   const [loading, setLoading] = useState<boolean>(false);
+
   const [cercleDescription, setCercleDescription] = useState<string>(
     data.description
   );
@@ -49,8 +50,6 @@ export default function EditCerle({
     useState<boolean>(false);
   const [cercleName, setCercleName] = useState<string>(data.name);
   const [cercleNameError, setCercleNameError] = useState<boolean>(false);
-
-  const [cercleEmail, setCercleEmail] = useState<string>("");
 
   const [nbFut, setNbFut] = useState<number>(data.nbFut);
   const [nbFutError, setNbFutError] = useState<boolean>(false);

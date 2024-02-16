@@ -27,6 +27,8 @@ import { useState } from "react";
 import QuickFilteringGrid from "./edition_table";
 import CercleTable from "./cercle_table";
 import EditCerle from "./edit_cercle";
+import ComitardTable from "./comitard_table";
+import EditComitard from "./edit_comitard";
 
 interface AdminAccountProps {
   data: DocumentData[];
@@ -46,9 +48,13 @@ export default function AdminAccount({
   const handleCloseModalEdition = () => setOpenModalEdition(false);
   const [modalEditionData, setModalEditionData] = useState<any | null>(null);
 
+  const [errorCercleEdit, setErrorCercleEdit] = useState("");
   const [openModalCercle, setOpenModalCercle] = useState(false);
   const [modalCercleData, setModalCercleData] = useState<any | null>(null);
 
+  const [errorComitardEdit, setErrorComitardEdit] = useState("");
+  const [openModalComitard, setOpenModalComitard] = useState(false);
+  const [modalComitardData, setModalComitardData] = useState<any | null>(null);
 
   return (
     <>
@@ -137,13 +143,18 @@ export default function AdminAccount({
           <CercleTable
             data={activeData}
             refetchData={refetchData}
-            error={(error) => console.log("error: ", error)}
+            error={(error) => setErrorCercleEdit(error)}
             handleOpenModalCercle={(data: any) => {
               setOpenModalCercle(true);
               setModalCercleData(data);
               //console.log("modal open:", data);
             }}
           />
+          {errorCercleEdit && (
+            <Alert sx={{ mt: 3 }} severity={"error"}>
+              {errorCercleEdit}
+            </Alert>
+          )}
         </CardContent>
       </Card>
 
@@ -160,20 +171,66 @@ export default function AdminAccount({
           mr: "auto",
         }}
       >
-        <EditCerle refetchData={refetchData} data={modalCercleData} close={() => setOpenModalCercle(false)} editionId={activeData.id}/>
+        <EditCerle
+          refetchData={refetchData}
+          data={modalCercleData}
+          close={() => setOpenModalCercle(false)}
+          editionId={activeData.id}
+        />
       </Modal>
 
       <NewComitard data={activeData} admin={true} refetchData={refetchData} />
 
       <Card sx={{ width: "100%", mb: 4 }}>
         <CardContent>
-          Edit/Remove comitard <br />
+          <Typography variant="h5" sx={{ mb: 1 }}>
+            Éditer, supprimer comitard
+          </Typography>
+          <ComitardTable
+            data={activeData}
+            refetchData={refetchData}
+            admin={true}
+            error={(error) => setErrorComitardEdit(error)}
+            handleOpenModalComitard={(data: any) => {
+              setOpenModalComitard(true);
+              setModalComitardData(data);
+              console.log("modal open:", data);
+            }}
+          />
+          {errorComitardEdit && (
+            <Alert sx={{ mt: 3 }} severity={"error"}>
+              {errorComitardEdit}
+            </Alert>
+          )}
         </CardContent>
       </Card>
+
+      <Modal
+        open={openModalComitard}
+        onClose={() => setOpenModalComitard(false)}
+        aria-labelledby="modal-modal-title"
+        aria-describedby="modal-modal-description"
+        sx={{
+          m: 3,
+          overflow: "scroll",
+          maxWidth: 800,
+          ml: "auto",
+          mr: "auto",
+        }}
+      >
+        <EditComitard
+          refetchData={refetchData}
+          data={modalComitardData}
+          activeData={activeData}
+          close={() => setOpenModalComitard(false)}
+          admin={true}
+        />
+      </Modal>
 
       <Card sx={{ width: "100%", mb: 4 }}>
         <CardContent>
           Edit/Remove auctions <br />
+          let change the count and date of the auction
         </CardContent>
       </Card>
 
