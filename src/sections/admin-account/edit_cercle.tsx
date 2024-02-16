@@ -11,8 +11,7 @@ import Card from "@mui/material/Card";
 import Typography from "@mui/material/Typography";
 import { useState } from "react";
 import { LoadingButton } from "@mui/lab";
-import { httpsCallable } from "@firebase/functions";
-import { db, functions } from "../../firebase_config";
+import { db } from "../../firebase_config";
 import QuantityInput from "../../components/inputs/numberInput.tsx";
 import { doc, updateDoc } from "@firebase/firestore";
 
@@ -43,6 +42,7 @@ export default function EditCerle({
 }: NewCerleProps) {
   console.log("data:", data);
   const [loading, setLoading] = useState<boolean>(false);
+
   const [cercleDescription, setCercleDescription] = useState<string>(
     data.description
   );
@@ -50,8 +50,6 @@ export default function EditCerle({
     useState<boolean>(false);
   const [cercleName, setCercleName] = useState<string>(data.name);
   const [cercleNameError, setCercleNameError] = useState<boolean>(false);
-
-  const [cercleEmail, setCercleEmail] = useState<string>("");
 
   const [nbFut, setNbFut] = useState<number>(data.nbFut);
   const [nbFutError, setNbFutError] = useState<boolean>(false);

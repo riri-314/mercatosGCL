@@ -470,6 +470,7 @@ exports.deactivateUser = onCall(async (request) => {
   return { message: "User deleted" };
 });
 
+
 exports.deleteUser = onCall(async (request) => {
   const auth = request.auth;
   const data = request.data;
@@ -493,6 +494,7 @@ exports.deleteUser = onCall(async (request) => {
         delete cercles[cercleId];
       }      
     });
+    // need to delete auctions from this cercle. TODO later
     const editionRef = admin.firestore().collection("editions").doc(editionDoc.id);
     batch.update(editionRef, { cercles });
   });

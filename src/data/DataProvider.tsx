@@ -29,7 +29,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   const [fetchedTime, setFetchedTime] = useState<number>(0);
 
   const fetchData = async () => {
-    const debug = true; //debug feature to always fetch the same doc. To remove when on production
+    const debug = false; //debug feature to always fetch the same doc. To remove when on production
     try {
       if (!debug) {
         const editionRef = collection(db, "editions");
