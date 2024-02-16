@@ -14,7 +14,6 @@ import { useState } from "react";
 import { httpsCallable } from "@firebase/functions";
 import { functions } from "../../firebase_config";
 import WarningModal from "../../components/modal/warning_modal";
-import { set } from "lodash";
 
 interface CercleTableProps {
   data: DocumentData;
@@ -29,7 +28,6 @@ export default function CercleTable({
   error,
   handleOpenModalCercle,
 }: CercleTableProps) {
-  const [loadingDelete, setLoadingDelete] = useState<boolean>(false);
 
   const [loading, setLoading] = useState<boolean>(false);
   const [openModal, setOpenModal] = useState<boolean>(false);
@@ -125,7 +123,6 @@ export default function CercleTable({
       renderCell: (params: GridRenderCellParams<any, string>) => (
         <LoadingButton
           disabled={params.row.active}
-          loading={loadingDelete}
           color="error"
           onClick={() => {
             setOpenModal(true);
