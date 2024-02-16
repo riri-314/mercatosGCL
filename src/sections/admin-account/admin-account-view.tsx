@@ -28,6 +28,7 @@ import QuickFilteringGrid from "./edition_table";
 import CercleTable from "./cercle_table";
 import EditCerle from "./edit_cercle";
 import ComitardTable from "./comitard_table";
+import EditComitard from "./edit_comitard";
 
 interface AdminAccountProps {
   data: DocumentData[];
@@ -191,6 +192,8 @@ export default function AdminAccount({
             admin={true}
             error={(error) => setErrorComitardEdit(error)}
             handleOpenModalComitard={(data: any) => {
+              setOpenModalComitard(true);
+              setModalComitardData(data);
               console.log("modal open:", data);
             }}
           />
@@ -202,9 +205,32 @@ export default function AdminAccount({
         </CardContent>
       </Card>
 
+      <Modal
+        open={openModalComitard}
+        onClose={() => setOpenModalComitard(false)}
+        aria-labelledby="modal-modal-title"
+        aria-describedby="modal-modal-description"
+        sx={{
+          m: 3,
+          overflow: "scroll",
+          maxWidth: 800,
+          ml: "auto",
+          mr: "auto",
+        }}
+      >
+        <EditComitard
+          refetchData={refetchData}
+          data={modalComitardData}
+          activeData={activeData}
+          close={() => setOpenModalComitard(false)}
+          admin={true}
+        />
+      </Modal>
+
       <Card sx={{ width: "100%", mb: 4 }}>
         <CardContent>
           Edit/Remove auctions <br />
+          let change the count and date of the auction
         </CardContent>
       </Card>
 
