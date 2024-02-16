@@ -183,9 +183,10 @@ export default function AdminAccount({
           <LoadingButton
             onClick={async () => {
               const auth = getAuth();
-              sendPasswordResetEmail(auth, "henri.pihet.807@gmail.com")
+              sendPasswordResetEmail(auth, "contact.rousseauflorent@gmail.com")
                 .then(() => {
                   // Password reset email sent!
+                    console.log("Password reset email sent!");
                   // ..
                 })
                 .catch((error) => {
