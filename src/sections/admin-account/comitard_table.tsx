@@ -8,16 +8,17 @@ import {
   GridToolbar,
 } from "@mui/x-data-grid";
 import Iconify from "../../components/iconify/iconify";
-import { DocumentData } from "@firebase/firestore";
+import { DocumentData, doc, updateDoc } from "@firebase/firestore";
 import { LoadingButton } from "@mui/lab";
 import { useState } from "react";
-import { httpsCallable } from "@firebase/functions";
-import { functions } from "../../firebase_config";
+import { db } from "../../firebase_config";
 import WarningModal from "../../components/modal/warning_modal";
 import { Avatar } from "@mui/material";
+import { useAuth } from "../../auth/AuthProvider";
 
 interface ComitardTableProps {
   data: DocumentData;
+  admin: boolean;
   refetchData: () => void;
   error: (error: string) => void;
   handleOpenModalComitard: (id: number) => void;
@@ -25,6 +26,7 @@ interface ComitardTableProps {
 
 export default function ComitardTable({
   data,
+  admin,
   refetchData,
   error,
   handleOpenModalComitard,
@@ -32,57 +34,78 @@ export default function ComitardTable({
   const [loading, setLoading] = useState<boolean>(false);
   const [openModal, setOpenModal] = useState<boolean>(false);
   const [modalData, setModalData] = useState<any | null>([]);
+  const { user } = useAuth();
 
   const cercleDataArray: any[] = [];
 
   //console.log("data test: ", data.data().cercles);
-
-  Object.entries(data.data().cercles).forEach((cercle: any) => {
-    //console.log("cercle: ", cercle);
-    Object.entries(cercle[1].comitards).forEach((comitard: any) => {
+  if (admin) {
+    Object.entries(data.data().cercles).forEach((cercle: any) => {
+      //console.log("cercle: ", cercle);
+      Object.entries(cercle[1].comitards).forEach((comitard: any) => {
         comitard[1].cercle = cercle[1].name;
+        comitard[1].cercleId = cercle[0];
         comitard[1].id = comitard[0];
-      //console.log("comitard: ", comitard);
-      cercleDataArray.push(comitard[1]);
+        //console.log("comitard: ", comitard);
+        cercleDataArray.push(comitard[1]);
+      });
     });
-  });
+  } else {
+    Object.entries(data.data().cercles).forEach((cercle: any) => {
+      //console.log("cercle: ", cercle);
+      Object.entries(cercle[1].comitards).forEach((comitard: any) => {
+        if (cercle[0] == user?.uid) {
+          comitard[1].cercle = cercle[1].name;
+          comitard[1].cercleId = cercle[0];
+          comitard[1].id = comitard[0];
+          //console.log("comitard: ", comitard);
+          cercleDataArray.push(comitard[1]);
+        }
+        //console.log("comitard: ", comitard);
+      });
+    });
+  }
 
   console.log(cercleDataArray);
 
-  function handleClick(uid: string, functionName: string) {
-    //delete th elogin of the user, not it's data
+  async function handleClick(comitardUid: string, cercleUid: string) {
     setLoading(true);
-    const addMessage = httpsCallable(functions, functionName);
-    addMessage({ uid: uid })
-      .then((result) => {
-        console.log("result: ", result);
-        refetchData();
-        setLoading(false);
-        setOpenModal(false);
-      })
-      .catch((errorMessage) => {
-        console.log("error:", errorMessage);
-        error("Error while deleting cercle");
-        setLoading(false);
-        setOpenModal(false);
-      });
+    try {
+      const docRef = doc(db, "editions", data.id);
+
+      const cercles = data.data()?.cercles;
+      if (cercles && cercles[cercleUid]) {
+        delete cercles[cercleUid].comitards[comitardUid];
+        await updateDoc(docRef, { cercles });
+      }
+      setLoading(false);
+      refetchData();
+
+      setOpenModal(false);
+    } catch (errorMessage) {
+      error("Error while deleting comitard");
+      setLoading(false);
+      setOpenModal(false);
+
+      console.error("Error deleting comitard:", error);
+    }
   }
 
   const columns: GridColDef[] = [
     { field: "id", headerName: "ID", width: 90 },
     {
-        field: "picture",
-        headerName: "Phtot",
-        width: 200,
-        renderCell: (params) => {
-          return (
-            <>
-              <Avatar src={params.row.picture} />
-              {params.value.name}
-            </>
-          );
-        }
+      field: "picture",
+      headerName: "Photo",
+      width: 200,
+      renderCell: (params) => {
+        return (
+          <>
+            <Avatar src={params.row.picture} />
+            {params.value.name}
+          </>
+        );
       },
+    },
     {
       field: "name",
       headerName: "Nom",
@@ -177,7 +200,10 @@ export default function ComitardTable({
         ];
       },
     },
-    {
+  ];
+
+  if (admin) {
+    columns.push({
       field: "delete",
       headerName: "Supprimer",
       minWidth: 150,
@@ -190,7 +216,7 @@ export default function ComitardTable({
             setOpenModal(true);
             setModalData([
               params.row.id,
-              "deleteComitard",
+              params.row.cercleId,
               "Êtes-vous sûr de vouloir supprimer ce comitard? Cela va supprimer le comitard et toutes les données associées. Cette action est irreversible et dangeureuse.",
             ]);
           }}
@@ -199,8 +225,8 @@ export default function ComitardTable({
           Supprimer
         </LoadingButton>
       ),
-    },
-  ];
+    });
+  }
 
   return (
     <>

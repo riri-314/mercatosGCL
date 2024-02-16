@@ -6,6 +6,7 @@ import { useAuth } from "../../auth/AuthProvider";
 
 import { DocumentData } from "@firebase/firestore";
 import NewComitard from "../admin-account/new_comitard";
+import ComitardTable from "../admin-account/comitard_table";
 
 interface AccountProps {
   data: DocumentData;
@@ -33,7 +34,18 @@ export default function Account({ data, refetchData }: AccountProps) {
 
       <Card sx={{ width: "100%", mb: 4 }}>
         <CardContent>
-            Table with all comitards and their info
+        <Typography variant="h5" sx={{ mb: 1 }}>
+            Éditer comitard
+          </Typography>
+          <ComitardTable
+            data={data}
+            refetchData={refetchData}
+            admin={false}
+            error={(error) => console.log("error: ", error)}
+            handleOpenModalComitard={(data: any) => {
+              console.log("modal open:", data);
+            }}
+          />
         </CardContent>
       </Card>
 
