@@ -10,8 +10,6 @@ import Typography from '@mui/material/Typography';
 import TableContainer from '@mui/material/TableContainer';
 import TablePagination from '@mui/material/TablePagination';
 
-
-
 import { results } from '../../_mock/results';
 import Scrollbar from '../../components/scrollbar/scrollbar';
 import { emptyRows, applyFilter, getComparator } from './utils';

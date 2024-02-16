@@ -98,8 +98,7 @@ const StyledButton = styled(Button, { shouldForwardProp: () => true })(
   font-size: 0.875rem;
   box-sizing: border-box;
   width: 100%;
-  height: 48px;
-  padding: 8px 12px;
+  padding: ${theme.spacing(2)};
   border-radius: 8px;
   text-align: left;
   line-height: 1.5;

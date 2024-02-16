@@ -40,7 +40,7 @@ export const storage = getStorage(app);
 export const functions = getFunctions(app);
 
 
-connectFunctionsEmulator(functions, "127.0.0.1", 5001);
+//connectFunctionsEmulator(functions, "127.0.0.1", 5001);
 
 //const analytics = getAnalytics(app);
 

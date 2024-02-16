@@ -9,7 +9,7 @@ export const AdminAccountPage = lazy(() => import('../pages/admin-account'));
 export const RulesPage = lazy(() => import('../pages/rules'));
 export const ResultPage = lazy(() => import('../pages/results'));
 export const LoginPage = lazy(() => import('../pages/login'));
-export const ProductsPage = lazy(() => import('../pages/products'));
+export const ComitardsPage = lazy(() => import('../pages/comitards-page.tsx'));
 export const Page404 = lazy(() => import('../pages/page-not-found'));
 
 // ----------------------------------------------------------------------
@@ -29,7 +29,7 @@ export default function Router() {
       ),
       children: [
         { element: <ResultPage />, index: true },
-        { path: 'comitards', element: <ProductsPage /> },
+        { path: 'comitards', element: <ComitardsPage /> },
         (user? (isAdmin() ? { path: 'account', element: <AdminAccountPage /> } : { path: 'account', element: <AccountPage /> }):{ path: 'account', element: <LoginPage /> }),
         { path: 'rules', element: <RulesPage /> },
       ],
