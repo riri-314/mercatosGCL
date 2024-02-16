@@ -2,16 +2,20 @@ import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import Card from "@mui/material/Card";
 
-import { Alert, CardContent, Modal } from "@mui/material";
-import { useAuth } from "../../auth/AuthProvider";
-
+import {Accordion, AccordionDetails, AccordionSummary, CardContent, Modal, Alert} from "@mui/material";
+import {useAuth} from "../../auth/AuthProvider";
 
 import {DocumentData} from "@firebase/firestore";
 import NewComitard from "../admin-account/new_comitard";
+import ComitardTable from "../admin-account/comitard_table.tsx";
+import Container from "@mui/material/Container";
+import {getAuth, sendPasswordResetEmail} from "@firebase/auth";
+import {LoadingButton} from "@mui/lab";
+import Box from "@mui/material/Box";
 
-import ComitardTable from "../admin-account/comitard_table";
 import { useState } from "react";
 import EditComitard from "../admin-account/edit_comitard";
+
 
 
 interface AccountProps {
@@ -42,7 +46,7 @@ export default function Account({ data, refetchData }: AccountProps) {
 
       <NewComitard data={data} admin={false} refetchData={refetchData} />
 
-      <Card sx={{ width: "100%", mb: 4 }}>
+      <Card sx={{ width: "100%", mb: 4, p: 2 }}>
         <CardContent>
           <Typography variant="h5" sx={{ mb: 1 }}>
             Éditer comitard
@@ -87,15 +91,54 @@ export default function Account({ data, refetchData }: AccountProps) {
           admin={false}
         />
       </Modal>
+      
+        <Card sx={{width: "100%", mb: 4}}>
+            <CardContent>
+                <Accordion>
+                    <AccordionSummary expandIcon={<Typography variant="h3">🢃</Typography>}>
+                        <Typography variant="h5">Enchères posées</Typography>
+                    </AccordionSummary>
+                    <AccordionDetails>
+                        <Container>
+                            <Typography variant="h6" align="center">
+                                Coming soon !
+                            </Typography>
+                        </Container>
+                    </AccordionDetails>
+                </Accordion>
+            </CardContent>
+        </Card>
+      
+              <Card sx={{width: "100%", mb: 4, p: 2}}>
+            <CardContent>
+                <Stack spacing={2}>
+                    <Typography variant="h5">Paramètres du compte</Typography>
+                    <Box>
+                        <LoadingButton
+                        size="large"
+                        variant={"outlined"}
 
-      <Card sx={{ width: "100%", mb: 4 }}>
-        <CardContent>Table with all encheres made by the cercle</CardContent>
-      </Card>
-
-      <Card sx={{ width: "100%", mb: 4 }}>
-        <CardContent>Option to reset password</CardContent>
-      </Card>
+                        onClick={async () => {
+                            const auth = getAuth();
+                            sendPasswordResetEmail(auth, user?.email ?? "")
+                                .then(() => {
+                                    // Password reset email sent!
+                                    console.log("Password reset email sent!");
+                                    // ..
+                                })
+                                .catch((error) => {
+                                    const errorMessage = error.message;
+                                    console.log("error reset password:", errorMessage);
+                                    // ..
+                                });
+                        }}
+                    >
+                        Réinitialiser le mot de passe
+                    </LoadingButton>
+                    </Box>
+                </Stack>
+            </CardContent>
+        </Card>
     </>
   );
-
 }
