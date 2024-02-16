@@ -35,7 +35,7 @@ export default function Account({data, refetchData}: AccountProps) {
 
         <NewComitard data={data} admin={false} refetchData={refetchData}/>
 
-        <Card sx={{width: "100%", mb: 4}}>
+        <Card sx={{width: "100%", mb: 4, p: 2}}>
             <CardContent>
                 <Typography variant="h5" sx={{mb: 1}}>
                     Éditer comitard
