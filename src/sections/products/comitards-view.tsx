@@ -164,6 +164,7 @@ export default function ComitardsView() {
                                                 user={user?.uid}
                                                 cercleId={cercleId}
                                                 comitardId={comitardID}
+                                                editionId={data.id}
                                                 nbFutsLeft={nbFutsLeft()}
                                                 enchereMax={enchereMinMax()[1]}
                                                 enchereMin={enchereMinMax()[0]}
