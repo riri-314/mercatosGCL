@@ -273,9 +273,16 @@ export default function EditComitard({
             setErrorSeverity("success");
             setError("Comitard créé avec succès");
             setLoading(false);
-            setErrorSeverity("error");
-            setError("Certains champs sont incorrects. Petit con.");
         })
+        .catch((error) => {
+          console.log("error:", error);
+          setPictureUpload(undefined);
+          setErrorSeverity("error");
+          setError(
+            "Une erreur est survenue lors de la création du comitard. serveur error."
+          );
+          setLoading(false);
+        });
     }}}
   return (
     <>
