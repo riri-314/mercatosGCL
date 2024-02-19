@@ -57,7 +57,7 @@ export default function ComitardCard({
     const [open, setOpen] = useState(false);
     const [timeLeft, setTimeLeft] = useState(0);
     const [displayVote, setDisplayVote] = useState(false);
-    const [vote, setVote] = useState(30);
+    const [vote, setVote] = useState(0);
     const [voteError, setVoteError] = useState("");
     const [voteErrorSeverity, setVoteErrorSeverity] = useState<AlertColor | undefined>("error");
     const [loading, setLoading] = useState(false);
