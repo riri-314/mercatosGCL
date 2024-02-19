@@ -32,6 +32,7 @@ interface ComitardCardProps {
     product: any;
     user: string | undefined;
     cercleId: string;
+    editionId: string;
     comitardId: string;
     nbFutsLeft: number;
     enchereMin: number;
@@ -45,6 +46,7 @@ export default function ComitardCard({
                                          product,
                                          cercleId,
                                          comitardId,
+                                         editionId,
                                          nbFutsLeft,
                                          enchereMin,
                                          enchereMax,
@@ -55,13 +57,13 @@ export default function ComitardCard({
     const [open, setOpen] = useState(false);
     const [timeLeft, setTimeLeft] = useState(0);
     const [displayVote, setDisplayVote] = useState(false);
-    const [vote, setVote] = useState(0);
+    const [vote, setVote] = useState(30);
     const [voteError, setVoteError] = useState("");
     const [voteErrorSeverity, setVoteErrorSeverity] = useState<AlertColor | undefined>("error");
     const [loading, setLoading] = useState(false);
     const handleOpen = () => setOpen(true);
     const handleClose = () => setOpen(false);
-    const {user} = useAuth();
+    const {user, isAdmin} = useAuth();
 
     const theme = useTheme();
     const isMediumScreen = useMediaQuery(theme.breakpoints.down("md")); // Adjust breakpoint as needed
@@ -104,6 +106,11 @@ export default function ComitardCard({
             return;
         }
 
+        if (isAdmin()){
+            setDisplayVote(true);
+            return;
+        }
+
         if (nbFutsLeft <= 0 || nbFutsLeft < enchereMin) {
             //console.log("Number of futs left: ", nbFutsLeft);
             setDisplayVote(false);
@@ -128,6 +135,30 @@ export default function ComitardCard({
             return;
         }
     }
+
+    // if comitard allready has a enchere, return the biggest enchere, return null otherwise
+    function maxEnchere(): number | null {
+        if (product.encheres) {
+            const encheres = Object.values(product.encheres)
+                .filter((enchere) => enchere !== null)
+                .map((enchere) => (enchere as { vote: number }).vote);
+            if (encheres.length > 0) {
+                return Math.max(...encheres);
+            }
+        }
+        return null;
+    }
+
+    // return the minimum enchere possible
+    function minEnchere(): number {
+        const max = maxEnchere();
+        if (max) {
+            return Math.max(max + 1, enchereMin);
+        }
+        return enchereMin;
+    }
+
+    // console.log("product: ", product.name, "maxEnchere: ", minEnchere())
 
     // function to display the time left of the enchère
     // only for not logged in users
@@ -165,7 +196,7 @@ export default function ComitardCard({
         console.log("vote: ", vote);
         if (vote && vote > 0 && vote >= enchereMin && enchereMax >= vote && vote <= nbFutsLeft) {
             const Vote = httpsCallable(functions, "vote");
-            Vote({vote: vote, comitardId: comitardId})
+            Vote({vote: vote, comitardId: comitardId, editionId: editionId})
                 .then((result) => {
                     // Read result of the Cloud Function.
                     /** @type {any} */
@@ -295,7 +326,7 @@ export default function ComitardCard({
                     {displayVote && isInTimeFrame && (<>
                             <QuantityInput
                                 title="Enchère"
-                                min={enchereMin}
+                                min={minEnchere()}
                                 max={Math.min(nbFutsLeft, enchereMax)}
                                 error={false}
                                 helpText={""}
@@ -368,7 +399,7 @@ export default function ComitardCard({
                                     <Stack spacing={1} sx={{my: (theme) => `${theme.spacing(1)}`}}>
                                         <QuantityInput
                                             title="Enchère"
-                                            min={enchereMin}
+                                            min={minEnchere()}
                                             max={Math.min(nbFutsLeft, enchereMax)}
                                             error={false}
                                             helpText={""}
