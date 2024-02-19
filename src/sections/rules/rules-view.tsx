@@ -10,12 +10,6 @@ import rehypeRaw from 'rehype-raw'
 import Iconify from "../../components/iconify/iconify.tsx";
 import Box from "@mui/material/Box";
 
-function timestampToString(date: number | Date) {
-    return new Intl.DateTimeFormat('fr-BE', {
-        year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
-    }).format(date)
-}
-
 export default function Rules() {
 
     const {data} = useData();
