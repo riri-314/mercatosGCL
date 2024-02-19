@@ -153,7 +153,7 @@ export default function ComitardCard({
     function minEnchere(): number {
         const max = maxEnchere();
         if (max) {
-            return Math.max(max + 1, enchereMin);
+            return Math.min(Math.max(max + 1, enchereMin) , enchereMax);
         }
         return enchereMin;
     }
