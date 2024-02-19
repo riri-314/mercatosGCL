@@ -6,7 +6,7 @@
  *
  * See a full list of supported triggers at https://firebase.google.com/docs/functions
  */
-
+import * as functions from "firebase-functions";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 import * as test from "firebase-admin/firestore";
@@ -69,7 +69,9 @@ exports.vote = onCall(async (request) => {
   const data = request.data;
   let isAdmin = false;
 
-  const activeEdition = await getActiveEditionBis();
+  console.log("edition id:", data.editionId);
+
+  const activeEdition = await getActiveEditionBis(data.editionId);
   const activeEditionData = await activeEdition.get();
   const activeEditionCercle = activeEditionData.data()?.cercles || {};
 
@@ -89,9 +91,9 @@ exports.vote = onCall(async (request) => {
   }
 
   // check date
-  console.log("before now:", admin.firestore.Timestamp);
-  console.log("before now:", test);
-  console.log("before now:", test.Timestamp);
+  //console.log("before now:", admin.firestore.Timestamp);
+  //console.log("before now:", test);
+  //console.log("before now:", test.Timestamp);
   const now = test.Timestamp.now();
   //const now = admin.firestore.Timestamp.fromDate(new Date());
 
@@ -203,6 +205,7 @@ exports.vote = onCall(async (request) => {
         },
         [`${s}.enchereStart`]: now,
         [`${s}.enchereStop`]: future,
+        [`${s}.enchereProcessed`]: false,
         [e]: test.FieldValue.increment(-data.vote),
         jobs: test.FieldValue.increment(1),
       })
@@ -214,6 +217,24 @@ exports.vote = onCall(async (request) => {
         return { message: "Added new enchere" };
       });
   } else {
+    // need to check here if the vote is bigger than last bigest vote
+    const encheres =
+      activeEditionCercle[cercleId].comitards[data.comitardId].encheres;
+    if (encheres) {
+      const tmp = Object.values(encheres)
+        .filter((enchere) => enchere !== null)
+        .map((enchere) => (enchere as { vote: number }).vote);
+      if (tmp.length > 0) {
+        if (Math.max(Math.max(...tmp) + 1, enchereMin) < data.vote) {
+          throw new HttpsError(
+            "invalid-argument",
+            "Vote number is not the biggest"
+          );
+        }
+      }
+    } else {
+      throw new HttpsError("unavailable", "No encheres found!");
+    }
     if (now < enchereStart || now > enchereStop) {
       throw new HttpsError(
         "permission-denied",
@@ -247,6 +268,63 @@ exports.vote = onCall(async (request) => {
   }
   return { message: "Added new enchere" };
 });
+
+export const taskRunner = functions
+  .runWith({ memory: "2GB" })
+  .pubsub.schedule("*/10 * * * *")
+  .onRun(async (context) => {
+    // Consistent timestamp
+
+    //const now = admin.firestore.Timestamp.now();
+    //console.log("now: ", now.toMillis().toLocaleString());
+
+    const activeEdition = await getActiveEdition();
+    const activeEditionData = await activeEdition.get();
+    const activeEditionCercle = activeEditionData.data()?.cercles || {};
+
+    const job = activeEditionData.data()?.jobs;
+
+    // check if there is a job to process
+    if (!job === undefined && job > 0) {
+      const remboursementGagnant =
+        activeEditionData.data()?.remboursementGagnant;
+      const remboursementPerdant =
+        activeEditionData.data()?.remboursementPerdant;
+      const remboursementVendeur =
+        activeEditionData.data()?.remboursementVendeur;
+      if (
+        remboursementGagnant === undefined ||
+        remboursementPerdant === undefined ||
+        remboursementVendeur === undefined
+      ) {
+        throw new HttpsError("unavailable", "No remboursement found!");
+      }
+      Object.keys(activeEditionCercle).forEach(function (cercleId) {
+        const cercle = activeEditionCercle[cercleId];
+        Object.keys(cercle.comitards).forEach(function (comitardId) {
+          const comitard = cercle.comitards[comitardId];
+          // check if comitard has an enchere to process
+          if (
+            !comitard.processed === undefined &&
+            !comitard.processed === true
+          ) {
+            const now = admin.firestore.Timestamp.now();
+            const enchereStop = comitard.enchereStop;
+            if (enchereStop < now.toMillis()) {
+              // process enchere
+              const encheres = comitard.encheres;
+              // todo
+
+              Object.keys(encheres).forEach(function (enchereId) {
+                const enchere = encheres[enchereId];
+                console.log("enchere: ", enchere);
+              });
+            }
+          }
+        });
+      });
+    }
+  });
 
 function getCercleId(
   comitardId: string,
@@ -292,7 +370,10 @@ exports.editComitard = onCall(async (request) => {
     !activeEditionCercle[context_auth.uid]?.comitards[data.comitardID] &&
     !admin
   ) {
-    console.log("!activeEditionCercle[context_auth.uid]?.comitards[data.comitardId]: ", !activeEditionCercle[context_auth.uid]?.comitards[data.comitardId])
+    console.log(
+      "!activeEditionCercle[context_auth.uid]?.comitards[data.comitardId]: ",
+      !activeEditionCercle[context_auth.uid]?.comitards[data.comitardId]
+    );
     // if comitard does not exist or user try to update not is comitard
     throw new HttpsError("permission-denied", "Unauthorized request!");
   }
@@ -326,7 +407,6 @@ exports.editComitard = onCall(async (request) => {
     data.estLeSeul?.length == 0 ||
     data.estLeSeul?.length > txtlenght2
   ) {
-
     throw new HttpsError("invalid-argument", "Missing data!");
   }
   if (false) {
@@ -535,6 +615,8 @@ exports.resetPasswords = onCall(async (request) => {
     throw new HttpsError("unavailable", "No editions found!");
   }
 
+  //
+
   const userUIDs = Object.keys(activeEditionCercle);
 
   // Loop through user UIDs in the cercle
@@ -729,20 +811,22 @@ async function getActiveEdition(): Promise<FirebaseFirestore.DocumentReference> 
   return querySnapshot.docs[0].ref;
 }
 
-async function getActiveEditionBis(): Promise<FirebaseFirestore.DocumentReference> {
+async function getActiveEditionBis(editionId: string): Promise<FirebaseFirestore.DocumentReference> {
   const db = test.getFirestore();
-  const editionCollection = db.collection("editions");
-  const querySnapshot = await editionCollection
-    .where("active", "==", true)
-    .orderBy("edition", "desc")
-    .limit(1)
-    .get();
+  //const editionCollection = db.collection("editions");
+  const test3 = db.collection("editions").doc(editionId);
+  //const querySnapshot = await editionCollection
+  //  .where("active", "==", true)
+  //  .orderBy("edition", "desc")
+  //  .limit(1)
+  //  .get();
 
-  const queryBis = await db.collection("editions").doc("rHiqrhsVIKrvsWCv0onw");
-
-  if (querySnapshot.empty) {
-    throw new HttpsError("unavailable", "No editions found!");
-  }
-  return queryBis;
+  //const queryBis = await db.collection("editions").doc("rHiqrhsVIKrvsWCv0onw");
+  //
+  //if (querySnapshot.empty) {
+  //  throw new HttpsError("unavailable", "No editions found!");
+  //}
+  //return queryBis;
   //return querySnapshot.docs[0].ref;
+  return test3;
 }
