@@ -87,6 +87,9 @@ export default function EditComitard({
     return out;
   }
 
+  //console.log(cerclesOption())
+  //console.log(cerclesOption()[cercle])
+
   async function handleEditComitard() {
     setLoading(true);
     let error = false;
@@ -220,6 +223,7 @@ export default function EditComitard({
                   firstname: firstname,
                   nickname: nickname,
                   post: post,
+                  cercleId: cercle ? cerclesOption()[cercle] : null,
                   cercle: cercle ? cercle : null,
                   teneurTaule: teneurTaule,
                   etatCivil: etatCivil,
@@ -274,6 +278,7 @@ export default function EditComitard({
           firstname: firstname,
           nickname: nickname,
           post: post,
+          cercleId: cercle ? cerclesOption()[cercle] : null,
           cercle: cercle ? cercle : null,
           teneurTaule: teneurTaule,
           etatCivil: etatCivil,

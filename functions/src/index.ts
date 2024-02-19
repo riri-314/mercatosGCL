@@ -368,6 +368,11 @@ exports.editComitard = onCall(async (request) => {
 
   let cercle = context_auth.uid;
 
+  if (admin) {
+    cercle = data.cercleId;
+    //console.log("waw c'est un admoin: ", data.cercleId)
+  }
+
   // Check if the request contains the required data
   if (
     data.comitardID === undefined ||
@@ -397,18 +402,19 @@ exports.editComitard = onCall(async (request) => {
   ) {
     throw new HttpsError("invalid-argument", "Missing data!");
   }
-  if (admin) {
-    if (data.cercle === undefined || data.cercle.length == 0) {
-      throw new HttpsError("invalid-argument", "Missing data!");
-    } else {
-      // Check if the cercle exists
-      if (!activeEditionCercle[data.cercle]) {
-        throw new HttpsError("invalid-argument", "Cercle does not exist!");
-      } else {
-        cercle = data.cercle;
-      }
-    }
-  }
+  // May be usefull later
+  //if (admin) {
+  //  if (data.cercle === undefined || data.cercle.length == 0) {
+  //    throw new HttpsError("invalid-argument", "Missing data!");
+  //  } else {
+  //    // Check if the cercle exists
+  //    if (!activeEditionCercle[data.cercle]) {
+  //      throw new HttpsError("invalid-argument", "Cercle does not exist!");
+  //    } else {
+  //      cercle = data.cercle;
+  //    }
+  //  }
+  //}
 
   const s = `cercles.${cercle}.comitards.${data.comitardID}`;
   const updateData: any = {};
@@ -446,6 +452,8 @@ exports.editComitard = onCall(async (request) => {
   if (data.estLeSeul) {
     updateData[`${s}.estLeSeul`] = data.estLeSeul;
   }
+
+
 
   activeEdition
     .update(updateData)
