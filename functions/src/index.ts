@@ -13,7 +13,6 @@ import * as test from "firebase-admin/firestore";
 import { getAuth } from "firebase-admin/auth";
 import {
   beforeUserCreated,
-  beforeUserSignedIn,
 } from "firebase-functions/v2/identity";
 import { v4 as uuidv4 } from "uuid";
 //import { Timestamp, increment } from "@firebase/firestore";
@@ -36,33 +35,10 @@ async function getAdminUid(uid: string): Promise<boolean> {
 }
 
 // disable user sign up
-export const beforecreated = beforeUserCreated((event) => {
+export const beforecreated = beforeUserCreated((_event) => {
   throw new HttpsError("permission-denied", "Unauthorized request!");
 });
 
-export const beforesignedin = beforeUserSignedIn(async (event) => {
-  const user = event.data;
-
-  // admin can sign in
-  if (user.uid && (await getAdminUid(user.uid))) {
-    return;
-  }
-
-  const activeEdition = await getActiveEdition();
-  const activeEditionData = await activeEdition.get();
-  const activeEditionCercle = activeEditionData.data()?.cercles || {};
-
-  if (Object.keys(activeEditionCercle).length === 0) {
-    // No editions found
-    throw new HttpsError("unavailable", "No editions found!");
-  }
-
-  // Check if the user's UID exists in the cercle map
-  if (activeEditionCercle[user.uid]) {
-    return;
-  }
-  throw new HttpsError("permission-denied", "Unauthorized access!");
-});
 
 exports.vote = onCall(async (request) => {
   const context_auth = request.auth;
@@ -70,8 +46,13 @@ exports.vote = onCall(async (request) => {
   let isAdmin = false;
 
   console.log("edition id:", data.editionId);
+  if (
+    data.editionId === undefined
+  ) {
+    throw new HttpsError("invalid-argument", "Edition id is invalid");
+  }
 
-  const activeEdition = await getActiveEditionBis(data.editionId);
+  const activeEdition = await getEditionBis(data.editionId);
   const activeEditionData = await activeEdition.get();
   const activeEditionCercle = activeEditionData.data()?.cercles || {};
 
@@ -228,7 +209,7 @@ exports.vote = onCall(async (request) => {
         if (Math.max(Math.max(...tmp) + 1, enchereMin) < data.vote) {
           throw new HttpsError(
             "invalid-argument",
-            "Vote number is not the biggest"
+            "Vote number has to be bigger than the last bigest vote!"
           );
         }
       }
@@ -347,7 +328,14 @@ exports.editComitard = onCall(async (request) => {
   const txtlenght1 = 30;
   const txtlenght2 = 150;
 
-  const activeEdition = await getActiveEdition();
+  console.log("edition id:", data.editionId);
+  if (
+    data.editionId === undefined
+  ) {
+    throw new HttpsError("invalid-argument", "Edition id is invalid");
+  }
+
+  const activeEdition = await getEdition(data.editionId);
   const activeEditionData = await activeEdition.get();
   const activeEditionCercle = activeEditionData.data()?.cercles || {};
 
@@ -409,7 +397,7 @@ exports.editComitard = onCall(async (request) => {
   ) {
     throw new HttpsError("invalid-argument", "Missing data!");
   }
-  if (false) {
+  if (admin) {
     if (data.cercle === undefined || data.cercle.length == 0) {
       throw new HttpsError("invalid-argument", "Missing data!");
     } else {
@@ -478,9 +466,17 @@ exports.addComitard = onCall(async (request) => {
   const txtlenght1 = 30;
   const txtlenght2 = 150;
 
-  const activeEdition = await getActiveEdition();
+  console.log("edition id:", data.editionId);
+  if (
+    data.editionId === undefined
+  ) {
+    throw new HttpsError("invalid-argument", "Edition id is invalid");
+  }
+
+  const activeEdition = await getEdition(data.editionId);
   const activeEditionData = await activeEdition.get();
   const activeEditionCercle = activeEditionData.data()?.cercles || {};
+
 
   if (Object.keys(activeEditionCercle).length === 0) {
     // No editions found
@@ -604,9 +600,17 @@ exports.resetPasswords = onCall(async (request) => {
 
   const admin_auth = admin.auth();
 
-  const activeEdition = await getActiveEdition();
+  console.log("edition id:", data.editionId);
+  if (
+    data.editionId === undefined
+  ) {
+    throw new HttpsError("invalid-argument", "Edition id is invalid");
+  }
+
+  const activeEdition = await getEdition(data.editionId);
   const activeEditionData = await activeEdition.get();
   const activeEditionCercle = activeEditionData.data()?.cercles || {};
+
 
   console.log("activeEditionCercle: ", activeEditionCercle);
 
@@ -730,7 +734,14 @@ exports.signUpUser = onCall(async (request) => {
     throw new HttpsError("invalid-argument", "Missing data!");
   }
 
-  const activeEdition = await getActiveEdition();
+  console.log("edition id:", data.editionId);
+  if (
+    data.editionId === undefined
+  ) {
+    throw new HttpsError("invalid-argument", "Edition id is invalid");
+  }
+
+  const activeEdition = await getEdition(data.editionId);
   const activeEditionData = await activeEdition.get();
   const activeEditionVotes = activeEditionData.data()?.nbFut;
 
@@ -796,6 +807,11 @@ async function deleteUserAuth(uid: string): Promise<void> {
  * @returns {Firestore.DocumentReference} The Firestore document reference for the active edition.
  */
 
+async function getEdition(editionId: string): Promise<FirebaseFirestore.DocumentReference> {
+  const editionCollection = admin.firestore().collection("editions").doc(editionId);
+  return editionCollection;
+}
+
 async function getActiveEdition(): Promise<FirebaseFirestore.DocumentReference> {
   const editionCollection = admin.firestore().collection("editions");
   const querySnapshot = await editionCollection
@@ -811,22 +827,8 @@ async function getActiveEdition(): Promise<FirebaseFirestore.DocumentReference> 
   return querySnapshot.docs[0].ref;
 }
 
-async function getActiveEditionBis(editionId: string): Promise<FirebaseFirestore.DocumentReference> {
+async function getEditionBis(editionId: string): Promise<FirebaseFirestore.DocumentReference> {
   const db = test.getFirestore();
-  //const editionCollection = db.collection("editions");
   const test3 = db.collection("editions").doc(editionId);
-  //const querySnapshot = await editionCollection
-  //  .where("active", "==", true)
-  //  .orderBy("edition", "desc")
-  //  .limit(1)
-  //  .get();
-
-  //const queryBis = await db.collection("editions").doc("rHiqrhsVIKrvsWCv0onw");
-  //
-  //if (querySnapshot.empty) {
-  //  throw new HttpsError("unavailable", "No editions found!");
-  //}
-  //return queryBis;
-  //return querySnapshot.docs[0].ref;
   return test3;
 }

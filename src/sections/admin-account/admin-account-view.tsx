@@ -113,7 +113,7 @@ export default function AdminAccount({
             </Card>
         </Modal>
 
-        <NewCerle refetchData={refetchData}/>
+        <NewCerle refetchData={refetchData} editionId={activeData.id}/>
 
         <Card sx={{width: "100%", mb: 4, p: 2}}>
             <CardContent>
@@ -248,7 +248,7 @@ export default function AdminAccount({
                             size={"large"}
                             onClick={async () => {
                                 const addMessage = httpsCallable(functions, "resetPasswords");
-                                addMessage({text: "Test super function"}).then((result) => {
+                            addMessage({text: "Test super function", editionId: activeData.id }).then((result) => {
                                     // Read result of the Cloud Function.
                                     /** @type {any} */
                                     const data: any = result.data;
@@ -259,35 +259,7 @@ export default function AdminAccount({
                         >
                             Réinitialiser tous les mots de passe
                         </LoadingButton>
-                        <LoadingButton
-                            onClick={async () => {
-                                const addMessage = httpsCallable(functions, "signUpUser");
-                                addMessage({text: "Test super function"}).then((result) => {
-                                    // Read result of the Cloud Function.
-                                    /** @type {any} */
-                                    const data: any = result.data;
-                                    console.log("data:", data);
-                                });
-                            }}
-                        >
-                            Sing up user
-                        </LoadingButton>
-                        <LoadingButton
-                            onClick={async () => {
-                                const addMessage = httpsCallable(functions, "signUpUser");
-                                addMessage({
-                                    email: "henri.pihet@protonmail.com", displayName: "kiki2000",
-                                }).then((result) => {
-                                    // Read result of the Cloud Function.
-                                    /** @type {any} */
-                                    const data: any = result.data;
-                                    //const sanitizedMessage = data.text;
-                                    console.log("data:", data);
-                                });
-                            }}
-                        >
-                            Signup user
-                        </LoadingButton>
+
                     </Stack>
                 </Stack>
             </CardContent>

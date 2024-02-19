@@ -196,7 +196,8 @@ export default function NewComitard({
                 getDownloadURL(uploadTask.snapshot.ref)
                     .then((downloadURL) => {
                         console.log("File available at", downloadURL);
-                        const data = {
+                        const data1 = {
+                            editionId: data.id,
                             name: name,
                             firstname: firstname,
                             nickname: nickname,
@@ -212,7 +213,7 @@ export default function NewComitard({
                             picture: downloadURL,
                         };
                         const addMessage = httpsCallable(functions, "addComitard");
-                        addMessage(data).then((result) => {
+                        addMessage(data1).then((result) => {
                             const data: any = result.data;
                             // reload data
                             refetchData();

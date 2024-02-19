@@ -18,10 +18,11 @@ import {httpsCallable} from "@firebase/functions";
 import {functions} from "../../firebase_config";
 
 interface NewCerleProps {
+    editionId: string;
     refetchData: () => void;
 }
 
-export default function NewCerle({refetchData}: NewCerleProps) {
+export default function NewCerle({refetchData, editionId}: NewCerleProps) {
     const [loading, setLoading] = useState<boolean>(false);
     const [cercleDescription, setCercleDescription] = useState<string>("");
     const [cercleDescriptionError, setCercleDescriptionError] = useState<boolean>(false);
@@ -56,7 +57,7 @@ export default function NewCerle({refetchData}: NewCerleProps) {
         } else {
             const addMessage = httpsCallable(functions, "signUpUser");
             addMessage({
-                email: cercleEmail, displayName: cercleName, description: cercleDescription,
+                email: cercleEmail, displayName: cercleName, description: cercleDescription, editionId: editionId,
             })
                 .then((result) => {
                     const data: any = result.data;
