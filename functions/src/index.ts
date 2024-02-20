@@ -206,7 +206,9 @@ exports.vote = onCall(async (request) => {
         .filter((enchere) => enchere !== null)
         .map((enchere) => (enchere as { vote: number }).vote);
       if (tmp.length > 0) {
-        if (Math.max(Math.max(...tmp) + 1, enchereMin) < data.vote) {
+        console.log("data.vote: ", data.vote, "Math.max(...tmp)+1", Math.max(...tmp)+1, "enchereMin", enchereMin);
+        console.log("Math.max(Math.max(...tmp)+1, enchereMin) < data.vote",Math.max(Math.max(...tmp)+1, enchereMin) > data.vote);
+        if (Math.max(Math.max(...tmp)+1, enchereMin) > data.vote) {
           throw new HttpsError(
             "invalid-argument",
             "Vote number has to be bigger than the last bigest vote!"
@@ -252,12 +254,12 @@ exports.vote = onCall(async (request) => {
 
 export const taskRunner = functions
   .runWith({ memory: "2GB" })
-  .pubsub.schedule("*/10 * * * *")
-  .onRun(async (context) => {
+  .pubsub.schedule("*/1 * * * *")
+  .onRun(async (_context) => {
     // Consistent timestamp
 
     //const now = admin.firestore.Timestamp.now();
-    //console.log("now: ", now.toMillis().toLocaleString());
+    console.log("running");
 
     const activeEdition = await getActiveEdition();
     const activeEditionData = await activeEdition.get();
@@ -285,6 +287,7 @@ export const taskRunner = functions
         Object.keys(cercle.comitards).forEach(function (comitardId) {
           const comitard = cercle.comitards[comitardId];
           // check if comitard has an enchere to process
+          console.log("comitard: ", comitard);
           if (
             !comitard.processed === undefined &&
             !comitard.processed === true
