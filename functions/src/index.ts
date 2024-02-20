@@ -11,9 +11,7 @@ import { HttpsError, onCall } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 import * as test from "firebase-admin/firestore";
 import { getAuth } from "firebase-admin/auth";
-import {
-  beforeUserCreated,
-} from "firebase-functions/v2/identity";
+import { beforeUserCreated } from "firebase-functions/v2/identity";
 import { v4 as uuidv4 } from "uuid";
 //import { Timestamp, increment } from "@firebase/firestore";
 
@@ -39,16 +37,13 @@ export const beforecreated = beforeUserCreated((_event) => {
   throw new HttpsError("permission-denied", "Unauthorized request!");
 });
 
-
 exports.vote = onCall(async (request) => {
   const context_auth = request.auth;
   const data = request.data;
   let isAdmin = false;
 
   console.log("edition id:", data.editionId);
-  if (
-    data.editionId === undefined
-  ) {
+  if (data.editionId === undefined) {
     throw new HttpsError("invalid-argument", "Edition id is invalid");
   }
 
@@ -78,9 +73,12 @@ exports.vote = onCall(async (request) => {
   const now = test.Timestamp.now();
   //const now = admin.firestore.Timestamp.fromDate(new Date());
 
-  console.log("now: ", now.toMillis());
   const start = activeEditionData.data()?.start;
   const stop = activeEditionData.data()?.stop;
+  //console.log("start: ", start);
+  //console.log("stop: ", stop);
+  //console.log("now: ", now);
+  //console.log("now < start: ", now < start);
   if (start && stop) {
     if (now < start || now > stop) {
       throw new HttpsError(
@@ -206,9 +204,9 @@ exports.vote = onCall(async (request) => {
         .filter((enchere) => enchere !== null)
         .map((enchere) => (enchere as { vote: number }).vote);
       if (tmp.length > 0) {
-        console.log("data.vote: ", data.vote, "Math.max(...tmp)+1", Math.max(...tmp)+1, "enchereMin", enchereMin);
-        console.log("Math.max(Math.max(...tmp)+1, enchereMin) < data.vote",Math.max(Math.max(...tmp)+1, enchereMin) > data.vote);
-        if (Math.max(Math.max(...tmp)+1, enchereMin) > data.vote) {
+        //console.log("data.vote: ", data.vote, "Math.max(...tmp)+1", Math.max(...tmp)+1, "enchereMin", enchereMin);
+        //console.log("Math.max(Math.max(...tmp)+1, enchereMin) < data.vote",Math.max(Math.max(...tmp)+1, enchereMin) > data.vote);
+        if (Math.max(Math.max(...tmp) + 1, enchereMin) > data.vote) {
           throw new HttpsError(
             "invalid-argument",
             "Vote number has to be bigger than the last bigest vote!"
@@ -252,62 +250,156 @@ exports.vote = onCall(async (request) => {
   return { message: "Added new enchere" };
 });
 
+async function remboursement() {
+  // Consistent timestamp
+
+  //const now = admin.firestore.Timestamp.now();
+  console.log("running");
+
+  const activeEdition = await getActiveEdition();
+  const activeEditionData = await activeEdition.get();
+  const activeEditionCercle = activeEditionData.data()?.cercles || {};
+
+  const job = activeEditionData.data()?.jobs;
+
+  // check if there is a job to process
+  if (job && job > 0) {
+    const remboursementGagnant = activeEditionData.data()?.remboursementGagnant;
+    const remboursementPerdant = activeEditionData.data()?.remboursementPerdant;
+    const remboursementVendeur = activeEditionData.data()?.remboursementVendeur;
+    if (
+      remboursementGagnant === undefined ||
+      remboursementPerdant === undefined ||
+      remboursementVendeur === undefined
+    ) {
+      throw new HttpsError("unavailable", "No remboursement found!");
+    }
+    Object.keys(activeEditionCercle).forEach(function (cercleId) {
+      const cercle = activeEditionCercle[cercleId];
+      Object.keys(cercle.comitards).forEach(async function (comitardId) {
+        const comitard = cercle.comitards[comitardId];
+        // check if comitard has an enchere to process
+        if (comitard.enchereProcessed === false) {
+          console.log("comitard not processed: ", comitard.name);
+          const now = test.Timestamp.now();
+          const enchereStop = comitard.enchereStop;
+          if (enchereStop < now) {
+            // process enchere
+            console.log(
+              "processing comitard: ",
+              comitard.name,
+              "cercle id:",
+              cercleId
+            );
+            const encheres = comitard.encheres;
+
+            const encheresArray = Object.values(encheres);
+
+            // Sorting the encheres by votes and then by date if votes are equal
+            encheresArray.sort((a: any, b: any) => {
+              // Compare by votes first
+              if (a.vote !== b.vote) {
+                return b.vote - a.vote; // Sort by descending vote count
+              } else {
+                // If votes are equal, compare by date
+                return b.date.toMillis() - a.date.toMillis(); // Sort by descending date
+              }
+            });
+
+            // Iterate over the sorted encheres array
+            encheresArray.forEach(async (enchere: any, index) => {
+              if (index === 0) {
+                await rembourseUser(
+                  activeEdition,
+                  enchere.sender,
+                  remboursementGagnant * enchere.vote
+                );
+                await rembourseUser(
+                  activeEdition,
+                  cercleId,
+                  remboursementVendeur * enchere.vote
+                );
+              } else {
+                await rembourseUser(
+                  activeEdition,
+                  enchere.sender,
+                  remboursementPerdant * enchere.vote
+                );
+              }
+              console.log("enchere sorted: ", enchere, "index: ", index);
+            });
+
+            // Set the comitard's enchereProcessed field to true
+            const s = `cercles.${cercleId}.comitards.${comitardId}`;
+            await activeEdition
+              .update({
+                [`${s}.enchereProcessed`]: true,
+                jobs: test.FieldValue.increment(-1),
+              })
+              .catch((error: any) => {
+                console.log("Error updating comitard:", error);
+                throw new HttpsError("unavailable", "Error updating comitard!");
+              })
+              .then(() => {
+                return { message: "Comitard updated in edition map" };
+              });
+            
+
+            // Call the winner function with the winning enchere (first in potentialWinners after sorting)
+            //winner(potentialWinners[0]);
+
+            // Call the loser function with each losing enchere
+            //loserEncheres.forEach(loser);
+          } else {
+            console.log("not time yet to process comitard: ", comitard.name);
+          }
+        } else {
+          console.log(
+            "comitard allready processed or has no encheres: ",
+            comitard.name
+          );
+        }
+      });
+    });
+  } else {
+    console.log("no jobs to process");
+  }
+}
+
+async function rembourseUser(edition: any, userId: string, amount: number) {
+  //const d = `cercles.${cercleId}.comitards.${
+  //  data.comitardId
+  //}.encheres.${uuidv4()}`;
+  const e = `cercles.${userId}.nbFut`;
+  //console.log("fieldValue: ", test.FieldValue);
+  //console.log("fieldValue: ", test.FieldValue.increment);
+  //console.log("fieldValue: ", test.FieldValue.increment(4));
+
+  edition
+    .update({
+      [e]: test.FieldValue.increment(Math.ceil(amount)),
+      //     jobs: test.FieldValue.increment(1),
+    })
+    .catch((error: any) => {
+      console.log("Error adding new enchere:", error);
+      throw new HttpsError("unavailable", "Error remboursing user!");
+    })
+    .then(() => {
+      return { message: "Success rembousring user" };
+    });
+}
+
+exports.rembour = onCall(async (_request) => {
+  await remboursement();
+  return { message: "Remboursement done" };
+});
+
 export const taskRunner = functions
   .runWith({ memory: "2GB" })
   .pubsub.schedule("*/1 * * * *")
   .onRun(async (_context) => {
     // Consistent timestamp
-
-    //const now = admin.firestore.Timestamp.now();
-    console.log("running");
-
-    const activeEdition = await getActiveEdition();
-    const activeEditionData = await activeEdition.get();
-    const activeEditionCercle = activeEditionData.data()?.cercles || {};
-
-    const job = activeEditionData.data()?.jobs;
-
-    // check if there is a job to process
-    if (!job === undefined && job > 0) {
-      const remboursementGagnant =
-        activeEditionData.data()?.remboursementGagnant;
-      const remboursementPerdant =
-        activeEditionData.data()?.remboursementPerdant;
-      const remboursementVendeur =
-        activeEditionData.data()?.remboursementVendeur;
-      if (
-        remboursementGagnant === undefined ||
-        remboursementPerdant === undefined ||
-        remboursementVendeur === undefined
-      ) {
-        throw new HttpsError("unavailable", "No remboursement found!");
-      }
-      Object.keys(activeEditionCercle).forEach(function (cercleId) {
-        const cercle = activeEditionCercle[cercleId];
-        Object.keys(cercle.comitards).forEach(function (comitardId) {
-          const comitard = cercle.comitards[comitardId];
-          // check if comitard has an enchere to process
-          console.log("comitard: ", comitard);
-          if (
-            !comitard.processed === undefined &&
-            !comitard.processed === true
-          ) {
-            const now = admin.firestore.Timestamp.now();
-            const enchereStop = comitard.enchereStop;
-            if (enchereStop < now.toMillis()) {
-              // process enchere
-              const encheres = comitard.encheres;
-              // todo
-
-              Object.keys(encheres).forEach(function (enchereId) {
-                const enchere = encheres[enchereId];
-                console.log("enchere: ", enchere);
-              });
-            }
-          }
-        });
-      });
-    }
+    await remboursement();
   });
 
 function getCercleId(
@@ -332,9 +424,7 @@ exports.editComitard = onCall(async (request) => {
   const txtlenght2 = 150;
 
   console.log("edition id:", data.editionId);
-  if (
-    data.editionId === undefined
-  ) {
+  if (data.editionId === undefined) {
     throw new HttpsError("invalid-argument", "Edition id is invalid");
   }
 
@@ -456,8 +546,6 @@ exports.editComitard = onCall(async (request) => {
     updateData[`${s}.estLeSeul`] = data.estLeSeul;
   }
 
-
-
   activeEdition
     .update(updateData)
     .catch((error: any) => {
@@ -478,16 +566,13 @@ exports.addComitard = onCall(async (request) => {
   const txtlenght2 = 150;
 
   console.log("edition id:", data.editionId);
-  if (
-    data.editionId === undefined
-  ) {
+  if (data.editionId === undefined) {
     throw new HttpsError("invalid-argument", "Edition id is invalid");
   }
 
   const activeEdition = await getEdition(data.editionId);
   const activeEditionData = await activeEdition.get();
   const activeEditionCercle = activeEditionData.data()?.cercles || {};
-
 
   if (Object.keys(activeEditionCercle).length === 0) {
     // No editions found
@@ -612,16 +697,13 @@ exports.resetPasswords = onCall(async (request) => {
   const admin_auth = admin.auth();
 
   console.log("edition id:", data.editionId);
-  if (
-    data.editionId === undefined
-  ) {
+  if (data.editionId === undefined) {
     throw new HttpsError("invalid-argument", "Edition id is invalid");
   }
 
   const activeEdition = await getEdition(data.editionId);
   const activeEditionData = await activeEdition.get();
   const activeEditionCercle = activeEditionData.data()?.cercles || {};
-
 
   console.log("activeEditionCercle: ", activeEditionCercle);
 
@@ -746,9 +828,7 @@ exports.signUpUser = onCall(async (request) => {
   }
 
   console.log("edition id:", data.editionId);
-  if (
-    data.editionId === undefined
-  ) {
+  if (data.editionId === undefined) {
     throw new HttpsError("invalid-argument", "Edition id is invalid");
   }
 
@@ -818,27 +898,38 @@ async function deleteUserAuth(uid: string): Promise<void> {
  * @returns {Firestore.DocumentReference} The Firestore document reference for the active edition.
  */
 
-async function getEdition(editionId: string): Promise<FirebaseFirestore.DocumentReference> {
-  const editionCollection = admin.firestore().collection("editions").doc(editionId);
+async function getEdition(
+  editionId: string
+): Promise<FirebaseFirestore.DocumentReference> {
+  const editionCollection = admin
+    .firestore()
+    .collection("editions")
+    .doc(editionId);
   return editionCollection;
 }
 
 async function getActiveEdition(): Promise<FirebaseFirestore.DocumentReference> {
-  const editionCollection = admin.firestore().collection("editions");
+  const db = test.getFirestore();
+  const editionCollection = db.collection("editions");
   const querySnapshot = await editionCollection
     .where("active", "==", true)
     .orderBy("edition", "desc")
     .limit(1)
     .get();
 
+  //const queryBis = await db.collection("editions").doc("rHiqrhsVIKrvsWCv0onw");
+  //
   if (querySnapshot.empty) {
     throw new HttpsError("unavailable", "No editions found!");
   }
-
+  //return queryBis;
   return querySnapshot.docs[0].ref;
+  //return test3;
 }
 
-async function getEditionBis(editionId: string): Promise<FirebaseFirestore.DocumentReference> {
+async function getEditionBis(
+  editionId: string
+): Promise<FirebaseFirestore.DocumentReference> {
   const db = test.getFirestore();
   const test3 = db.collection("editions").doc(editionId);
   return test3;
