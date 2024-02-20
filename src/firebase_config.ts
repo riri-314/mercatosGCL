@@ -40,9 +40,9 @@ export const storage = getStorage(app);
 
 export const functions = getFunctions(app);
 
+const debug = false;
 
-
-if (location.hostname === "localhost") {
+if (location.hostname === "localhost" && debug) {
   // Point to the Storage emulator running on localhost.
   connectStorageEmulator(storage, "127.0.0.1", 9199);
   connectFunctionsEmulator(functions, "127.0.0.1", 5001);
