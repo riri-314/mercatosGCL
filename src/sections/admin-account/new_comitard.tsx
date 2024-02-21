@@ -14,7 +14,7 @@ import Card from "@mui/material/Card";
 import Typography from "@mui/material/Typography";
 import UnstyledSelectIntroduction from "../../components/inputs/select";
 import QuantityInput from "../../components/inputs/numberInput";
-import {useState} from "react";
+import { useState} from "react";
 import PictureInput from "../../components/inputs/pictureInput";
 import {ImageListType} from "react-images-uploading";
 import {functions, storage} from "../../firebase_config";
@@ -196,7 +196,8 @@ export default function NewComitard({
                 getDownloadURL(uploadTask.snapshot.ref)
                     .then((downloadURL) => {
                         console.log("File available at", downloadURL);
-                        const data = {
+                        const data1 = {
+                            editionId: data.id,
                             name: name,
                             firstname: firstname,
                             nickname: nickname,
@@ -212,7 +213,7 @@ export default function NewComitard({
                             picture: downloadURL,
                         };
                         const addMessage = httpsCallable(functions, "addComitard");
-                        addMessage(data).then((result) => {
+                        addMessage(data1).then((result) => {
                             const data: any = result.data;
                             // reload data
                             refetchData();
@@ -220,6 +221,20 @@ export default function NewComitard({
                             setPictureUpload(undefined);
                             setErrorSeverity("success");
                             setError("Comitard créé avec succès");
+                            // empty fields
+                            setName("");
+                            setFirstname("");
+                            setNickname("");
+                            setPost("");
+                            setCercle(null);
+                            setTeneurTaule(null);
+                            setEtatCivil("");
+                            setAge(null);
+                            setNbEtoiles(null);
+                            setPointFort("");
+                            setPointFaible("");
+                            setEstLeSeul("");
+                            setPicture([]);
                             setLoading(false);
                         }).catch((error) => {
                             console.log("error:", error);
@@ -363,6 +378,7 @@ export default function NewComitard({
                                         min={0}
                                         max={10}
                                         error={teneurTauleError}
+                                        
                                         helpText={`Teneur en taule du comitard de 0 à 10`}
                                         change={(_event: any, val: any) => {
                                             setTeneurTaule(val);

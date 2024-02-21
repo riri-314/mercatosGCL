@@ -151,7 +151,7 @@ export default function LoginView() {
         loading={loading}
         onClick={handleClick}
       >
-        Connection
+        Connexion
       </LoadingButton>
     </>
   );
