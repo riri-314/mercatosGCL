@@ -23,9 +23,10 @@ import ResultsTableHead from './results-table-head';
 interface ResultTableProps {
   tableName: string;
   columnName: any[];
+  encheres: any[];
 }
 
-export default function ResultTable({tableName, columnName}: ResultTableProps) {
+export default function ResultTable({tableName, columnName, encheres}: ResultTableProps) {
   const [page, setPage] = useState(0);
 
   const [order, setOrder] = useState('asc');
@@ -76,7 +77,7 @@ export default function ResultTable({tableName, columnName}: ResultTableProps) {
                 headLabel={columnName}
               />
               <TableBody>
-                {dataFiltered
+                {encheres
                   .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                   .map((row: any) => (
                     <ResultsTableRow
