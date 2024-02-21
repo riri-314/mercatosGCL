@@ -91,7 +91,7 @@ export default function Nav({ openNav, onCloseNav }: any) {
       icon: icon("ic_disabled"),
     },
     {
-      title: user ? "Compte" : "Connection",
+      title: user ? "Compte" : "Connexion",
       path: user ? "/account" : "/login",
       icon: icon("ic_lock"),
     },

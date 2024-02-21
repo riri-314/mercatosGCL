@@ -3,11 +3,11 @@
 import { initializeApp } from "@firebase/app";
 
 //import { getAnalytics } from "firebase/analytics";
-import { getFirestore } from "@firebase/firestore";
-import { getAuth } from "@firebase/auth";
-import { getStorage } from "@firebase/storage";
-//import { connectFunctionsEmulator, getFunctions } from "@firebase/functions";
-import { getFunctions } from "@firebase/functions";
+import { connectFirestoreEmulator, getFirestore } from "@firebase/firestore";
+import { connectAuthEmulator, getAuth } from "@firebase/auth";
+import { connectStorageEmulator, getStorage } from "@firebase/storage";
+import { connectFunctionsEmulator, getFunctions } from "@firebase/functions";
+//import { getFunctions } from "@firebase/functions";
 
 // https://firebase.google.com/docs/web/setup#available-libraries
 
@@ -25,7 +25,6 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_measurementId,
 };
 
-console.log("firebaseConfig:", firebaseConfig);
 
 firebaseConfig.storageBucket = firebaseConfig.storageBucket.replace(/"/g, '');
 
@@ -41,9 +40,13 @@ export const storage = getStorage(app);
 
 export const functions = getFunctions(app);
 
+const debug = false;
 
-//connectFunctionsEmulator(functions, "127.0.0.1", 5001);
-
-//const analytics = getAnalytics(app);
-
+if (location.hostname === "localhost" && debug) {
+  // Point to the Storage emulator running on localhost.
+  connectStorageEmulator(storage, "127.0.0.1", 9199);
+  connectFunctionsEmulator(functions, "127.0.0.1", 5001);
+  connectAuthEmulator(auth, "http://127.0.0.1:9099");
+  connectFirestoreEmulator(db, '127.0.0.1', 8080);
+} 
 

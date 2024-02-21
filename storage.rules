@@ -1,8 +1,23 @@
 rules_version = '2';
+
+// Craft rules based on data in your Firestore database
+// allow write: if firestore.get(
+//    /databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin;
+
 service firebase.storage {
   match /b/{bucket}/o {
-    match /{allPaths=**} {
-      allow read, write, get, list: if request.origin == "http://localhost:5173";
+    //allow write: if firestore.get(/databases/(default)/documents/admin/admin).data.addmins[request.auth.token.email] == request.auth.uid;
+    match /{editionID}/{userID}/{fileName} {
+      allow get: if true;
+      allow list: if false;
+      allow update: if firestore.get(/databases/(default)/documents/admin/admin).data.admins[request.auth.token.email] == request.auth.uid;
+      allow delete: if firestore.get(/databases/(default)/documents/admin/admin).data.admins[request.auth.token.email] == request.auth.uid;
+    	allow create: if (request.resource.size < 5 * 1024 * 1024 // limit file size to 5.5mb
+                   && request.resource.contentType.matches('image/.*') // limit upload to images types files
+                   && request.auth.uid != null // user has to be logged in
+                   && firestore.get(/databases/(default)/documents/editions/$(editionID)).data.active == true // user has to upload in a active edition folder
+                   && request.auth.uid == userID) // user has to upload in his folder
+                   || (firestore.get(/databases/(default)/documents/admin/admin).data.admins[request.auth.token.email] == request.auth.uid) // or if the user is admin
     }
   }
 }
