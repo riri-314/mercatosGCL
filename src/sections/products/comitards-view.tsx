@@ -8,8 +8,10 @@ import Loading from "../loading/loading";
 import ComitardCard from "./comitard-card.tsx";
 
 import {useEffect, useState} from "react";
-import {Box} from "@mui/material";
+import {Accordion, AccordionDetails, AccordionSummary, Box} from "@mui/material";
 import Iconify from "../../components/iconify/iconify";
+import useMediaQuery from "@mui/material/useMediaQuery";
+import {useTheme} from "@mui/material/styles";
 
 
 // ----------------------------------------------------------------------
@@ -29,7 +31,8 @@ export default function ComitardsView() {
         return () => clearInterval(interval);
     }, [data]);
 
-    //isInTimeFrameFN();
+    const theme = useTheme();
+    const isSmallScreen = useMediaQuery(theme.breakpoints.down("sm"));
 
     function nbFutsLeft(): number {
         if (user) {
@@ -114,66 +117,104 @@ export default function ComitardsView() {
     }
 
     return (<Container>
-            <Container>
-                {data && refreshTime && !refreshing ? (<>
-                        <Box
-                            sx={{
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                fontStyle: "oblique",
-                                m: -1,
-                            }}
-                            onClick={() => refresh()}
-                        >
-                            <Typography variant="body1" sx={{marginLeft: "5px"}}>
-                                Rafraîchi il y a {refreshTime}.
-                            </Typography>
-                            <Iconify icon="material-symbols-light:refresh"/>
-                        </Box>
-                    </>) : (<>
-                        <Box
-                            sx={{
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                fontStyle: "oblique",
-                                m: -1,
-                            }}
-                        >
-                            <Typography variant="body1" sx={{marginLeft: "5px"}}>
-                                Mise à jour...
-                            </Typography>
-                        </Box>
-                    </>)}
-            </Container>
-            {data ? (Object.keys(data.data().cercles)
-                    .sort((a, b) => data
-                        .data().cercles[a].name.localeCompare(data.data().cercles[b].name))
-                    .map((cercleId) => (<div key={cercleId} style={{marginBottom: "20px"}}>
+        <Container>
+            {data && refreshTime && !refreshing ? (<>
+                <Box
+                    sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontStyle: "oblique",
+                        mt: -1,
+                        mb: 1,
+                    }}
+                    onClick={() => refresh()}
+                >
+                    <Typography variant="body1" sx={{marginLeft: "5px"}}>
+                        Rafraîchi il y a {refreshTime}.
+                    </Typography>
+                    <Iconify icon="material-symbols-light:refresh"/>
+                </Box>
+            </>) : (<>
+                <Box
+                    sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontStyle: "oblique",
+                    }}
+                >
+                    <Typography variant="body1" sx={{marginLeft: "5px"}}>
+                        Mise à jour...
+                    </Typography>
+                </Box>
+            </>)}
+        </Container>
+        {data ? (Object.keys(data.data().cercles)
+            .sort((a, b) => data
+                .data().cercles[a].name.localeCompare(data.data().cercles[b].name))
+            .map((cercleId) => (
+                <div key={cercleId} style={{marginBottom: "20px"}}>
+                    {isSmallScreen && <Accordion>
+                        <AccordionSummary expandIcon={<Typography variant="h3">🢃</Typography>}>
                             <Typography sx={{m: 3}} variant="h3">
                                 {data.data().cercles[cercleId].name}
                             </Typography>
+                        </AccordionSummary>
+                        <AccordionDetails>
+                            {(!data.data().cercles[cercleId].comitards || Object.keys(data.data().cercles[cercleId].comitards).length == 0) &&
+                                <Box sx={{mb: 4, mt: -4, ml: 3}}>Aucun comitard n'a pu participer, snif 😥</Box>}
                             <Grid container spacing={3}>
                                 {data.data().cercles[cercleId].comitards && Object.keys(data.data().cercles[cercleId].comitards)
                                     .sort((a, b) => data
                                         .data().cercles[cercleId].comitards[a].name.localeCompare(data.data().cercles[cercleId].comitards[b].name))
                                     .map((comitardID: any) => (<Grid key={comitardID} item xs={12} sm={6} md={3}>
-                                            <ComitardCard
-                                                product={data.data().cercles[cercleId].comitards[comitardID]}
-                                                user={user?.uid}
-                                                cercleId={cercleId}
-                                                comitardId={comitardID}
-                                                editionId={data.id}
-                                                nbFutsLeft={nbFutsLeft()}
-                                                enchereMax={enchereMinMax()[1]}
-                                                enchereMin={enchereMinMax()[0]}
-                                                isInTimeFrame={isInTimeFrame}
-                                                refetchData={refetchData}
-                                                cerclesData={getCerclesDataWithNames(data.data().cercles)}/>
-                                        </Grid>))}
+                                        <ComitardCard
+                                            product={data.data().cercles[cercleId].comitards[comitardID]}
+                                            user={user?.uid}
+                                            cercleId={cercleId}
+                                            comitardId={comitardID}
+                                            editionId={data.id}
+                                            nbFutsLeft={nbFutsLeft()}
+                                            enchereMax={enchereMinMax()[1]}
+                                            enchereMin={enchereMinMax()[0]}
+                                            isInTimeFrame={isInTimeFrame}
+                                            refetchData={refetchData}
+                                            cerclesData={getCerclesDataWithNames(data.data().cercles)}/>
+                                    </Grid>))}
                             </Grid>
-                        </div>))) : (<Loading/>)}
-        </Container>);
+                        </AccordionDetails>
+                    </Accordion>}
+
+                    {!isSmallScreen && (
+                        <>
+                            <Typography sx={{m: 3}} variant="h3">
+                                {data.data().cercles[cercleId].name}
+                            </Typography>
+                            {(!data.data().cercles[cercleId].comitards || Object.keys(data.data().cercles[cercleId].comitards).length == 0) &&
+                                <Box sx={{m: 3}}>Aucun comitard n'a pu participer, snif 😥</Box>}
+                            <Grid container spacing={3}>
+                                {data.data().cercles[cercleId].comitards && Object.keys(data.data().cercles[cercleId].comitards)
+                                    .sort((a, b) => data
+                                        .data().cercles[cercleId].comitards[a].name.localeCompare(data.data().cercles[cercleId].comitards[b].name))
+                                    .map((comitardID: any) => (<Grid key={comitardID} item xs={12} sm={6} md={3}>
+                                        <ComitardCard
+                                            product={data.data().cercles[cercleId].comitards[comitardID]}
+                                            user={user?.uid}
+                                            cercleId={cercleId}
+                                            comitardId={comitardID}
+                                            editionId={data.id}
+                                            nbFutsLeft={nbFutsLeft()}
+                                            enchereMax={enchereMinMax()[1]}
+                                            enchereMin={enchereMinMax()[0]}
+                                            isInTimeFrame={isInTimeFrame}
+                                            refetchData={refetchData}
+                                            cerclesData={getCerclesDataWithNames(data.data().cercles)}/>
+                                    </Grid>))}
+                            </Grid>
+                        </>
+                    )}
+                </div>))) : (<Loading/>)}
+    </Container>);
 
 }
