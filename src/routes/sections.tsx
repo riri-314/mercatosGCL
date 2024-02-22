@@ -29,8 +29,8 @@ export default function Router() {
         </DashboardLayout>
       ),
       children: [
-        { element: <WipPage />, index: true },
-        /*{ element: <ResultPage />, index: true },*/
+        // { element: <WipPage />, index: true },
+        { element: <ResultPage />, index: true },
         { path: 'comitards', element: <ComitardsPage /> },
         (user? (isAdmin() ? { path: 'account', element: <AdminAccountPage /> } : { path: 'account', element: <AccountPage /> }):{ path: 'account', element: <LoginPage /> }),
         { path: 'rules', element: <RulesPage /> },
