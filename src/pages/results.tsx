@@ -3,7 +3,7 @@ import Grid from "@mui/material/Unstable_Grid2";
 import Container from "@mui/material/Container";
 import {useData} from "../data/DataProvider.tsx";
 import {Timestamp} from "@firebase/firestore";
-import {DataGrid} from "@mui/x-data-grid";
+import {DataGrid, frFR} from "@mui/x-data-grid";
 import {CardContent, CardHeader} from "@mui/material";
 import Card from "@mui/material/Card";
 import React from "react";
@@ -44,6 +44,7 @@ export default function ResultsPage() {
                                     comitard: `${comitard.name} "${comitard.nickname}" ${comitard.firstname}`,
                                     enchere: `${getCerclesDataWithNames()[enchere.sender]?.name || 'Erreur'} avec ${enchere.vote} fûts`,
                                     vote: enchere.vote,
+                                    house: `${getCerclesDataWithNames()[cercle_id]?.name || 'Erreur'}`,
                                     date: date.toDate().toLocaleString(),
                                 })
                             }
@@ -87,6 +88,7 @@ export default function ResultsPage() {
                                         comitard: `${comitard.name} "${comitard.nickname}" ${comitard.firstname}`,
                                         enchere: `${getCerclesDataWithNames()[enchere.sender]?.name || 'Erreur'} avec ${enchere.vote} fûts`,
                                         vote: enchere.vote,
+                                        house: `${getCerclesDataWithNames()[cercle_id]?.name || 'Erreur'}`,
                                         endDate: endEncheres.toDate().toLocaleString(),
                                     });
                                 }
@@ -148,6 +150,7 @@ export default function ResultsPage() {
                                         comitard: `${comitard.name} "${comitard.nickname}" ${comitard.firstname}`,
                                         enchere: `${getCerclesDataWithNames()[enchere.sender]?.name || 'Erreur'} avec ${enchere.vote} fûts`,
                                         vote: enchere.vote,
+                                        house: `${getCerclesDataWithNames()[cercle_id]?.name || 'Erreur'}`,
                                         endDate: endEncheres.toDate().toLocaleString(),
                                     });
                                 }
@@ -176,10 +179,10 @@ export default function ResultsPage() {
             }
         }
         encheres.sort((a, b) => {
-            if (a.endDate < b.endDate) {
+            if (a.endDate > b.endDate) {
                 return -1;
             }
-            if (a.endDate > b.endDate) {
+            if (a.endDate < b.endDate) {
                 return 1;
             }
             return 0;
@@ -195,44 +198,17 @@ export default function ResultsPage() {
                 <title> Résultats </title>
             </Helmet>
             <Grid container spacing={3}>
-                {/*<Grid xs={12} md={6} lg={6}>
-                    <ResultTable
-                        tableName="Enchères en cours"
-                        columnName={[{id: "name", label: "Nom"}, {id: "enchere", label: "Enchère"}, {
-                            id: "date",
-                            label: "Temps restant"
-                        },]}
-                    />
-                </Grid>
-                <Grid xs={12} md={6} lg={6}>
-                    <ResultTable
-                        tableName="Enchères remportées"
-                        columnName={[{id: "name", label: "Nom"}, {id: "enchere", label: "Enchère"}, {
-                            id: "date",
-                            label: "Fin de l'enchère"
-                        },]}
-                    />
-                </Grid>*/}
-                {/*<Grid xs={12} md={6} lg={6}>
-                    <ResultTable
-                        encheres={aggregateEncheres()}
-                        tableName="Enchères en cours"
-                        columnName={[
-                            {id: "name", label: "Comitard"},
-                            {id: "enchere", label: "Enchères"},
-                            {id: "date", label: "Fin de l'enchère"},
-                        ]}
-                    />
-                </Grid>*/}
                 <Grid xs={12} md={6} xl={6}>
-                    <Card >
+                    <Card>
                         <CardHeader title={"Enchères en cours"}/>
                         <CardContent>
                             <DataGrid
+                                localeText={frFR.components.MuiDataGrid.defaultProps.localeText}
                                 sx={{minHeight: "46rem"}}
                                 rows={aggregateRunningEncheres()}
                                 columns={[
                                     {field: 'comitard', headerName: 'Comitard', sortable: false, width: 200},
+                                    {field: 'house', headerName: "Provenance", sortable: false, width: 90},
                                     {field: 'enchere', headerName: 'Meilleure enchère', sortable: false, width: 200},
                                     {field: 'endDate', headerName: "Fin des enchères", sortable: false, width: 200},]}
                                 initialState={{
@@ -251,19 +227,21 @@ export default function ResultsPage() {
                         <CardHeader title={"Enchères remportées"}/>
                         <CardContent>
                             <DataGrid
+                                localeText={frFR.components.MuiDataGrid.defaultProps.localeText}
                                 sx={{minHeight: "46rem"}}
                                 rows={aggregateClosedEncheres()}
                                 columns={[
                                     {field: 'comitard', headerName: 'Comitard', sortable: false, width: 250},
+                                    {field: 'house', headerName: "Provenance", sortable: false, width: 90},
                                     {field: 'enchere', headerName: 'Gagnant', sortable: false, width: 150},
-                                    {field: 'endDate', headerName: "Enchères terminées à", sortable: false, width: 200},]}
+                                    {field: 'endDate', headerName: "Enchères terminées à", sortable: false, width: 200},
+                                ]}
                                 initialState={{
                                     pagination: {
                                         paginationModel: {page: 0, pageSize: 12},
                                     },
                                 }}
                                 pageSizeOptions={[12, 30, 50]}
-                                disableColumnMenu
                             />
                         </CardContent>
                     </Card>
@@ -273,10 +251,12 @@ export default function ResultsPage() {
                         <CardHeader title={"Toutes les enchères"}/>
                         <CardContent>
                             <DataGrid
+                                localeText={frFR.components.MuiDataGrid.defaultProps.localeText}
                                 sx={{minHeight: "46rem"}}
                                 rows={aggregateAllEncheres()}
                                 columns={[
                                     {field: 'comitard', headerName: 'Comitard', sortable: false, width: 200},
+                                    {field: 'house', headerName: "Provenance", sortable: false, width: 90},
                                     {field: 'enchere', headerName: 'Meilleure enchère', sortable: false, width: 200},
                                     {field: 'date', headerName: "Date de l'enchère", sortable: false, width: 200},]}
                                 initialState={{
@@ -285,7 +265,6 @@ export default function ResultsPage() {
                                     },
                                 }}
                                 pageSizeOptions={[12, 30, 50]}
-                                disableColumnMenu
                             />
                         </CardContent>
                     </Card>
