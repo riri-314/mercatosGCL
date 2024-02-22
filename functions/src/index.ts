@@ -396,7 +396,7 @@ exports.rembour = onCall(async (_request) => {
 
 export const taskRunner = functions
   .runWith({ memory: "2GB" })
-  .pubsub.schedule("*/1 * * * *")
+  .pubsub.schedule("*/10 * * * *")
   .onRun(async (_context) => {
     // Consistent timestamp
     await remboursement();
