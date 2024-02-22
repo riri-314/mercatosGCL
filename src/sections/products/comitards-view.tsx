@@ -8,7 +8,7 @@ import Loading from "../loading/loading";
 import ComitardCard from "./comitard-card.tsx";
 
 import {useEffect, useState} from "react";
-import {Accordion, AccordionDetails, AccordionSummary, Box} from "@mui/material";
+import {Accordion, AccordionDetails, AccordionSummary, Box, Theme} from "@mui/material";
 import Iconify from "../../components/iconify/iconify";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import {useTheme} from "@mui/material/styles";
@@ -31,7 +31,7 @@ export default function ComitardsView() {
         return () => clearInterval(interval);
     }, [data]);
 
-    const theme = useTheme();
+    const theme : Theme = useTheme();
     const isSmallScreen = useMediaQuery(theme.breakpoints.down("sm"));
 
     function nbFutsLeft(): number {
@@ -156,7 +156,7 @@ export default function ComitardsView() {
             .map((cercleId) => (
                 <div key={cercleId} style={{marginBottom: "20px"}}>
                     {isSmallScreen && <Accordion>
-                        <AccordionSummary expandIcon={<Iconify width={40} icon="solar:double-alt-arrow-down-bold-duotone" sx={{color: (theme) => `${theme.palette.primary.main}`}} />}>
+                        <AccordionSummary expandIcon={<Iconify width={40} icon="solar:double-alt-arrow-down-bold-duotone" sx={{color: (theme : Theme) => `${theme.palette.primary.main}`}} />}>
                             <Typography sx={{m: 3}} variant="h3">
                                 {data.data().cercles[cercleId].name}
                             </Typography>
