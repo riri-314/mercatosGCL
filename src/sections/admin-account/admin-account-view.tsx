@@ -2,12 +2,12 @@ import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import Card from "@mui/material/Card";
 import {
-  Accordion,
-  AccordionDetails,
-  AccordionSummary,
-  Alert,
-  CardContent,
-  Modal,
+    Accordion,
+    AccordionDetails,
+    AccordionSummary,
+    Alert,
+    CardContent,
+    Modal, Theme,
 } from "@mui/material";
 import { useAuth } from "../../auth/AuthProvider";
 import { LoadingButton } from "@mui/lab";
@@ -25,6 +25,7 @@ import EditCerle from "./edit_cercle";
 import ComitardTable from "./comitard_table";
 import EditComitard from "./edit_comitard";
 import Container from "@mui/material/Container";
+import Iconify from "../../components/iconify/iconify.tsx";
 
 interface AdminAccountProps {
   data: DocumentData[];
@@ -68,9 +69,7 @@ export default function AdminAccount({
       <Card sx={{ width: "100%", mb: 4 }}>
         <CardContent>
           <Accordion>
-            <AccordionSummary
-              expandIcon={<Typography variant="h3">🢃</Typography>}
-            >
+            <AccordionSummary expandIcon={<Iconify width={40} icon="solar:double-alt-arrow-down-bold-duotone" sx={{color: (theme : Theme) => `${theme.palette.primary.main}`}} />}>
               <Typography variant="h5">Créer une nouvelle édition</Typography>
             </AccordionSummary>
             <AccordionDetails>
@@ -232,9 +231,7 @@ export default function AdminAccount({
       <Card sx={{ width: "100%", mb: 4 }}>
         <CardContent>
           <Accordion>
-            <AccordionSummary
-              expandIcon={<Typography variant="h3">🢃</Typography>}
-            >
+            <AccordionSummary expandIcon={<Iconify width={40} icon="solar:double-alt-arrow-down-bold-duotone" sx={{color: (theme : Theme) => `${theme.palette.primary.main}`}} />}>
               <Typography variant="h5">
                 Modifier/Supprimer des enchères
               </Typography>
