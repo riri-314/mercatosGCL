@@ -156,7 +156,7 @@ export default function ComitardsView() {
             .map((cercleId) => (
                 <div key={cercleId} style={{marginBottom: "20px"}}>
                     {isSmallScreen && <Accordion>
-                        <AccordionSummary expandIcon={<Typography variant="h3">🢃</Typography>}>
+                        <AccordionSummary expandIcon={<Iconify width={40} icon="solar:double-alt-arrow-down-bold-duotone" sx={{color: (theme) => `${theme.palette.primary.main}`}} />}>
                             <Typography sx={{m: 3}} variant="h3">
                                 {data.data().cercles[cercleId].name}
                             </Typography>

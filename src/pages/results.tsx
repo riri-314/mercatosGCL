@@ -6,16 +6,15 @@ import {Timestamp} from "@firebase/firestore";
 import {DataGrid, frFR} from "@mui/x-data-grid";
 import {CardContent, CardHeader} from "@mui/material";
 import Card from "@mui/material/Card";
-import React from "react";
 
 // ----------------------------------------------------------------------
 
 export default function ResultsPage() {
 
-    const {data, refetchData, fetchedTime} = useData();
+    const {data} = useData();
 
     function getCerclesDataWithNames() {
-        const cerclesWithNames = {};
+        const cerclesWithNames: { [cercleId: string]: { name: string } } = {};
 
         Object.keys(data?.data().cercles).forEach((cercleId) => {
             cerclesWithNames[cercleId] = {name: data?.data().cercles[cercleId].name};
@@ -78,11 +77,10 @@ export default function ResultsPage() {
                         if (comitard.encheres) {
                             const startEncheres = comitard.enchereStart as Timestamp;
                             const endEncheres = comitard.enchereStop as Timestamp;
-                            if (endEncheres.toDate() > Date.now() && startEncheres.toDate() < Date.now()) {
+                            if (endEncheres.toDate() > new Date() && startEncheres.toDate() < new Date()) {
                                 const candidateEncheres = [];
                                 for (const enchere_id in comitard.encheres) {
                                     const enchere = comitard.encheres[enchere_id];
-                                    const date = enchere.date as Timestamp;
                                     candidateEncheres.push({
                                         id: enchere_id,
                                         comitard: `${comitard.name} "${comitard.nickname}" ${comitard.firstname}`,
@@ -140,11 +138,10 @@ export default function ResultsPage() {
                         if (comitard.encheres) {
                             const startEncheres = comitard.enchereStart as Timestamp;
                             const endEncheres = comitard.enchereStop as Timestamp;
-                            if (endEncheres.toDate() < Date.now() && startEncheres.toDate() < Date.now()) {
+                            if (endEncheres.toDate() < new Date() && startEncheres.toDate() < new Date()) {
                                 const candidateEncheres = [];
                                 for (const enchere_id in comitard.encheres) {
                                     const enchere = comitard.encheres[enchere_id];
-                                    const date = enchere.date as Timestamp;
                                     candidateEncheres.push({
                                         id: enchere_id,
                                         comitard: `${comitard.name} "${comitard.nickname}" ${comitard.firstname}`,
