@@ -31,12 +31,16 @@ I have no fucking idea.
 
 
 Todo Henri:
-reset password when creating new edition
+
+Logo tshirt mercatos
+
+reset password when creating new edition OK
 implémenter éditer supprimer cercle
 tester nouveau comitard
 tester éditer comitard
 tester supprimer comitard + impémenter remboursement cercles sur encheres sur comitard
 modifier supprimer encheres, tout à faire
+changer adresse mail d'un président //caca mais faisable en backend admin
 
 
 Todo Flo:
