@@ -279,7 +279,7 @@ export default function AdminAccount({
                 variant={"outlined"}
                 size={"large"}
                 onClick={async () => {
-                  const addMessage = httpsCallable(functions, "resetPasswords");
+                  const addMessage = httpsCallable(functions, "resetpasswords");
                   addMessage({
                     text: "Test super function",
                     editionId: activeData.id,

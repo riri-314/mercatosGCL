@@ -37,6 +37,9 @@ export const beforecreated = beforeUserCreated((_event) => {
   throw new HttpsError("permission-denied", "Unauthorized request!");
 });
 
+// check if login in first ?
+// define the now const at the start of the function. Will "fix" the issue with late votes.
+
 exports.vote = onCall(async (request) => {
   const context_auth = request.auth;
   const data = request.data;
@@ -416,7 +419,7 @@ function getCercleId(
   return cercleIdFound;
 }
 
-exports.editComitard = onCall(async (request) => {
+exports.editcomitard = onCall(async (request) => { //changed
   const context_auth = request.auth;
   const data = request.data;
   let admin = false;
@@ -558,7 +561,7 @@ exports.editComitard = onCall(async (request) => {
   return { message: "Comitard updated in edition map" };
 });
 
-exports.addComitard = onCall(async (request) => {
+exports.addcomitard = onCall(async (request) => {
   const context_auth = request.auth;
   const data = request.data;
   let admin = false;
@@ -581,11 +584,11 @@ exports.addComitard = onCall(async (request) => {
 
   // Check if the request is made by an admin
   if (!context_auth) {
-    throw new HttpsError("permission-denied", "Unauthorized request!"); // return error if not connected
+    throw new HttpsError("permission-denied", "Unauthorized request, not connected!"); // return error if not connected
   } else {
     admin = await getAdminUid(context_auth.uid);
     if (!activeEditionCercle[context_auth.uid] && !admin) {
-      throw new HttpsError("permission-denied", "Unauthorized request!"); // return error if not admin or not a active cercle
+      throw new HttpsError("permission-denied", "Unauthorized request, Old account or not admin!"); // return error if not admin or not a active cercle
     }
   }
 
@@ -684,7 +687,7 @@ exports.addComitard = onCall(async (request) => {
  * @throws {functions.https.HttpsError} - Throws an error if the request is unauthorized or if there is an internal error.
  */
 
-exports.resetPasswords = onCall(async (request) => {
+exports.resetpasswords = onCall(async (request) => {
   const context_auth = request.auth;
   const data = request.data;
   //const auth = getAuth();
@@ -763,7 +766,7 @@ function generateRandomPassword(): string {
   return "123456";
 }
 
-exports.deactivateUser = onCall(async (request) => {
+exports.deactivateuser = onCall(async (request) => {
   const auth = request.auth;
   const data = request.data;
   const uid = data.uid;
@@ -776,7 +779,7 @@ exports.deactivateUser = onCall(async (request) => {
   return { message: "User deleted" };
 });
 
-exports.deleteUser = onCall(async (request) => {
+exports.deleteuser = onCall(async (request) => {
   const auth = request.auth;
   const data = request.data;
   const uid = data.uid;
@@ -811,7 +814,7 @@ exports.deleteUser = onCall(async (request) => {
   return { message: "User deleted" };
 });
 
-exports.signUpUser = onCall(async (request) => {
+exports.signupuser = onCall(async (request) => {
   const auth = request.auth;
   const data = request.data;
   const description = data.description || "";

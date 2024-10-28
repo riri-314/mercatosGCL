@@ -235,7 +235,7 @@ export default function EditComitard({
                   picture: downloadURL,
                 };
                 // call another cloud function to update the doc
-                const addMessage = httpsCallable(functions, "editComitard");
+                const addMessage = httpsCallable(functions, "editcomitard");
                 addMessage(data1)
                   .then((result) => {
                     const data: any = result.data;
@@ -289,7 +289,7 @@ export default function EditComitard({
           estLeSeul: estLeSeul,
         };
         // call another cloud function to update the doc
-        const addMessage = httpsCallable(functions, "editComitard");
+        const addMessage = httpsCallable(functions, "editcomitard");
         addMessage(data1)
           .then((result) => {
             const data: any = result.data;
