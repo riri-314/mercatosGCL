@@ -44,7 +44,7 @@ export const functions = getFunctions(app); //ok
 
 export const analytics = getAnalytics(app);
 
-const debug = true;
+const debug = false;
 
 if (debug) {
   // Point to the Storage emulator running on localhost.

@@ -346,7 +346,6 @@ async function remboursement() {
               .then(() => {
                 return { message: "Comitard updated in edition map" };
               });
-            
 
             // Call the winner function with the winning enchere (first in potentialWinners after sorting)
             //winner(potentialWinners[0]);
@@ -419,7 +418,8 @@ function getCercleId(
   return cercleIdFound;
 }
 
-exports.editcomitard = onCall(async (request) => { //changed
+exports.editcomitard = onCall(async (request) => {
+  //changed
   const context_auth = request.auth;
   const data = request.data;
   let admin = false;
@@ -584,11 +584,17 @@ exports.addcomitard = onCall(async (request) => {
 
   // Check if the request is made by an admin
   if (!context_auth) {
-    throw new HttpsError("permission-denied", "Unauthorized request, not connected!"); // return error if not connected
+    throw new HttpsError(
+      "permission-denied",
+      "Unauthorized request, not connected!"
+    ); // return error if not connected
   } else {
     admin = await getAdminUid(context_auth.uid);
     if (!activeEditionCercle[context_auth.uid] && !admin) {
-      throw new HttpsError("permission-denied", "Unauthorized request, Old account or not admin!"); // return error if not admin or not a active cercle
+      throw new HttpsError(
+        "permission-denied",
+        "Unauthorized request, Old account or not admin!"
+      ); // return error if not admin or not a active cercle
     }
   }
 
@@ -677,6 +683,23 @@ exports.addcomitard = onCall(async (request) => {
   // add comitard in the map
 });
 
+exports.testreset = onCall(async (_request) => {
+  //const email = "henri.pihet.807@gmail.com";
+  const uid = "uyptV9DH7Aa9pgjpYffufZAMlmr2";
+  const admin_auth = admin.auth();
+  try {
+    //await admin_auth.generatePasswordResetLink(email);
+    //await sendPasswordResetEmail(auth, email);
+    const newPassword = generateRandomPassword();
+    await admin_auth.updateUser(uid, { password: newPassword });
+
+    return {message: "Youpiiiii: "+ newPassword};
+
+  } catch (error: any) {
+    return {message: "Ouuuuups error: "+ error};
+  }
+});
+
 /**
  * Reset all passwords for users in the cercle and send reset password emails.
  * This function can only be called by an admin.
@@ -718,6 +741,7 @@ exports.resetpasswords = onCall(async (request) => {
   //
 
   const userUIDs = Object.keys(activeEditionCercle);
+  const emailArray = [];
 
   // Loop through user UIDs in the cercle
   for (const uid of userUIDs) {
@@ -726,7 +750,12 @@ exports.resetpasswords = onCall(async (request) => {
     const newPassword = data.password || generateRandomPassword();
 
     // Reset password for each user
-    await admin_auth.updateUser(uid, { password: newPassword });
+    try {
+      await admin_auth.updateUser(uid, { password: newPassword }); 
+      //console.log("Password reset for user: ", uid, newPassword); //FOR DEBUG
+    } catch (error: any) {
+      console.log("Error resetting password for user: ", uid);
+    }
 
     const user = await admin_auth.getUser(uid);
     const email = user.email;
@@ -736,15 +765,16 @@ exports.resetpasswords = onCall(async (request) => {
     // necessary to do that. Only way to track user eamil is with firebase admin sdk.
     // Firebase auth sdk only give us uid.
     if (email) {
-      // await admin_auth.generatePasswordResetLink(email);
-      //await sendPasswordResetEmail(auth, email);
+      emailArray.push(email);
+      
       console.log("email: ", email);
     } else {
       throw new Error("No email found for user!");
     }
   }
 
-  return { message: "Passwords reset and reset email sent to all users." };
+  return { message: "Passwords reseted to all users.", emails: emailArray };
+  //return { message: "Passwords reset and reset email sent to all users." };
 });
 
 /**
