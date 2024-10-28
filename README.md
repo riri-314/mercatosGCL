@@ -17,3 +17,29 @@
 - **Start:** `npm run dev`
 - **Build:** `npm build`
 
+## Emulator
+First change debug to true in firebase_config.ts
+
+Importing firestore data to local storage: gsutil -m cp -r gs://mercatosgcl.appspot.com/bucket_export_test .
+source: https://stackoverflow.com/questions/57838764/how-to-import-data-from-cloud-firestore-to-the-local-emulator
+
+bucket_export_test is the folder containing the firestore data
+firebase emulators:start --import ./bucket_export_test/2024-10-28T12\:20\:20_28227/
+
+Importing the pictures:
+I have no fucking idea.
+
+
+Todo Henri:
+reset password when creating new edition
+implémenter éditer supprimer cercle
+tester nouveau comitard
+tester éditer comitard
+tester supprimer comitard + impémenter remboursement cercles sur encheres sur comitard
+modifier supprimer encheres, tout à faire
+
+
+Todo Flo:
+modifier supprimer encheres, tout à faire
+admin devrait pas avoir un nombre de futs dans UI
+

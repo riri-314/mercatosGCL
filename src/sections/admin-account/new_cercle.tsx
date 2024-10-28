@@ -55,7 +55,7 @@ export default function NewCerle({refetchData, editionId}: NewCerleProps) {
             setCercleError("Veuillez remplir les champs");
             setLoading(false);
         } else {
-            const addMessage = httpsCallable(functions, "signUpUser");
+            const addMessage = httpsCallable(functions, "signupuser");
             addMessage({
                 email: cercleEmail, displayName: cercleName, description: cercleDescription, editionId: editionId,
             })

@@ -82,7 +82,7 @@ export default function CercleTable({
                 color="secondary"
                 onClick={() => {
                     setOpenModal(true);
-                    setModalData([params.row.id, "deactivateCercle", "Êtes-vous sûr de vouloir désactiver ce cercle? Cela va uniquement désactiver le cercle, pas les données associées. Le cercle ne pourra plus se connecter. Cette action est irreversible"]);
+                    setModalData([params.row.id, "deactivatecercle", "Êtes-vous sûr de vouloir désactiver ce cercle? Cela va uniquement désactiver le cercle, pas les données associées. Le cercle ne pourra plus se connecter. Cette action est irreversible"]);
                 }}
                 variant="contained"
             >
@@ -98,7 +98,7 @@ export default function CercleTable({
                 color="error"
                 onClick={() => {
                     setOpenModal(true);
-                    setModalData([params.row.id, "deleteCercle", "Êtes-vous sûr de vouloir supprimer ce cercle? Cela va supprimer le cercle et toutes les données associées. Cette action est irreversible et dangeureuse."]);
+                    setModalData([params.row.id, "deletecercle", "Êtes-vous sûr de vouloir supprimer ce cercle? Cela va supprimer le cercle et toutes les données associées. Cette action est irreversible et dangeureuse."]);
                 }}
                 variant="contained"
             >

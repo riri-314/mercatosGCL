@@ -212,7 +212,7 @@ export default function NewComitard({
                             estLeSeul: estLeSeul,
                             picture: downloadURL,
                         };
-                        const addMessage = httpsCallable(functions, "addComitard");
+                        const addMessage = httpsCallable(functions, "addcomitard");
                         addMessage(data1).then((result) => {
                             const data: any = result.data;
                             // reload data
