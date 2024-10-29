@@ -683,23 +683,6 @@ exports.addcomitard = onCall(async (request) => {
   // add comitard in the map
 });
 
-exports.testreset = onCall(async (_request) => {
-  //const email = "henri.pihet.807@gmail.com";
-  const uid = "uyptV9DH7Aa9pgjpYffufZAMlmr2";
-  const admin_auth = admin.auth();
-  try {
-    //await admin_auth.generatePasswordResetLink(email);
-    //await sendPasswordResetEmail(auth, email);
-    const newPassword = generateRandomPassword();
-    await admin_auth.updateUser(uid, { password: newPassword });
-
-    return {message: "Youpiiiii: "+ newPassword};
-
-  } catch (error: any) {
-    return {message: "Ouuuuups error: "+ error};
-  }
-});
-
 /**
  * Reset all passwords for users in the cercle and send reset password emails.
  * This function can only be called by an admin.
@@ -751,7 +734,7 @@ exports.resetpasswords = onCall(async (request) => {
 
     // Reset password for each user
     try {
-      await admin_auth.updateUser(uid, { password: newPassword }); 
+      await admin_auth.updateUser(uid, { password: newPassword });
       //console.log("Password reset for user: ", uid, newPassword); //FOR DEBUG
     } catch (error: any) {
       console.log("Error resetting password for user: ", uid);
@@ -766,7 +749,7 @@ exports.resetpasswords = onCall(async (request) => {
     // Firebase auth sdk only give us uid.
     if (email) {
       emailArray.push(email);
-      
+
       console.log("email: ", email);
     } else {
       throw new Error("No email found for user!");
@@ -792,54 +775,101 @@ function generateRandomPassword(): string {
     newPassword += chars.charAt(Math.floor(Math.random() * chars.length));
   }
 
-  //return newPassword;
-  return "123456";
+  return newPassword;
+  //return "123456";
 }
 
-exports.deactivateuser = onCall(async (request) => {
+exports.disableuser = onCall(async (request) => {
   const auth = request.auth;
   const data = request.data;
-  const uid = data.uid;
+  const uid = data.uid; //user uid
 
   if (!auth || !(await getAdminUid(auth.uid))) {
     throw new HttpsError("permission-denied", "Unauthorized request!");
   }
 
-  await deleteUserAuth(uid);
-  return { message: "User deleted" };
+  if (!uid) {
+    throw new HttpsError("invalid-argument", "User id is invalid");
+  }
+
+  try {
+    admin.auth().updateUser(uid, {
+      disabled: true,
+    });
+    return { message: "User disabled" };
+  } catch (error: any) {
+    throw new HttpsError(
+      "internal",
+      "Failed to disable user: " + error.message
+    );
+  }
+});
+
+exports.enableuser = onCall(async (request) => {
+  const auth = request.auth;
+  const data = request.data;
+  const uid = data.uid; //user uid
+
+  if (!auth || !(await getAdminUid(auth.uid))) {
+    throw new HttpsError("permission-denied", "Unauthorized request!");
+  }
+
+  if (!uid) {
+    throw new HttpsError("invalid-argument", "User id is invalid");
+  }
+
+  try {
+    admin.auth().updateUser(uid, {
+      disabled: false,
+    });
+    return { message: "User disabled" };
+  } catch (error: any) {
+    throw new HttpsError(
+      "internal",
+      "Failed to disable user: " + error.message
+    );
+  }
 });
 
 exports.deleteuser = onCall(async (request) => {
   const auth = request.auth;
   const data = request.data;
-  const uid = data.uid;
+  const uid = data.uid; //user uid
+  const editionId = data.editionId;
 
   if (!auth || !(await getAdminUid(auth.uid))) {
     throw new HttpsError("permission-denied", "Unauthorized request!");
   }
 
-  await deleteUserAuth(uid);
+  console.log("edition id:", editionId);
+  if (editionId === undefined) {
+    throw new HttpsError("invalid-argument", "Edition id is invalid");
+  }
 
-  // Remove the map assigned with the user ID in all editions' cercles
-  const editionsSnapshot = await admin.firestore().collection("editions").get();
-  const batch = admin.firestore().batch();
+  if (!uid) {
+    throw new HttpsError("invalid-argument", "User id is invalid");
+  }
 
-  editionsSnapshot.forEach((editionDoc) => {
-    const cercles = editionDoc.data().cercles || {};
-    Object.keys(cercles).forEach((cercleId) => {
-      if (cercleId === uid) {
-        delete cercles[cercleId];
-      }
-    });
-    // need to delete auctions from this cercle. TODO later
-    const editionRef = admin
-      .firestore()
-      .collection("editions")
-      .doc(editionDoc.id);
-    batch.update(editionRef, { cercles });
+  const activeEdition = await getEdition(editionId);
+  const activeEditionData = await activeEdition.get();
+  const activeEditionCercle = activeEditionData.data()?.cercles || {};
+
+  if (Object.keys(activeEditionCercle).length === 0) {
+    // No editions found
+    throw new HttpsError("unavailable", "No cercles found in edition!");
+  }
+
+  Object.keys(activeEditionCercle).forEach((cercleId) => {
+    if (cercleId === uid) {
+      delete activeEditionCercle[cercleId];
+    }
   });
 
-  await batch.commit();
+  const editionRef = admin.firestore().collection("editions").doc(editionId);
+
+  await editionRef.update({ cercles: activeEditionCercle });
+
+  await deleteUserAuth(uid);
 
   return { message: "User deleted" };
 });
@@ -912,6 +942,46 @@ exports.signupuser = onCall(async (request) => {
     });
 
   return { message: "User created and added to edition map" };
+});
+
+exports.getdisabledstatus = onCall(async (request) => {
+  const auth = request.auth;
+  const data = request.data;
+  const editionId = data.editionId;
+
+  if (!auth || !(await getAdminUid(auth.uid))) {
+    throw new HttpsError("permission-denied", "Unauthorized request!");
+  }
+
+  if (!editionId) {
+    throw new HttpsError("invalid-argument", "Edition id is invalid");
+  }
+  // get all cercles uid
+
+  const activeEdition = await getEdition(editionId);
+  const activeEditionData = await activeEdition.get();
+  const activeEditionCercle = activeEditionData.data()?.cercles || {};
+
+  console.log("activeEditionCercle: ", activeEditionCercle);
+
+  if (Object.keys(activeEditionCercle).length === 0) {
+    // No editions found
+    throw new HttpsError("unavailable", "No editions found!");
+  }
+
+  const statusDict: { [key: string]: boolean } = {};
+
+  try {
+    const userUIDs = Object.keys(activeEditionCercle);
+    for (const uid of userUIDs) {
+      const user = await admin.auth().getUser(uid);
+      statusDict[uid] = user.disabled;
+    }
+  } catch (error: any) {
+    console.log("Error retrieving user status:", error);
+  }
+
+  return { status: statusDict };
 });
 
 async function deleteUserAuth(uid: string): Promise<void> {
