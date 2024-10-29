@@ -37,6 +37,9 @@ export const beforecreated = beforeUserCreated((_event) => {
   throw new HttpsError("permission-denied", "Unauthorized request!");
 });
 
+// check if login in first ?
+// define the now const at the start of the function. Will "fix" the issue with late votes.
+
 exports.vote = onCall(async (request) => {
   const context_auth = request.auth;
   const data = request.data;
@@ -343,7 +346,6 @@ async function remboursement() {
               .then(() => {
                 return { message: "Comitard updated in edition map" };
               });
-            
 
             // Call the winner function with the winning enchere (first in potentialWinners after sorting)
             //winner(potentialWinners[0]);
@@ -416,7 +418,8 @@ function getCercleId(
   return cercleIdFound;
 }
 
-exports.editComitard = onCall(async (request) => {
+exports.editcomitard = onCall(async (request) => {
+  //changed
   const context_auth = request.auth;
   const data = request.data;
   let admin = false;
@@ -558,7 +561,7 @@ exports.editComitard = onCall(async (request) => {
   return { message: "Comitard updated in edition map" };
 });
 
-exports.addComitard = onCall(async (request) => {
+exports.addcomitard = onCall(async (request) => {
   const context_auth = request.auth;
   const data = request.data;
   let admin = false;
@@ -581,11 +584,17 @@ exports.addComitard = onCall(async (request) => {
 
   // Check if the request is made by an admin
   if (!context_auth) {
-    throw new HttpsError("permission-denied", "Unauthorized request!"); // return error if not connected
+    throw new HttpsError(
+      "permission-denied",
+      "Unauthorized request, not connected!"
+    ); // return error if not connected
   } else {
     admin = await getAdminUid(context_auth.uid);
     if (!activeEditionCercle[context_auth.uid] && !admin) {
-      throw new HttpsError("permission-denied", "Unauthorized request!"); // return error if not admin or not a active cercle
+      throw new HttpsError(
+        "permission-denied",
+        "Unauthorized request, Old account or not admin!"
+      ); // return error if not admin or not a active cercle
     }
   }
 
@@ -684,7 +693,7 @@ exports.addComitard = onCall(async (request) => {
  * @throws {functions.https.HttpsError} - Throws an error if the request is unauthorized or if there is an internal error.
  */
 
-exports.resetPasswords = onCall(async (request) => {
+exports.resetpasswords = onCall(async (request) => {
   const context_auth = request.auth;
   const data = request.data;
   //const auth = getAuth();
@@ -715,6 +724,7 @@ exports.resetPasswords = onCall(async (request) => {
   //
 
   const userUIDs = Object.keys(activeEditionCercle);
+  const emailArray = [];
 
   // Loop through user UIDs in the cercle
   for (const uid of userUIDs) {
@@ -723,7 +733,12 @@ exports.resetPasswords = onCall(async (request) => {
     const newPassword = data.password || generateRandomPassword();
 
     // Reset password for each user
-    await admin_auth.updateUser(uid, { password: newPassword });
+    try {
+      await admin_auth.updateUser(uid, { password: newPassword });
+      //console.log("Password reset for user: ", uid, newPassword); //FOR DEBUG
+    } catch (error: any) {
+      console.log("Error resetting password for user: ", uid);
+    }
 
     const user = await admin_auth.getUser(uid);
     const email = user.email;
@@ -733,15 +748,16 @@ exports.resetPasswords = onCall(async (request) => {
     // necessary to do that. Only way to track user eamil is with firebase admin sdk.
     // Firebase auth sdk only give us uid.
     if (email) {
-      // await admin_auth.generatePasswordResetLink(email);
-      //await sendPasswordResetEmail(auth, email);
+      emailArray.push(email);
+
       console.log("email: ", email);
     } else {
       throw new Error("No email found for user!");
     }
   }
 
-  return { message: "Passwords reset and reset email sent to all users." };
+  return { message: "Passwords reseted to all users.", emails: emailArray };
+  //return { message: "Passwords reset and reset email sent to all users." };
 });
 
 /**
@@ -759,59 +775,106 @@ function generateRandomPassword(): string {
     newPassword += chars.charAt(Math.floor(Math.random() * chars.length));
   }
 
-  //return newPassword;
-  return "123456";
+  return newPassword;
+  //return "123456";
 }
 
-exports.deactivateUser = onCall(async (request) => {
+exports.disableuser = onCall(async (request) => {
   const auth = request.auth;
   const data = request.data;
-  const uid = data.uid;
+  const uid = data.uid; //user uid
 
   if (!auth || !(await getAdminUid(auth.uid))) {
     throw new HttpsError("permission-denied", "Unauthorized request!");
   }
 
-  await deleteUserAuth(uid);
-  return { message: "User deleted" };
+  if (!uid) {
+    throw new HttpsError("invalid-argument", "User id is invalid");
+  }
+
+  try {
+    admin.auth().updateUser(uid, {
+      disabled: true,
+    });
+    return { message: "User disabled" };
+  } catch (error: any) {
+    throw new HttpsError(
+      "internal",
+      "Failed to disable user: " + error.message
+    );
+  }
 });
 
-exports.deleteUser = onCall(async (request) => {
+exports.enableuser = onCall(async (request) => {
   const auth = request.auth;
   const data = request.data;
-  const uid = data.uid;
+  const uid = data.uid; //user uid
 
   if (!auth || !(await getAdminUid(auth.uid))) {
     throw new HttpsError("permission-denied", "Unauthorized request!");
   }
 
-  await deleteUserAuth(uid);
+  if (!uid) {
+    throw new HttpsError("invalid-argument", "User id is invalid");
+  }
 
-  // Remove the map assigned with the user ID in all editions' cercles
-  const editionsSnapshot = await admin.firestore().collection("editions").get();
-  const batch = admin.firestore().batch();
-
-  editionsSnapshot.forEach((editionDoc) => {
-    const cercles = editionDoc.data().cercles || {};
-    Object.keys(cercles).forEach((cercleId) => {
-      if (cercleId === uid) {
-        delete cercles[cercleId];
-      }
+  try {
+    admin.auth().updateUser(uid, {
+      disabled: false,
     });
-    // need to delete auctions from this cercle. TODO later
-    const editionRef = admin
-      .firestore()
-      .collection("editions")
-      .doc(editionDoc.id);
-    batch.update(editionRef, { cercles });
+    return { message: "User disabled" };
+  } catch (error: any) {
+    throw new HttpsError(
+      "internal",
+      "Failed to disable user: " + error.message
+    );
+  }
+});
+
+exports.deleteuser = onCall(async (request) => {
+  const auth = request.auth;
+  const data = request.data;
+  const uid = data.uid; //user uid
+  const editionId = data.editionId;
+
+  if (!auth || !(await getAdminUid(auth.uid))) {
+    throw new HttpsError("permission-denied", "Unauthorized request!");
+  }
+
+  console.log("edition id:", editionId);
+  if (editionId === undefined) {
+    throw new HttpsError("invalid-argument", "Edition id is invalid");
+  }
+
+  if (!uid) {
+    throw new HttpsError("invalid-argument", "User id is invalid");
+  }
+
+  const activeEdition = await getEdition(editionId);
+  const activeEditionData = await activeEdition.get();
+  const activeEditionCercle = activeEditionData.data()?.cercles || {};
+
+  if (Object.keys(activeEditionCercle).length === 0) {
+    // No editions found
+    throw new HttpsError("unavailable", "No cercles found in edition!");
+  }
+
+  Object.keys(activeEditionCercle).forEach((cercleId) => {
+    if (cercleId === uid) {
+      delete activeEditionCercle[cercleId];
+    }
   });
 
-  await batch.commit();
+  const editionRef = admin.firestore().collection("editions").doc(editionId);
+
+  await editionRef.update({ cercles: activeEditionCercle });
+
+  await deleteUserAuth(uid);
 
   return { message: "User deleted" };
 });
 
-exports.signUpUser = onCall(async (request) => {
+exports.signupuser = onCall(async (request) => {
   const auth = request.auth;
   const data = request.data;
   const description = data.description || "";
@@ -879,6 +942,46 @@ exports.signUpUser = onCall(async (request) => {
     });
 
   return { message: "User created and added to edition map" };
+});
+
+exports.getdisabledstatus = onCall(async (request) => {
+  const auth = request.auth;
+  const data = request.data;
+  const editionId = data.editionId;
+
+  if (!auth || !(await getAdminUid(auth.uid))) {
+    throw new HttpsError("permission-denied", "Unauthorized request!");
+  }
+
+  if (!editionId) {
+    throw new HttpsError("invalid-argument", "Edition id is invalid");
+  }
+  // get all cercles uid
+
+  const activeEdition = await getEdition(editionId);
+  const activeEditionData = await activeEdition.get();
+  const activeEditionCercle = activeEditionData.data()?.cercles || {};
+
+  console.log("activeEditionCercle: ", activeEditionCercle);
+
+  if (Object.keys(activeEditionCercle).length === 0) {
+    // No editions found
+    throw new HttpsError("unavailable", "No editions found!");
+  }
+
+  const statusDict: { [key: string]: boolean } = {};
+
+  try {
+    const userUIDs = Object.keys(activeEditionCercle);
+    for (const uid of userUIDs) {
+      const user = await admin.auth().getUser(uid);
+      statusDict[uid] = user.disabled;
+    }
+  } catch (error: any) {
+    console.log("Error retrieving user status:", error);
+  }
+
+  return { status: statusDict };
 });
 
 async function deleteUserAuth(uid: string): Promise<void> {

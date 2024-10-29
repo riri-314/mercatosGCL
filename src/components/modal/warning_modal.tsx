@@ -46,7 +46,7 @@ export default function WarningModal({
               variant="contained"
               color="error"
             >
-              Cancel
+              Annuler
             </Button>
             <LoadingButton
               onClick={onProceed}
@@ -55,7 +55,7 @@ export default function WarningModal({
               size="large"
               variant="contained"
             >
-              Proceed
+              Procéder
             </LoadingButton>
           </div>
         </CardContent>

@@ -79,6 +79,7 @@ export default function EditCerle({
                         name: cercleName,
                         description: cercleDescription,
                         nbFut: nbFut,
+                        comitards: data.comitards,
                     },
                 });
                 refetchData();

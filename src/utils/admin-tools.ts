@@ -8,8 +8,10 @@ import {
   query,
   where,
 } from "@firebase/firestore";
-import { db } from "../firebase_config";
+import { auth, db, functions } from "../firebase_config";
 import { Dayjs } from "dayjs";
+import { httpsCallable } from "@firebase/functions";
+import { sendPasswordResetEmail } from "@firebase/auth";
 
 type Dict = {
   [key: string]: any;
@@ -40,6 +42,7 @@ export async function newEdition(
   let newEdition = 0;
   let oldCercles: any = {};
   let errorCode = 0
+  let oldEditionId = "";
   
   // Retrieve all documents in the "editions" collection
   await getDocs(editionsRef)
@@ -49,6 +52,7 @@ export async function newEdition(
       snapshot.forEach(Doc => {
         const edition = Doc.data().edition;
         if (edition > newEdition) {
+          oldEditionId = Doc.id;
           newEdition = edition;
           oldCercles = Doc.data().cercles;
           Object.keys(oldCercles).forEach(function (cercleId) {
@@ -82,6 +86,20 @@ export async function newEdition(
       // Create a new document in the same collection
       const newDocRef = doc(editionsRef) // Auto-generated document ID
       batch.set(newDocRef, newEditionData); // Add new document data
+
+
+      // reset all oldCercles passwords
+      const addMessage = httpsCallable(functions, "resetpassword");
+      addMessage({ editionId: oldEditionId }).then((result) => {
+        const data: any = result.data;
+        //console.log("data:", data);
+        const emailArray = data.emails;
+        //console.log("emailArray:", emailArray);
+        emailArray.forEach(async (email: string) => {
+          console.log("sending reset password email:", email);
+          await sendPasswordResetEmail(auth, email);
+        });
+      });
   
       // Commit the batched write operation
       return batch.commit();
