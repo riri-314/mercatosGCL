@@ -2,7 +2,7 @@ import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import Card from "@mui/material/Card";
 
-import {Accordion, AccordionDetails, AccordionSummary, CardContent, Modal, Alert} from "@mui/material";
+import {Accordion, AccordionDetails, AccordionSummary, CardContent, Modal, Alert, Theme} from "@mui/material";
 import {useAuth} from "../../auth/AuthProvider";
 
 import {DocumentData} from "@firebase/firestore";
@@ -15,6 +15,7 @@ import Box from "@mui/material/Box";
 
 import { useState } from "react";
 import EditComitard from "../admin-account/edit_comitard";
+import Iconify from "../../components/iconify/iconify.tsx";
 
 
 
@@ -95,7 +96,7 @@ export default function Account({ data, refetchData }: AccountProps) {
         <Card sx={{width: "100%", mb: 4}}>
             <CardContent>
                 <Accordion>
-                    <AccordionSummary expandIcon={<Typography variant="h3">🢃</Typography>}>
+                    <AccordionSummary expandIcon={<Iconify width={40} icon="solar:double-alt-arrow-down-bold-duotone" sx={{color: (theme : Theme) => `${theme.palette.primary.main}`}} />}>
                         <Typography variant="h5">Enchères posées</Typography>
                     </AccordionSummary>
                     <AccordionDetails>
