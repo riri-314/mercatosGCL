@@ -24,7 +24,7 @@ Importing firestore data to local storage: gsutil -m cp -r gs://mercatosgcl.apps
 source: https://stackoverflow.com/questions/57838764/how-to-import-data-from-cloud-firestore-to-the-local-emulator
 
 bucket_export_test is the folder containing the firestore data
-firebase emulators:start --import ./bucket_export_test/2024-10-28T12\:20\:20_28227/
+firebase emulators:start --import ./bucket_export_test/2024-10-28T12\:20\:20_28227/ --export-on-exit
 
 Importing the pictures:
 I have no fucking idea.
@@ -35,9 +35,13 @@ Todo Henri:
 Logo tshirt mercatos
 
 reset password when creating new edition OK
-implémenter éditer supprimer cercle
-tester nouveau comitard
-tester éditer comitard
+vérifier si active button fonctionne dans la table avec les éditions OK
+implémenter et verifier cercle
+    éditer  OK
+    supprimer OK
+    deactiver OK
+tester nouveau comitard OK
+tester éditer comitard OK
 tester supprimer comitard + impémenter remboursement cercles sur encheres sur comitard
 modifier supprimer encheres, tout à faire
 changer adresse mail d'un président //caca mais faisable en backend admin
