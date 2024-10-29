@@ -8,7 +8,7 @@ import {
     CardContent,
     FormHelperText,
     Grid,
-    TextField,
+    TextField, Theme,
 } from "@mui/material";
 import Card from "@mui/material/Card";
 import Typography from "@mui/material/Typography";
@@ -16,6 +16,7 @@ import {useState} from "react";
 import {LoadingButton} from "@mui/lab";
 import {httpsCallable} from "@firebase/functions";
 import {functions} from "../../firebase_config";
+import Iconify from "../../components/iconify/iconify.tsx";
 
 interface NewCerleProps {
     editionId: string;
@@ -80,7 +81,7 @@ export default function NewCerle({refetchData, editionId}: NewCerleProps) {
             <Card sx={{width: "100%", mb: 4}}>
                 <CardContent>
                     <Accordion>
-                        <AccordionSummary expandIcon={<Typography variant="h3">🢃</Typography>}>
+                        <AccordionSummary expandIcon={<Iconify width={40} icon="solar:double-alt-arrow-down-bold-duotone" sx={{color: (theme : Theme) => `${theme.palette.primary.main}`}} />}>
                             <Typography variant="h5"> Créer nouveau cercle</Typography>
                         </AccordionSummary>
                         <AccordionDetails>
