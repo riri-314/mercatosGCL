@@ -34,19 +34,19 @@ firebaseConfig.storageBucket = firebaseConfig.storageBucket.replace(/"/g, '');
 
 export const app = initializeApp(firebaseConfig);
 
-export const db = getFirestore(app);
+export const db = getFirestore(app); //ok
 
-export const auth = getAuth(app)
+export const auth = getAuth(app) //ok
 
-export const storage = getStorage(app);
+export const storage = getStorage(app); //ok
 
-export const functions = getFunctions(app);
+export const functions = getFunctions(app); //ok
 
 export const analytics = getAnalytics(app);
 
 const debug = false;
 
-if (location.hostname === "localhost" && debug) {
+if (debug) {
   // Point to the Storage emulator running on localhost.
   connectStorageEmulator(storage, "127.0.0.1", 9199);
   connectFunctionsEmulator(functions, "127.0.0.1", 5001);
