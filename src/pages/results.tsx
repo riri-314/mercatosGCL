@@ -20,7 +20,6 @@ export default function ResultsPage() {
         name: data?.data().cercles[cercleId].name,
       };
     });
-
     return cerclesWithNames;
   }
 
@@ -69,6 +68,7 @@ export default function ResultsPage() {
 
     return encheres;
   }
+
 
   // aggregate the running encheres
   function aggregateRunningEncheres() {
@@ -140,6 +140,7 @@ export default function ResultsPage() {
     return encheres;
   }
 
+
   // aggregate the closed encheres
   function aggregateClosedEncheres() {
     const encheres = [];
@@ -174,6 +175,7 @@ export default function ResultsPage() {
                     endDate: endEncheres.toDate().toLocaleString(),
                   });
                 }
+
 
                 candidateEncheres.sort((a, b) => {
                   if (a.vote > b.vote) {
