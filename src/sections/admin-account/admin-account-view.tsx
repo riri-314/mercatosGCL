@@ -14,7 +14,7 @@ import { LoadingButton } from "@mui/lab";
 import { getAuth, sendPasswordResetEmail } from "@firebase/auth";
 import { httpsCallable } from "@firebase/functions";
 import NewCerle from "./new_cercle";
-import { auth, functions } from "../../firebase_config";
+import { functions } from "../../firebase_config";
 import NewEdition from "./new_edition";
 import NewComitard from "./new_comitard";
 import { DocumentData } from "@firebase/firestore";
@@ -289,7 +289,7 @@ export default function AdminAccount({
                   });
                 }}
               >
-                Réinitialiser tous les mots de passe
+                Réinitialiser tous les mots de passe DANGER
               </LoadingButton>
               <LoadingButton
                 variant={"outlined"}
@@ -306,39 +306,6 @@ export default function AdminAccount({
                 }}
               >
                 Remboursement
-              </LoadingButton>
-              <LoadingButton
-                variant={"outlined"}
-                size={"large"}
-                onClick={async () => {
-                  const addMessage = httpsCallable(functions, "resetpasswords");
-                  addMessage({ editionId: "quCYmyzHQqh9ebm9EN2m" }).then((result) => {
-                    const data: any = result.data;
-                    console.log("data:", data);
-                    const emailArray = data.emails;
-                    console.log("emailArray:", emailArray);
-                    emailArray.forEach(async (email: string) => {
-                      console.log("email:", email);
-                      if (email === "henri.pihet.807@gmail.com") {
-                        await sendPasswordResetEmail(auth, email);
-                      }
-                      //await sendPasswordResetEmail(auth, email);
-                    });
-                  });
-                }}
-              >
-                Fake reset all passwords and retrieve emails DEBUG
-              </LoadingButton>
-              <LoadingButton
-                variant={"outlined"}
-                size={"large"}
-                onClick={async () => {
-                  const email = "henri.pihet.807@gmail.com";
-                  await sendPasswordResetEmail(auth, email);
-                  console.log("email sent to:", email);
-                }}
-              >
-                Reset henri password BIS
               </LoadingButton>
             </Stack>
           </Stack>
