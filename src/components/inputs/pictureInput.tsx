@@ -10,6 +10,7 @@ interface PictureInputProps {
   change: (images: ImageType[]) => void;
   error: boolean;
   upload: number | undefined;
+
 }
 
 export default function PictureInput({ change, error, upload }: PictureInputProps) {
@@ -18,6 +19,7 @@ export default function PictureInput({ change, error, upload }: PictureInputProp
   const maxNumber = 1;
   const maxFileSize = 5500000; // Bytes
   const maxFileSizeCompressed = 0.1; // MBytes
+
 
   const onChange = async (imageList: ImageListType) => {
     // data for submit

@@ -236,6 +236,7 @@ export default function NewComitard({
                             setPointFaible("");
                             setEstLeSeul("");
                             setPicture([]);
+                            // really remove the picture
                             setLoading(false);
                         }).catch((error) => {
                             console.log("error:", error);
