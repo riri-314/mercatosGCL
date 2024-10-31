@@ -44,10 +44,14 @@ tester nouveau comitard OK
 tester éditer comitard OK
 tester supprimer comitard + impémenter remboursement cercles sur encheres sur comitard
 modifier supprimer encheres, tout à faire
+admin peut voter dans backend???
+optimiser page résultats, trop lente
 changer adresse mail d'un président //caca mais faisable en backend admin
 
 
 Todo Flo:
 modifier supprimer encheres, tout à faire
 admin devrait pas avoir un nombre de futs dans UI
+Buf avec les régles du jeux (markdown est cassé quand edit ou nouvelle édition)
+changer create comitard pour avoir petite photo
 

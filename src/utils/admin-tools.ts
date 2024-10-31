@@ -59,6 +59,7 @@ export async function newEdition(
             const cercle = oldCercles[cercleId];
             if (cercle.hasOwnProperty("comitards")) {
               oldCercles[cercleId].comitards = {};
+              oldCercles[cercleId].nbFut = votes;
             }
           });
         }
@@ -87,9 +88,9 @@ export async function newEdition(
       const newDocRef = doc(editionsRef) // Auto-generated document ID
       batch.set(newDocRef, newEditionData); // Add new document data
 
-
+      console.log("created new doc, calling reset password function");
       // reset all oldCercles passwords
-      const addMessage = httpsCallable(functions, "resetpassword");
+      const addMessage = httpsCallable(functions, "resetpasswords");
       addMessage({ editionId: oldEditionId }).then((result) => {
         const data: any = result.data;
         //console.log("data:", data);
@@ -99,6 +100,8 @@ export async function newEdition(
           console.log("sending reset password email:", email);
           await sendPasswordResetEmail(auth, email);
         });
+      }).catch((error) => {
+        console.log("error while reseting passwords:", error);
       });
   
       // Commit the batched write operation
