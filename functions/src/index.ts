@@ -693,6 +693,8 @@ exports.addcomitard = onCall(async (request) => {
  * @throws {functions.https.HttpsError} - Throws an error if the request is unauthorized or if there is an internal error.
  */
 
+
+
 exports.resetpasswords = onCall(async (request) => {
   const context_auth = request.auth;
   const data = request.data;
@@ -702,8 +704,6 @@ exports.resetpasswords = onCall(async (request) => {
   if (!context_auth || !(await getAdminUid(context_auth.uid))) {
     throw new HttpsError("permission-denied", "Unauthorized request!");
   }
-
-  const admin_auth = admin.auth();
 
   console.log("edition id:", data.editionId);
   if (data.editionId === undefined) {
@@ -734,13 +734,13 @@ exports.resetpasswords = onCall(async (request) => {
 
     // Reset password for each user
     try {
-      await admin_auth.updateUser(uid, { password: newPassword });
+      await admin.auth().updateUser(uid, { password: newPassword });
       //console.log("Password reset for user: ", uid, newPassword); //FOR DEBUG
     } catch (error: any) {
       console.log("Error resetting password for user: ", uid);
     }
 
-    const user = await admin_auth.getUser(uid);
+    const user = await admin.auth().getUser(uid);
     const email = user.email;
 
     // Send reset password email
