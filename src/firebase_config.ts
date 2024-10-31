@@ -18,17 +18,17 @@ import { connectFunctionsEmulator, getFunctions } from "@firebase/functions";
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_apiKey,
-  authDomain: import.meta.env.VITE_authDomain,
-  projectId: import.meta.env.VITE_projectId,
+  apiKey: "AIzaSyCa5d5LxdDmTkmKzdrIgLDbBRDSmOti1a4",
+  authDomain: "mercatosgcl.firebaseapp.com",
+  projectId: "mercatosgcl",
   storageBucket: "mercatosgcl.appspot.com",
-  messagingSenderId: import.meta.env.VITE_messagingSenderId,
-  appId: import.meta.env.VITE_appId,
-  measurementId: import.meta.env.VITE_measurementId,
+  messagingSenderId: "130093762104",
+  appId: "1:130093762104:web:c63811ba64c2ed2ac448cd",
+  measurementId: "G-9FXC2SMDQY",
 };
 
 
-firebaseConfig.storageBucket = firebaseConfig.storageBucket.replace(/"/g, '');
+//firebaseConfig.storageBucket = firebaseConfig.storageBucket.replace(/"/g, '');
 
 // Initialize Firebase
 
