@@ -4,7 +4,7 @@
 
 > Website for the GCL mercatos
 
-![preview](public/assets/preview.jpg)
+![preview](public/assets/mercatoScreen.png)
 
 ## Link
 - [Public link](https://mercatosgcl.web.app/)
