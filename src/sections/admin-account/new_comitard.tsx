@@ -265,7 +265,13 @@ export default function NewComitard({
             <Card sx={{width: "100%", mb: 4}}>
                 <CardContent>
                     <Accordion>
-                        <AccordionSummary expandIcon={<Iconify width={40} icon="solar:double-alt-arrow-down-bold-duotone" sx={{color: (theme : Theme) => `${theme.palette.primary.main}`}} />}>
+                        <AccordionSummary expandIcon={
+                            <Iconify
+                                width={40}
+                                icon="solar:double-alt-arrow-down-bold-duotone"
+                                sx={{color: (theme : Theme) => `${theme.palette.primary.main}`}}
+                                fallback={<span>↓</span>}
+                            />}>
                             <Typography variant="h5"> Créer nouveau comitard </Typography>
                         </AccordionSummary>
                         <AccordionDetails>
