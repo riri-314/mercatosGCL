@@ -27,3 +27,4 @@ emulator
 emulator/*
 bucket_export_test/*
 mercatosgcl.appspot.com/*
+scripts/*
