@@ -13,6 +13,11 @@ import Box from "@mui/material/Box";
 export default function Rules() {
 
     const {data} = useData();
+    let rules = data?.data().rules;
+    if (data != null) {
+        // Remove escape characters from the rules
+        rules = data.data().rules.replace(/\\/g, "");
+    }
 
     return (<>
             <Stack
@@ -30,7 +35,7 @@ export default function Rules() {
                 <CardContent sx={{ml: 2}}>
                     {data ? (<>
                             <Markdown remarkPlugins={[remarkGfm]}
-                                      rehypePlugins={[rehypeRaw]}>{data.data().rules}</Markdown>
+                                      rehypePlugins={[rehypeRaw]}>{rules}</Markdown>
 
                             <hr/>
 
@@ -53,14 +58,14 @@ export default function Rules() {
                             <Box sx={{display: "flex", alignItems: "center", mt: 2, gap: (theme) => theme.spacing(1)}}>
                                 <Iconify sx={{color: (theme: any) => theme.palette.primary.main}}
                                          icon="solar:clock-circle-line-duotone"/>
-                                <Typography variant="h5">Durée du mercato</Typography>
+                                <Typography variant="h5">Durée des enchères</Typography>
                             </Box>
 
                             <ul>
-                                <li><strong>Début du mercato : </strong>
+                                <li><strong>Début des enchères : </strong>
                                     {new Date(data?.data().start.seconds * 1000).toLocaleString()}</li>
                                 <li>
-                                    <strong>Fin du mercato : </strong>
+                                    <strong>Fin des enchères : </strong>
                                     {new Date(data?.data().stop.seconds * 1000).toLocaleString()}
                                 </li>
                             </ul>
