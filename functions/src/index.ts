@@ -6,13 +6,13 @@
  *
  * See a full list of supported triggers at https://firebase.google.com/docs/functions
  */
-import * as functions from "firebase-functions";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 import * as test from "firebase-admin/firestore";
 import { getAuth } from "firebase-admin/auth";
 import { beforeUserCreated } from "firebase-functions/v2/identity";
 import { v4 as uuidv4 } from "uuid";
+import { onSchedule } from "firebase-functions/scheduler";
 //import { Timestamp, increment } from "@firebase/firestore";
 
 admin.initializeApp();
@@ -41,6 +41,8 @@ export const beforecreated = beforeUserCreated((_event) => {
 // define the now const at the start of the function. Will "fix" the issue with late votes.
 
 exports.vote = onCall(async (request) => {
+  const now = test.Timestamp.now();
+  
   const context_auth = request.auth;
   const data = request.data;
   let isAdmin = false;
@@ -73,7 +75,6 @@ exports.vote = onCall(async (request) => {
   //console.log("before now:", admin.firestore.Timestamp);
   //console.log("before now:", test);
   //console.log("before now:", test.Timestamp);
-  const now = test.Timestamp.now();
   //const now = admin.firestore.Timestamp.fromDate(new Date());
 
   const start = activeEditionData.data()?.start;
@@ -396,13 +397,22 @@ exports.rembour = onCall(async (_request) => {
   return { message: "Remboursement done" };
 });
 
-export const taskRunner = functions
-  .runWith({ memory: "2GB" })
-  .pubsub.schedule("*/10 * * * *")
-  .onRun(async (_context) => {
+//old V1 function
+//export const taskRunner = functions
+//  .runWith({ memory: "2GB" })
+//  .pubsub.schedule("*/10 * * * *")
+//  .onRun(async (_context) => {
+//    // Consistent timestamp
+//    await remboursement();
+//  });
+
+//new V2 function
+exports.taskrunner = onSchedule("*/10 * * * *", async (_event) => {
+  async (_event: any) => {
     // Consistent timestamp
     await remboursement();
-  });
+  }
+});
 
 function getCercleId(
   comitardId: string,
