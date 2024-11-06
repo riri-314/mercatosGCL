@@ -7,15 +7,15 @@ import Stack from "@mui/material/Stack";
 import Modal from "@mui/material/Modal";
 import Typography from "@mui/material/Typography";
 import Divider from "@mui/material/Divider";
-import Iconify from "../../components/iconify/iconify";
-import Label from "../../components/label/label";
+import Iconify from "../../components/iconify/iconify.tsx";
+import Label from "../../components/label/label.tsx";
 import LazyLoad from "react-lazy-load";
-import QuantityInput from "../../components/inputs/numberInput";
+import QuantityInput from "../../components/inputs/numberInput.tsx";
 import { httpsCallable } from "@firebase/functions";
-import { functions } from "../../firebase_config";
+import { functions } from "../../firebase_config.ts";
 import { Alert, AlertColor } from "@mui/material";
 import { LoadingButton } from "@mui/lab";
-import { useAuth } from "../../auth/AuthProvider";
+import { useAuth } from "../../auth/AuthProvider.tsx";
 import LinearProgress from "@mui/material/LinearProgress";
 import EncheresList from "./comitard-encheres.tsx";
 
@@ -62,7 +62,7 @@ export default function ComitardCard({
   const [loading, setLoading] = useState(false);
 
   const { user, isAdmin } = useAuth();
-  console.log("redering comitard card2: ", product.name);
+  //console.log("redering comitard card2: ", product.name);
   const theme = useTheme();
   const isMediumScreen = useMediaQuery(theme.breakpoints.down("md")); // Adjust breakpoint as needed
 
@@ -281,7 +281,7 @@ export default function ComitardCard({
               return b.date.seconds - a.date.seconds;
             } else {
               // If dates are the same, compare by vote
-              console.log("product name: ", product.name);
+              //console.log("product name: ", product.name);
               return b.vote - a.vote;
             }
           })[0]

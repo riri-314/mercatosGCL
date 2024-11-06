@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Grid, Box } from '@mui/material';
 
-import ComitardCard from './comitard-card-V2';
+import ComitardCard from './comitard-card-V3';
 
 interface ComitardListProps {
   cercleId: string;
@@ -11,7 +11,8 @@ interface ComitardListProps {
   enchereMinMax: number[];
   isInTimeFrame: boolean;
   refetchData: () => void;
-  getCerclesDataWithNames: (cerclesData: any) => any;
+  cerclesData: any;
+  currentTime: number;
 }
 
 const ComitardList: React.FC<ComitardListProps> = ({
@@ -22,9 +23,10 @@ const ComitardList: React.FC<ComitardListProps> = ({
   enchereMinMax,
   isInTimeFrame,
   refetchData,
-  getCerclesDataWithNames,
+  cerclesData,
+  currentTime,
 }) => {
-  const comitards = dataContent?.cercles[cercleId]?.comitards;
+  const comitards = useMemo(() => dataContent?.cercles[cercleId]?.comitards, [dataContent, cercleId]);
 
   if (!comitards || Object.keys(comitards).length === 0) {
     return (
@@ -51,7 +53,8 @@ const ComitardList: React.FC<ComitardListProps> = ({
               enchereMin={enchereMinMax[0]}
               isInTimeFrame={isInTimeFrame}
               refetchData={refetchData}
-              cerclesData={getCerclesDataWithNames(dataContent.cercles)}
+              cerclesData={cerclesData}
+              currentTime={currentTime}
             />
           </Grid>
         ))}
