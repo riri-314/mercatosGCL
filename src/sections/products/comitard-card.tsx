@@ -98,7 +98,7 @@ export default function ComitardCard({
       }
     }
   }, [isInTimeFrame, product, user]);
-  console.log("rendering comitard card: ", product.name);
+  //console.log("rendering comitard card: ", product.name);
   // function to decide if we display the vote button or not
   // only for logged in users
   // also update the time left of the enchère
@@ -290,7 +290,7 @@ export default function ComitardCard({
             return b.date.seconds - a.date.seconds;
           } else {
             // If dates are the same, compare by vote
-            console.log("product name: ", product.name);
+            //console.log("product name: ", product.name);
             return b.vote - a.vote;
           }
         })[0]

@@ -48,7 +48,7 @@ exports.vote = onCall(async (request) => {
   let isAdmin = false;
 
   console.log("edition id:", data.editionId);
-  if (data.editionId === undefined) {
+  if (data.editionId === undefined || data.editionId == null) {
     throw new HttpsError("invalid-argument", "Edition id is invalid");
   }
 
