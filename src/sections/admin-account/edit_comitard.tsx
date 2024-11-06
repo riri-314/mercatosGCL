@@ -2,7 +2,9 @@ import LoadingButton from "@mui/lab/LoadingButton";
 import {
   Alert,
   AlertColor,
+  Button,
   CardContent,
+  Divider,
   FormHelperText,
   Grid,
   TextField,
@@ -60,7 +62,7 @@ export default function EditComitard({
   const [pointFaibleError, setPointFaibleError] = useState(false);
   const [estLeSeul, setEstLeSeul] = useState(data.estLeSeul);
   const [estLeSeulError, setEstLeSeulError] = useState(false);
-  const [picture, setPicture] = useState<ImageListType>([]);
+  const [picture, setPicture] = useState(data.picture);
   const [pictureUpdated, setPictureUpdated] = useState(false);
   const [pictureError, setPictureError] = useState(false);
   const [pictureUpload, setPictureUpload] = useState<number | undefined>(
@@ -168,16 +170,20 @@ export default function EditComitard({
     } else {
       setEstLeSeulError(false);
     }
-    //if (picture[0] != null && picture[0].file !== undefined) {
-    //  setPictureError(false);
-    //} else {
-    //  error = true;
-    //  setPictureError(true);
-    //}
+
+    if (pictureUpdated) {
+      if (picture[0] != null && picture[0].file !== undefined) {
+        setPictureError(false);
+      } else {
+        error = true;
+        setPictureError(true);
+      }
+    }
 
     if (!error) {
       console.log("Check user input ok");
       if (pictureUpdated) {
+        //update user.uid if admin with the corresponding cercle id
         const storageRef = ref(storage, `${data.id}/${user?.uid}/${uuidv4()}`);
 
         const uploadTask = uploadBytesResumable(
@@ -311,6 +317,10 @@ export default function EditComitard({
             setLoading(false);
           });
       }
+    } else {
+      setLoading(false);
+      setErrorSeverity("error");
+      setError("Certains champs sont incorrects. Petit con.");
     }
   }
   return (
@@ -318,7 +328,7 @@ export default function EditComitard({
       <Card sx={{ width: "100%", mb: 4 }}>
         <CardContent>
           <Typography variant="h5" sx={{ mb: 1 }}>
-            Créer nouveau comitard
+            Éditer comitard
           </Typography>
           <Grid container spacing={2}>
             <Grid item xs={12} sm={6}>
@@ -579,11 +589,13 @@ export default function EditComitard({
                 {txtlenght2}
               </FormHelperText>
             </Grid>
-            {false && (
+
+            <Divider />
+
+            {pictureUpdated ? (
               <Grid item xs={12} sm={12}>
                 <PictureInput
                   change={(images: ImageListType) => {
-                    setPictureUpdated(true);
                     setPicture(images);
                     if (images.length > 0) {
                       setPictureError(false);
@@ -595,7 +607,32 @@ export default function EditComitard({
                   upload={pictureUpload}
                 />
               </Grid>
+            ) : (
+              <Grid item xs={12} sm={12}>
+                <div style={{ width: "100%", margin: "0 auto" }}>
+                  <img
+                    src={picture}
+                    alt=""
+                    width="100"
+                    style={{ width: "100%" }}
+                  />
+                  <div className="image-item__btn-wrapper">
+                    <Button
+                      onClick={() => {
+                        setPictureUpdated(true);
+                      }}
+                      variant="outlined"
+                      size="large"
+                      sx={{ width: "100%", mt: 2 }}
+                    >
+                      Retirer l'image
+                    </Button>
+                  </div>
+                </div>
+              </Grid>
             )}
+
+            <Divider />
 
             <Grid item xs={12} sm={12}>
               <LoadingButton
