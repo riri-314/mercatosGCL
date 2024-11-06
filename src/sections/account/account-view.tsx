@@ -86,7 +86,7 @@ export default function Account({ data, refetchData }: AccountProps) {
       >
         <EditComitard
           refetchData={refetchData}
-          data={modalComitardData}
+          ComitardData={modalComitardData}
           activeData={data}
           close={() => setOpenModalComitard(false)}
           admin={false}
