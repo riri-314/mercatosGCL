@@ -98,7 +98,7 @@ export default function ComitardCard({
       }
     }
   }, [isInTimeFrame, product, user]);
-
+  //console.log("rendering comitard card: ", product.name);
   // function to decide if we display the vote button or not
   // only for logged in users
   // also update the time left of the enchère
@@ -284,7 +284,16 @@ export default function ComitardCard({
   const firstEnchere: any = product.encheres
     ? Object.values(product.encheres)
         .filter((enchere) => enchere !== null)
-        .sort((a: any, b: any) => b.date.seconds - a.date.seconds)[0]
+        .sort((a: any, b: any) => {
+          // First, compare by date.seconds
+          if (b.date.seconds !== a.date.seconds) {
+            return b.date.seconds - a.date.seconds;
+          } else {
+            // If dates are the same, compare by vote
+            //console.log("product name: ", product.name);
+            return b.vote - a.vote;
+          }
+        })[0]
     : null;
 
   const renderPrice = (

@@ -227,7 +227,7 @@ export default function AdminAccount({
       >
         <EditComitard
           refetchData={refetchData}
-          data={modalComitardData}
+          ComitardData={modalComitardData}
           activeData={activeData}
           close={() => setOpenModalComitard(false)}
           admin={true}
