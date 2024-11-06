@@ -24,45 +24,54 @@ import { useAuth } from "../../auth/AuthProvider";
 import { httpsCallable } from "@firebase/functions";
 
 interface EditComitardProps {
-  data: DocumentData;
+  ComitardData: DocumentData;
   activeData: DocumentData;
   admin: Boolean;
   close: () => void;
   refetchData: () => void;
 }
 
+function getCercleIdByComitardId(activeData: DocumentData, comitardId: string): string | undefined {
+  for (const [cercleId, cercle] of Object.entries(activeData.data().cercles)) {
+      if ((cercle as any).comitards && comitardId in (cercle as any).comitards) {
+          return cercleId;
+      }
+  }
+  return undefined; // Return undefined if the comitard ID is not found
+}
+
 export default function EditComitard({
-  data,
+  ComitardData,
   activeData,
   admin,
   close,
   refetchData,
 }: EditComitardProps) {
-  const [name, setName] = useState(data.name);
+  const [name, setName] = useState(ComitardData.name);
   const [nameError, setNameError] = useState(false);
-  const [firstname, setFirstname] = useState(data.firstname);
+  const [firstname, setFirstname] = useState(ComitardData.firstname);
   const [firstnameError, setFirstnameError] = useState(false);
-  const [nickname, setNickname] = useState(data.nickname);
+  const [nickname, setNickname] = useState(ComitardData.nickname);
   const [nicknameError, setNicknameError] = useState(false);
-  const [post, setPost] = useState(data.post);
+  const [post, setPost] = useState(ComitardData.post);
   const [postError, setPostError] = useState(false);
-  const [cercle, setCercle] = useState(data.cercle);
+  const [cercle, setCercle] = useState(ComitardData.cercle);
   const [cercleError, setCercleError] = useState(false);
-  const [teneurTaule, setTeneurTaule] = useState(data.teneurTaule);
+  const [teneurTaule, setTeneurTaule] = useState(ComitardData.teneurTaule);
   const [teneurTauleError, setTeneurTauleError] = useState(false);
-  const [etatCivil, setEtatCivil] = useState(data.etatCivil);
+  const [etatCivil, setEtatCivil] = useState(ComitardData.etatCivil);
   const [etatCivilError, setEtatCivilError] = useState(false);
-  const [age, setAge] = useState(data.age);
+  const [age, setAge] = useState(ComitardData.age);
   const [ageError, setAgeError] = useState(false);
-  const [nbEtoiles, setNbEtoiles] = useState(data.nbEtoiles);
+  const [nbEtoiles, setNbEtoiles] = useState(ComitardData.nbEtoiles);
   const [nbEtoilesError, setNbEtoilesError] = useState(false);
-  const [pointFort, setPointFort] = useState(data.pointFort);
+  const [pointFort, setPointFort] = useState(ComitardData.pointFort);
   const [pointFortError, setPointFortError] = useState(false);
-  const [pointFaible, setPointFaible] = useState(data.pointFaible);
+  const [pointFaible, setPointFaible] = useState(ComitardData.pointFaible);
   const [pointFaibleError, setPointFaibleError] = useState(false);
-  const [estLeSeul, setEstLeSeul] = useState(data.estLeSeul);
+  const [estLeSeul, setEstLeSeul] = useState(ComitardData.estLeSeul);
   const [estLeSeulError, setEstLeSeulError] = useState(false);
-  const [picture, setPicture] = useState(data.picture);
+  const [picture, setPicture] = useState(ComitardData.picture);
   const [pictureUpdated, setPictureUpdated] = useState(false);
   const [pictureError, setPictureError] = useState(false);
   const [pictureUpload, setPictureUpload] = useState<number | undefined>(
@@ -184,7 +193,17 @@ export default function EditComitard({
       console.log("Check user input ok");
       if (pictureUpdated) {
         //update user.uid if admin with the corresponding cercle id
-        const storageRef = ref(storage, `${data.id}/${user?.uid}/${uuidv4()}`);
+        let cerlcleUID = user?.uid;
+        if (admin) {
+          cerlcleUID = getCercleIdByComitardId(activeData, ComitardData.id);
+          if (cerlcleUID === undefined) {
+            setLoading(false);
+            setErrorSeverity("error");
+            setError("Cercle non trouvé pour ce comitard.");
+            return;
+          }
+        }
+        const storageRef = ref(storage, `${activeData.id}/${cerlcleUID}/${uuidv4()}`);
 
         const uploadTask = uploadBytesResumable(
           storageRef,
@@ -224,7 +243,7 @@ export default function EditComitard({
                 console.log("File available at", downloadURL);
                 const data1 = {
                   editionId: activeData.id,
-                  comitardId: data.id,
+                  comitardId: ComitardData.id,
                   name: name,
                   firstname: firstname,
                   nickname: nickname,
@@ -244,13 +263,13 @@ export default function EditComitard({
                 const addMessage = httpsCallable(functions, "editcomitard");
                 addMessage(data1)
                   .then((result) => {
-                    const data: any = result.data;
-                    // reload data
+                    const ComitardData: any = result.data;
+                    // reload ComitardData
                     refetchData();
-                    console.log("data:", data);
+                    console.log("ComitardData:", ComitardData);
                     setPictureUpload(undefined);
                     setErrorSeverity("success");
-                    setError("Comitard créé avec succès");
+                    setError("Comitard mis à jour avec succès");
                     setLoading(false);
                   })
                   .catch((error) => {
@@ -258,7 +277,7 @@ export default function EditComitard({
                     setPictureUpload(undefined);
                     setErrorSeverity("error");
                     setError(
-                      "Une erreur est survenue lors de la création du comitard. serveur error."
+                      "Une erreur est survenue lors de la mise à jour du comitard. serveur error."
                     );
                     setLoading(false);
                   });
@@ -279,7 +298,7 @@ export default function EditComitard({
         console.log("do not change the picture");
         const data1 = {
           editionId: activeData.id,
-          comitardID: data.id,
+          comitardId: ComitardData.id,
           name: name,
           firstname: firstname,
           nickname: nickname,
@@ -293,18 +312,19 @@ export default function EditComitard({
           pointFort: pointFort,
           pointFaible: pointFaible,
           estLeSeul: estLeSeul,
+          picture: picture,
         };
         // call another cloud function to update the doc
         const addMessage = httpsCallable(functions, "editcomitard");
         addMessage(data1)
           .then((result) => {
-            const data: any = result.data;
-            // reload data
+            const ComitardData: any = result.data;
+            // reload ComitardData
             refetchData();
-            console.log("data:", data);
+            console.log("ComitardData:", ComitardData);
             setPictureUpload(undefined);
             setErrorSeverity("success");
-            setError("Comitard créé avec succès");
+            setError("Comitard mis à jour avec succès");
             setLoading(false);
           })
           .catch((error) => {
@@ -312,7 +332,7 @@ export default function EditComitard({
             setPictureUpload(undefined);
             setErrorSeverity("error");
             setError(
-              "Une erreur est survenue lors de la création du comitard. serveur error."
+              "Une erreur est survenue lors de la mise à jour du comitard. serveur error."
             );
             setLoading(false);
           });
@@ -591,6 +611,8 @@ export default function EditComitard({
             </Grid>
 
             <Divider />
+
+       
 
             {pictureUpdated ? (
               <Grid item xs={12} sm={12}>

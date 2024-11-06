@@ -461,13 +461,17 @@ exports.editcomitard = onCall(async (request) => {
   }
   // check if user only update his comitard
   if (
-    !activeEditionCercle[context_auth.uid]?.comitards[data.comitardID] &&
+    !activeEditionCercle[context_auth.uid]?.comitards[data.comitardId] &&
     !admin
   ) {
     console.log(
       "!activeEditionCercle[context_auth.uid]?.comitards[data.comitardId]: ",
       !activeEditionCercle[context_auth.uid]?.comitards[data.comitardId]
     );
+    //console.log("activeEditionCercel ", activeEditionCercle);
+    //console.log("context_auth.uid ", context_auth.uid);
+    //console.log("data.comitardId ", data.comitardId);
+    //console.log("activeEditionCercle[context_auth.uid]: ", activeEditionCercle[context_auth.uid]);
     // if comitard does not exist or user try to update not is comitard
     throw new HttpsError("permission-denied", "Unauthorized request!");
   }
@@ -481,8 +485,8 @@ exports.editcomitard = onCall(async (request) => {
 
   // Check if the request contains the required data
   if (
-    data.comitardID === undefined ||
-    data.comitardID.lenght == 0 ||
+    data.comitardId === undefined ||
+    data.comitardId.lenght == 0 ||
     data.name?.length == 0 ||
     data.name?.length > txtlenght1 ||
     data.firstname?.length == 0 ||
@@ -504,7 +508,9 @@ exports.editcomitard = onCall(async (request) => {
     data.pointFaible?.length == 0 ||
     data.pointFaible?.length > txtlenght2 ||
     data.estLeSeul?.length == 0 ||
-    data.estLeSeul?.length > txtlenght2
+    data.estLeSeul?.length > txtlenght2 ||
+    data.picture === undefined ||
+    data.picture.length == 0
   ) {
     throw new HttpsError("invalid-argument", "Missing data!");
   }
@@ -522,7 +528,7 @@ exports.editcomitard = onCall(async (request) => {
   //  }
   //}
 
-  const s = `cercles.${cercle}.comitards.${data.comitardID}`;
+  const s = `cercles.${cercle}.comitards.${data.comitardId}`;
   const updateData: any = {};
 
   if (data.name) {
@@ -557,6 +563,9 @@ exports.editcomitard = onCall(async (request) => {
   }
   if (data.estLeSeul) {
     updateData[`${s}.estLeSeul`] = data.estLeSeul;
+  }
+  if (data.picture) {
+    updateData[`${s}.picture`] = data.picture;
   }
 
   activeEdition
