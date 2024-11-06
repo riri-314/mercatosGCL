@@ -1,7 +1,7 @@
 import React from 'react';
 import { Grid, Box } from '@mui/material';
 
-import ComitardCard from './comitard-card2';
+import ComitardCard from './comitard-card-V2';
 
 interface ComitardListProps {
   cercleId: string;

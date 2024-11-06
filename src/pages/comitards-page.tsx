@@ -1,5 +1,5 @@
 import {Helmet} from 'react-helmet-async';
-import ComitardsView from '../sections/products/comitards-view2.tsx';
+import ComitardsView from '../sections/products/comitards-view-V3.tsx';
 
 
 // ----------------------------------------------------------------------
