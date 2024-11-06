@@ -1,8 +1,6 @@
-import { useEffect, useState } from "react";
-
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
-
 import Box from "@mui/material/Box";
 import Card from "@mui/material/Card";
 import Stack from "@mui/material/Stack";
@@ -13,7 +11,6 @@ import Iconify from "../../components/iconify/iconify";
 import Label from "../../components/label/label";
 import LazyLoad from "react-lazy-load";
 import QuantityInput from "../../components/inputs/numberInput";
-
 import { httpsCallable } from "@firebase/functions";
 import { functions } from "../../firebase_config";
 import { Alert, AlertColor } from "@mui/material";
@@ -63,46 +60,46 @@ export default function ComitardCard({
     AlertColor | undefined
   >("error");
   const [loading, setLoading] = useState(false);
-  const handleOpen = () => setOpen(true);
-  const handleClose = () => setOpen(false);
-  const { user, isAdmin } = useAuth();
 
+  const { user, isAdmin } = useAuth();
+  console.log("redering comitard card2: ", product.name);
   const theme = useTheme();
   const isMediumScreen = useMediaQuery(theme.breakpoints.down("md")); // Adjust breakpoint as needed
-  //console.log("isInTimeFrame: ", isInTimeFrame);
 
-  useEffect(() => {
-    //console.log("isInTimeFrame: ", isInTimeFrame);
-    //console.log("Update the time left");
+  // Memoize functions to prevent unnecessary re-creations
+  const handleOpen = useCallback(() => setOpen(true), []);
+  const handleClose = useCallback(() => setOpen(false), []);
 
-    if (isInTimeFrame) {
-      if (user) {
-        displayVoteFn();
-        displayTimeLeft();
-        const interval = setInterval(() => {
-          displayVoteFn();
-          displayTimeLeft();
-        }, 1000); // Update every second
-
-        return () => clearInterval(interval);
-      } else {
-        //console.log("No suer")
-        setDisplayVote(false);
-        setVoteError("");
-        displayTimeLeft();
-        const interval = setInterval(() => {
-          displayTimeLeft();
-        }, 1000); // Update every second
-
-        return () => clearInterval(interval);
+  // Memoize computed values
+  const maxEnchere = useMemo((): number | null => {
+    if (product.encheres) {
+      const encheres = Object.values(product.encheres)
+        .filter((enchere) => enchere !== null)
+        .map((enchere) => (enchere as { vote: number }).vote);
+      if (encheres.length > 0) {
+        return Math.max(...encheres);
       }
     }
-  }, [isInTimeFrame, product, user]);
-  console.log("rendering comitard card: ", product.name);
-  // function to decide if we display the vote button or not
-  // only for logged in users
-  // also update the time left of the enchère
-  function displayVoteFn(): void {
+    return null;
+  }, [product.encheres]);
+
+  const minEnchere = useMemo((): number => {
+    const max = maxEnchere;
+    if (max !== null) {
+      return Math.min(Math.max(max + 1, enchereMin), enchereMax);
+    }
+    return enchereMin;
+  }, [maxEnchere, enchereMin, enchereMax]);
+
+  const isDisabled = useMemo((): boolean => {
+    const max = maxEnchere;
+    if (max !== null) {
+      return max + 1 > enchereMax;
+    }
+    return false;
+  }, [maxEnchere, enchereMax]);
+
+  const displayVoteFn = useCallback((): void => {
     if (!user || user.uid === cercleId) {
       setDisplayVote(false);
       return;
@@ -114,21 +111,18 @@ export default function ComitardCard({
     }
 
     if (nbFutsLeft <= 0 || nbFutsLeft < enchereMin) {
-      //console.log("Number of futs left: ", nbFutsLeft);
       setDisplayVote(false);
       return;
     }
 
     if (product.enchereStart && product.enchereStop) {
-      const now = new Date().getTime();
+      const now = Date.now();
       const enchereStart = product.enchereStart.toMillis();
       const enchereStop = product.enchereStop.toMillis();
       if (now >= enchereStart && now <= enchereStop) {
-        //setTimeLeft(enchereStop - now);
         setDisplayVote(true);
         return;
       } else {
-        //setTimeLeft(0);
         setDisplayVote(false);
         return;
       }
@@ -136,57 +130,47 @@ export default function ComitardCard({
       setDisplayVote(true);
       return;
     }
-  }
+  }, [
+    user,
+    cercleId,
+    isAdmin,
+    nbFutsLeft,
+    enchereMin,
+    product.enchereStart,
+    product.enchereStop,
+  ]);
 
-  // if comitard allready has a enchere, return the biggest enchere, return null otherwise
-  function maxEnchere(): number | null {
-    if (product.encheres) {
-      const encheres = Object.values(product.encheres)
-        .filter((enchere) => enchere !== null)
-        .map((enchere) => (enchere as { vote: number }).vote);
-      if (encheres.length > 0) {
-        return Math.max(...encheres);
-      }
-    }
-    return null;
-  }
-
-  // return the minimum enchere possible
-  function minEnchere(): number {
-    const max = maxEnchere();
-    if (max) {
-      return Math.min(Math.max(max + 1, enchereMin), enchereMax);
-    }
-    return enchereMin;
-  }
-
-  function isDisabled(): boolean {
-    const max = maxEnchere();
-    if (max) {
-      return max + 1 > enchereMax;
-    } else {
-      return false;
-    }
-  }
-
-  // console.log("product: ", product.name, "maxEnchere: ", minEnchere())
-
-  // function to display the time left of the enchère
-  // only for not logged in users
-  function displayTimeLeft(): void {
+  const displayTimeLeft = useCallback((): void => {
     const enchereStart = product?.enchereStart?.toMillis();
     const enchereStop = product?.enchereStop?.toMillis();
-    const now = new Date().getTime();
-    if (now >= enchereStart && now <= enchereStop) {
+    const now = Date.now();
+    if (
+      enchereStart &&
+      enchereStop &&
+      now >= enchereStart &&
+      now <= enchereStop
+    ) {
       setTimeLeft(enchereStop - now);
-      return;
     } else {
       setTimeLeft(0);
-      return;
     }
-  }
+  }, [product]);
 
-  function formatTimeLeft(time: number): string {
+  useEffect(() => {
+    if (isInTimeFrame) {
+      displayVoteFn();
+      displayTimeLeft();
+
+      const interval = setInterval(() => {
+        displayVoteFn();
+        displayTimeLeft();
+      }, 1000); // Update every second
+
+      return () => clearInterval(interval);
+    }
+  }, [isInTimeFrame, displayVoteFn, displayTimeLeft]);
+
+  const formatTimeLeft = useCallback((time: number): string => {
     const hours = Math.floor(time / (1000 * 60 * 60));
     const minutes = Math.floor((time % (1000 * 60 * 60)) / (1000 * 60));
     const seconds = Math.floor((time % (1000 * 60)) / 1000);
@@ -198,13 +182,13 @@ export default function ComitardCard({
     } else {
       return `${seconds}s`;
     }
-  }
+  }, []);
 
-  function handleVote(): void {
+  const handleVote = useCallback((): void => {
     setLoading(true);
     setVoteError("");
     setVoteErrorSeverity("error");
-    console.log("vote: ", vote);
+
     if (
       vote &&
       vote > 0 &&
@@ -214,13 +198,8 @@ export default function ComitardCard({
     ) {
       const Vote = httpsCallable(functions, "vote");
       Vote({ vote: vote, comitardId: comitardId, editionId: editionId })
-        .then((result) => {
-          // Read result of the Cloud Function.
-          /** @type {any} */
-          const data: any = result.data;
-          //const sanitizedMessage = data.text;
-          console.log("data:", data);
-          //refetchData();
+        .then((_result) => {
+          // Handle success
           setTimeout(() => {
             refetchData();
           }, 2000);
@@ -232,130 +211,152 @@ export default function ComitardCard({
           setLoading(false);
         })
         .catch((error) => {
-          // Getting the Error details.
-          //const code = error.code;
-          const message = error.message;
-          const details = error.details;
+          // Handle error
           setTimeout(() => {
             refetchData();
           }, 2000);
-          console.log("error:", message, details);
-          setVoteError(`Erreur serveur: ${message}`);
+          setVoteError(`Erreur serveur: ${error.message}`);
           setLoading(false);
         });
     } else {
       setVoteError("Veuillez entrer une enchère valide");
       setLoading(false);
     }
-  }
+  }, [
+    vote,
+    enchereMin,
+    enchereMax,
+    nbFutsLeft,
+    functions,
+    comitardId,
+    editionId,
+    refetchData,
+  ]);
 
-  const style = {
-    position: "absolute",
-    top: "50%",
-    left: "50%",
-    transform: "translate(-50%, -50%)",
-    width: isMediumScreen ? "90%" : "50%", // Adjust width based on screen size
-    height: "90vh",
-
-    boxShadow: "none", // Remove the box shadow
-    border: "none", // Remove the border
-    outline: "none", // Remove outline (focus indicator)
-  };
-
-  const renderStatus = (
-    <Label
-      variant="filled"
-      color={"error"}
-      onClick={() => console.log("timeLeft: ", timeLeft)}
-      sx={{
-        zIndex: 9,
-        top: 16,
-        right: 16,
-        position: "absolute",
-        textTransform: "uppercase",
-        boxShadow: (theme: any) => theme.shadows[4],
-      }}
-    >
-      {formatTimeLeft(timeLeft)}
-      <Iconify icon="jam:chronometer" />
-    </Label>
+  // Style object can be moved outside the component or memoized
+  const modalStyle = useMemo(
+    () => ({
+      position: "absolute",
+      top: "50%",
+      left: "50%",
+      transform: "translate(-50%, -50%)",
+      width: isMediumScreen ? "90%" : "50%", // Adjust width based on screen size
+      height: "90vh",
+      boxShadow: "none",
+      border: "none",
+      outline: "none",
+    }),
+    [isMediumScreen]
   );
 
-  const firstEnchere: any = product.encheres
-    ? Object.values(product.encheres)
-        .filter((enchere) => enchere !== null)
-        .sort((a: any, b: any) => {
-          // First, compare by date.seconds
-          if (b.date.seconds !== a.date.seconds) {
-            return b.date.seconds - a.date.seconds;
-          } else {
-            // If dates are the same, compare by vote
-            console.log("product name: ", product.name);
-            return b.vote - a.vote;
-          }
-        })[0]
-    : null;
-
-  const renderPrice = (
-    <Label
-      variant="filled"
-      color={"info"}
-      sx={{
-        zIndex: 9,
-        top: 16,
-        left: 16,
-        position: "absolute",
-        textTransform: "uppercase",
-        boxShadow: (theme: any) => theme.shadows[4],
-      }}
-    >
-      <Iconify icon="ic:round-show-chart" />
-      {!(timeLeft > 0) && product.encheres !== null && <span>win</span>}
-      {firstEnchere
-        ? `${(firstEnchere as { vote: number }).vote} fûts`
-        : "No data"}
-    </Label>
-  );
-
-  const renderImg = (
-    <LazyLoad>
-      <Box
-        component="img"
-        alt={product.name}
-        src={product.picture}
+  // Extracted rendering functions
+  const renderStatus = useMemo(
+    () => (
+      <Label
+        variant="filled"
+        color={"error"}
         sx={{
-          top: 0,
-          width: 1,
-          height: 1,
-          objectFit: "cover",
+          zIndex: 9,
+          top: 16,
+          right: 16,
           position: "absolute",
+          textTransform: "uppercase",
+          boxShadow: (theme: any) => theme.shadows[4],
         }}
-        loading="lazy"
-      />
-    </LazyLoad>
+      >
+        {formatTimeLeft(timeLeft)}
+        <Iconify icon="jam:chronometer" />
+      </Label>
+    ),
+    [formatTimeLeft, timeLeft]
   );
 
-  const renderWinner = (
-    <Label
-      variant="filled"
-      color={"success"}
-      sx={{
-        zIndex: 9,
-        top: 16,
-        left: 16,
-        position: "absolute",
-        textTransform: "uppercase",
-        boxShadow: (theme: any) => theme.shadows[4],
-      }}
-    >
-      <Iconify icon="solar:cup-bold" />
-      {firstEnchere
-        ? `${
-            (cerclesData[firstEnchere.sender as string] as { name: string })
-              .name
-          }`
-        : "No data"}
-    </Label>
+  const firstEnchere: any = useMemo(() => {
+    return product.encheres
+      ? Object.values(product.encheres)
+          .filter((enchere) => enchere !== null)
+          .sort((a: any, b: any) => {
+            // First, compare by date.seconds
+            if (b.date.seconds !== a.date.seconds) {
+              return b.date.seconds - a.date.seconds;
+            } else {
+              // If dates are the same, compare by vote
+              console.log("product name: ", product.name);
+              return b.vote - a.vote;
+            }
+          })[0]
+      : null;
+  }, [product.encheres]);
+
+  const renderPrice = useMemo(
+    () => (
+      <Label
+        variant="filled"
+        color={"info"}
+        sx={{
+          zIndex: 9,
+          top: 16,
+          left: 16,
+          position: "absolute",
+          textTransform: "uppercase",
+          boxShadow: (theme: any) => theme.shadows[4],
+        }}
+      >
+        <Iconify icon="ic:round-show-chart" />
+        {!(timeLeft > 0) && product.encheres !== null && <span>win</span>}
+        {firstEnchere
+          ? `${(firstEnchere as { vote: number }).vote} fûts`
+          : "No data"}
+      </Label>
+    ),
+    [firstEnchere, product.encheres, timeLeft]
+  );
+
+  const renderWinner = useMemo(
+    () => (
+      <Label
+        variant="filled"
+        color={"success"}
+        sx={{
+          zIndex: 9,
+          top: 16,
+          left: 16,
+          position: "absolute",
+          textTransform: "uppercase",
+          boxShadow: (theme: any) => theme.shadows[4],
+        }}
+      >
+        <Iconify icon="solar:cup-bold" />
+        {firstEnchere
+          ? `${
+              (cerclesData[firstEnchere.sender as string] as { name: string })
+                .name
+            }`
+          : "No data"}
+      </Label>
+    ),
+    [firstEnchere, cerclesData]
+  );
+
+  const renderImg = useMemo(
+    () => (
+      <LazyLoad>
+        <Box
+          component="img"
+          alt={product.name}
+          src={product.picture}
+          sx={{
+            top: 0,
+            width: 1,
+            height: 1,
+            objectFit: "cover",
+            position: "absolute",
+          }}
+          loading="lazy"
+        />
+      </LazyLoad>
+    ),
+    [product.name, product.picture]
   );
 
   return (
@@ -377,25 +378,24 @@ export default function ComitardCard({
             <>
               <QuantityInput
                 title="Enchère"
-                min={minEnchere()}
+                min={minEnchere}
                 max={Math.min(nbFutsLeft, enchereMax)}
                 error={false}
                 helpText={""}
                 change={(_event: any, val: any) => {
-                  console.log(val);
                   setVote(val);
                 }}
               />
               <LoadingButton
-                onClick={() => handleVote()}
+                onClick={handleVote}
                 loading={loading}
-                disabled={isDisabled()}
+                disabled={isDisabled}
                 variant="contained"
                 size="large"
                 color="inherit"
                 startIcon={<Iconify icon="solar:user-hand-up-bold-duotone" />}
               >
-                {isDisabled() ? "Enchére max atteinte" : "Enchérir"}
+                {isDisabled ? "Enchére max atteinte" : "Enchérir"}
               </LoadingButton>
             </>
           )}
@@ -413,7 +413,7 @@ export default function ComitardCard({
         aria-labelledby="modal-modal-title"
         aria-describedby="modal-modal-description"
       >
-        <Card sx={style}>
+        <Card sx={modalStyle}>
           <Box sx={{ pt: "40vh", position: "relative" }}>
             {timeLeft > 0 && renderStatus}
             {timeLeft > 0 && renderPrice}
@@ -436,12 +436,12 @@ export default function ComitardCard({
               sx={{ my: (theme) => `${theme.spacing(1)}` }}
             />
             <Box>
-              <Stack>
+              <Stack spacing={2}>
                 <Typography>
                   <strong>Poste</strong> : {product.post}
                   <br />
                   <strong>Maison d'appartenance </strong>:{" "}
-                  {cerclesData[cercleId].name}
+                  {cerclesData[cercleId]?.name}
                   <br />
                   <strong>Teneur en taule</strong> : {product.teneurTaule}
                   <br />
@@ -461,25 +461,21 @@ export default function ComitardCard({
                   <strong>Est le seul</strong> : {product.estLeSeul}
                 </Typography>
                 {displayVote && isInTimeFrame && (
-                  <Stack
-                    spacing={1}
-                    sx={{ my: (theme) => `${theme.spacing(1)}` }}
-                  >
+                  <Stack spacing={1} sx={{ my: 1 }}>
                     <QuantityInput
                       title="Enchère"
-                      min={minEnchere()}
+                      min={minEnchere}
                       max={Math.min(nbFutsLeft, enchereMax)}
                       error={false}
                       helpText={""}
                       change={(_event: any, val: any) => {
-                        console.log(val);
                         setVote(val);
                       }}
                     />
                     <LoadingButton
-                      onClick={() => handleVote()}
+                      onClick={handleVote}
                       loading={loading}
-                      disabled={isDisabled()}
+                      disabled={isDisabled}
                       variant="contained"
                       size="large"
                       fullWidth
@@ -488,7 +484,7 @@ export default function ComitardCard({
                         <Iconify icon="solar:user-hand-up-bold-duotone" />
                       }
                     >
-                      {isDisabled() ? "Enchére max atteinte" : "Enchérir"}
+                      {isDisabled ? "Enchére max atteinte" : "Enchérir"}
                     </LoadingButton>
                     {voteError && (
                       <Alert sx={{ mt: 3 }} severity={voteErrorSeverity}>
