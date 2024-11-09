@@ -2,28 +2,35 @@ import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import Card from "@mui/material/Card";
 
-import {Accordion, AccordionDetails, AccordionSummary, CardContent, Modal, Alert, Theme} from "@mui/material";
-import {useAuth} from "../../auth/AuthProvider";
+import {
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
+  CardContent,
+  Modal,
+  Alert,
+  Theme,
+} from "@mui/material";
+import { useAuth } from "../../auth/AuthProvider";
 
-import {DocumentData} from "@firebase/firestore";
+import { DocumentData } from "@firebase/firestore";
 import NewComitard from "../admin-account/new_comitard";
 import ComitardTable from "../admin-account/comitard_table.tsx";
 import Container from "@mui/material/Container";
-import {getAuth, sendPasswordResetEmail} from "@firebase/auth";
-import {LoadingButton} from "@mui/lab";
+import { getAuth, sendPasswordResetEmail } from "@firebase/auth";
+import { LoadingButton } from "@mui/lab";
 import Box from "@mui/material/Box";
 
 import { useState } from "react";
 import EditComitard from "../admin-account/edit_comitard";
 import Iconify from "../../components/iconify/iconify.tsx";
-
-
+import { httpsCallable } from "@firebase/functions";
+import { functions } from "../../firebase_config.ts";
 
 interface AccountProps {
-    data: DocumentData;
-    refetchData: () => void;
+  data: DocumentData;
+  refetchData: () => void;
 }
-
 
 export default function Account({ data, refetchData }: AccountProps) {
   const { user } = useAuth();
@@ -92,60 +99,77 @@ export default function Account({ data, refetchData }: AccountProps) {
           admin={false}
         />
       </Modal>
-      
-        <Card sx={{width: "100%", mb: 4}}>
-            <CardContent>
-                <Accordion>
-                    <AccordionSummary expandIcon={
-                        <Iconify
-                            width={40}
-                            icon="solar:double-alt-arrow-down-bold-duotone"
-                            sx={{color: (theme : Theme) => `${theme.palette.primary.main}`}}
-                            fallback={<span>↓</span>}
-                        />}>
-                        <Typography variant="h5">Enchères posées</Typography>
-                    </AccordionSummary>
-                    <AccordionDetails>
-                        <Container>
-                            <Typography variant="h6" align="center">
-                                Coming soon !
-                            </Typography>
-                        </Container>
-                    </AccordionDetails>
-                </Accordion>
-            </CardContent>
-        </Card>
-      
-              <Card sx={{width: "100%", mb: 4, p: 2}}>
-            <CardContent>
-                <Stack spacing={2}>
-                    <Typography variant="h5">Paramètres du compte</Typography>
-                    <Box>
-                        <LoadingButton
-                        size="large"
-                        variant={"outlined"}
 
-                        onClick={async () => {
-                            const auth = getAuth();
-                            sendPasswordResetEmail(auth, user?.email ?? "")
-                                .then(() => {
-                                    // Password reset email sent!
-                                    console.log("Password reset email sent!");
-                                    // ..
-                                })
-                                .catch((error) => {
-                                    const errorMessage = error.message;
-                                    console.log("error reset password:", errorMessage);
-                                    // ..
-                                });
-                        }}
-                    >
-                        Réinitialiser le mot de passe
-                    </LoadingButton>
-                    </Box>
-                </Stack>
-            </CardContent>
-        </Card>
+      <Card sx={{ width: "100%", mb: 4 }}>
+        <CardContent>
+          <Accordion>
+            <AccordionSummary
+              expandIcon={
+                <Iconify
+                  width={40}
+                  icon="solar:double-alt-arrow-down-bold-duotone"
+                  sx={{
+                    color: (theme: Theme) => `${theme.palette.primary.main}`,
+                  }}
+                  fallback={<span>↓</span>}
+                />
+              }
+            >
+              <Typography variant="h5">Enchères posées</Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Container>
+                <Typography variant="h6" align="center">
+                  Coming soon !
+                </Typography>
+              </Container>
+            </AccordionDetails>
+          </Accordion>
+        </CardContent>
+      </Card>
+
+      <Card sx={{ width: "100%", mb: 4, p: 2 }}>
+        <CardContent>
+          <Stack spacing={2}>
+            <Typography variant="h5">Paramètres du compte</Typography>
+            <Box>
+              <LoadingButton
+                size="large"
+                variant={"outlined"}
+                onClick={async () => {
+                  const auth = getAuth();
+                  sendPasswordResetEmail(auth, user?.email ?? "")
+                    .then(() => {
+                      // Password reset email sent!
+                      console.log("Password reset email sent!");
+                      // ..
+                    })
+                    .catch((error) => {
+                      const errorMessage = error.message;
+                      console.log("error reset password:", errorMessage);
+                      // ..
+                    });
+                }}
+              >
+                Réinitialiser le mot de passe
+              </LoadingButton>
+            </Box>
+            <LoadingButton
+              variant={"outlined"}
+              size={"large"}
+              onClick={async () => {
+                const addMessage = httpsCallable(functions, "votebis");
+                addMessage({ timeClient: new Date().toISOString() }).then((result) => {
+                  const data: any = result.data;
+                  console.log("Retunr message:", data);
+                });
+              }}
+            >
+              DEBUG VOTE
+            </LoadingButton>
+          </Stack>
+        </CardContent>
+      </Card>
     </>
   );
 }
