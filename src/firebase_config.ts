@@ -40,7 +40,7 @@ export const auth = getAuth(app) //ok
 
 export const storage = getStorage(app); //ok
 
-export const functions = getFunctions(app); //ok
+export const functions = getFunctions(app, "europe-west1"); //ok
 
 export const analytics = getAnalytics(app);
 
