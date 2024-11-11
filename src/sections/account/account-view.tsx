@@ -48,10 +48,10 @@ export default function Account({ data, refetchData }: AccountProps) {
         mb={5}
       >
         <Typography variant="h4" sx={{ mb: 1 }}>
-          Hi, Welcome back {user && user?.displayName} 👋
+          Bonjour, bienvenue {user && user?.displayName} 👋
         </Typography>
       </Stack>
-      
+
       {new Date().getTime() < data?.data().stop ? (
         <NewComitard data={data} admin={false} refetchData={refetchData} />
       ) : (

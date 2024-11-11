@@ -41,14 +41,9 @@ optimiser page résultats, trop lente
 admin:
 admin peut voter dans backend??? Yes
 Retirer admin vote dans la page comitards
-admin devrait pas avoir un nombre de futs dans UI
 ajouter, modifier supprimer encheres, tout à faire
 ajouter boutton pour bloquer edit comitard (par admin)
 changer adresse mail d'un président //caca mais faisable en backend admin
-
-Bug:
-user ne devrait pas etre capable de créer comitard apres le fin du mecato
-
 
 Todo Flo:
 changer create comitard pour avoir petite photo
