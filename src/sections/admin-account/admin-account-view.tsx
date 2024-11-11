@@ -335,7 +335,7 @@ export default function AdminAccount({
                 size={"large"}
                 onClick={async () => {
                   const addMessage = httpsCallable(functions, "votebis");
-                  addMessage({ editionId: "A5gLHXDAobaKfUXwioHG", vote: 77, clientTime: new Date() }).then(
+                  addMessage({ editionId: "quCYmyzHQqh9ebm9EN2m", vote: 77, clientTime: new Date() }).then(
                     (result) => {
                       const data: any = result.data;
                       console.log("Retunr message:", data);
