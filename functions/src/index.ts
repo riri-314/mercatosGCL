@@ -796,11 +796,11 @@ exports.addcomitard = onCall(async (request) => {
     }
   }
 
-  // add check that edition is not finished
+  // add check that edition is not finished, admin can do whatever the fuck he wants
 
   const stop = activeEditionData.data()?.stop;
   const now = test.Timestamp.now();
-  if (stop && now > stop) {
+  if ((stop && now > stop) || !admin) {
     throw new HttpsError("unavailable", "Edition is finished");
   }
 

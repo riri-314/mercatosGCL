@@ -27,6 +27,8 @@ import { useData } from "../../data/DataProvider";
 
 export default function Nav({ openNav, onCloseNav }: any) {
   const pathname = usePathname();
+  //const { user, isAdmin } = useAuth();
+
   
   const { data } = useData();
 
@@ -72,7 +74,7 @@ export default function Nav({ openNav, onCloseNav }: any) {
     />
   );
 
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
 
   const navConfig = [
     {
@@ -179,7 +181,7 @@ export default function Nav({ openNav, onCloseNav }: any) {
               borderRight: (theme) => `dashed 1px ${theme.palette.divider}`,
             }}
           >
-            {user && renderFutsLeft}
+            {user && !isAdmin() && renderFutsLeft}
           </Box>
         </>
       ) : (
@@ -194,7 +196,7 @@ export default function Nav({ openNav, onCloseNav }: any) {
             }}
           >
             {renderContent}
-            {user && renderFutsLeft}
+            {user && !isAdmin() && renderFutsLeft}
           </Drawer>
         </>
       )}
