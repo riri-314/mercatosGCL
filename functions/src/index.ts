@@ -18,8 +18,7 @@ import { setGlobalOptions } from "firebase-functions/options";
 
 admin.initializeApp();
 
-setGlobalOptions({ region: 'europe-west1' })
-
+setGlobalOptions({ region: "europe-west1" });
 
 /**
  * Get the UID of the admin user.
@@ -44,128 +43,185 @@ export const beforecreated = beforeUserCreated((_event) => {
 // check if login in first ?
 // define the now const at the start of the function. Will "fix" the issue with late votes.
 
-exports.vote = onCall(
-  async (request) => {
-    const now = test.Timestamp.now();
+exports.vote = onCall(async (request) => {
+  const now = test.Timestamp.now();
+  const context_auth = request.auth;
+  if (!context_auth) {
+    throw new HttpsError("permission-denied", "Unauthorized request!"); // return error if not connected
+  }
+  let isAdmin = false;
+  const timeDelay = 2500;
+  const data = request.data;
 
-    const context_auth = request.auth;
-    const data = request.data;
-    let isAdmin = false;
+  //console.log("edition id:", data.editionId);
+  if (data.editionId === undefined || data.editionId == null) {
+    return { message: "Erreur interne: Pas d'édition trouvée" };
+  }
 
-    //console.log("edition id:", data.editionId);
-    if (data.editionId === undefined || data.editionId == null) {
-      throw new HttpsError("invalid-argument", "Edition id is invalid");
+  const activeEdition = await getEditionBis(data.editionId);
+  const activeEditionData = await activeEdition.get();
+  const activeEditionCercle = activeEditionData.data()?.cercles || {};
+
+  if (Object.keys(activeEditionCercle).length === 0) {
+    // No editions found
+    return { message: "Erreur interne: Pas de cercles trouvés dans l'édition" };
+  }
+
+  // Check if the request is made by an isAdmin
+
+  isAdmin = await getAdminUid(context_auth.uid);
+  if (!activeEditionCercle[context_auth.uid] && !isAdmin) {
+    throw new HttpsError("permission-denied", "Unauthorized request!"); // return error if not isAdmin or not a active cercle
+  }
+
+  // check clientTime
+
+  if (data.clientTime === undefined) {
+    return { message: "Erreur interne: Ne peut pas vérifier l'enchère" };
+  }
+  const clientTimestamp = Date.parse(data.clientTime);
+
+  const start = activeEditionData.data()?.start;
+  const stop = activeEditionData.data()?.stop;
+
+  if (start && stop) {
+    if (now < start || now > stop) {
+      return {
+        message:
+          "Pas dans le temps impartie pour les enchères. Too soon or too late",
+      };
     }
+  } else {
+    return { message: "Erreur interne: Pas de temps d'enchère trouvé" };
+  }
 
-    const activeEdition = await getEditionBis(data.editionId);
-    const activeEditionData = await activeEdition.get();
-    const activeEditionCercle = activeEditionData.data()?.cercles || {};
+  let senderId = context_auth.uid;
 
-    if (Object.keys(activeEditionCercle).length === 0) {
-      // No editions found
-      throw new HttpsError("unavailable", "No cercles found in edition!");
+  // Check if the request contains the required data
+
+  const enchereMin = activeEditionData.data()?.enchereMin;
+  const enchereMax = activeEditionData.data()?.enchereMax;
+  if (!enchereMin || !enchereMax) {
+    return { message: "Erreur interne: pas de min max enchere" };
+  }
+
+  let nbFut = 0;
+  if (isAdmin) {
+    nbFut = Infinity;
+  } else {
+    nbFut = activeEditionCercle[senderId].nbFut;
+  }
+  if (!nbFut) {
+    return { message: "Erreur: le nombre de fûts est invalide" };
+  }
+
+  // check vote number > 0, > votemin, < votemax, <= nbFut
+  //console.log("data.vote: ", data.vote);
+  if (
+    data.vote === undefined ||
+    data.vote < 0 ||
+    data.vote == Infinity ||
+    data.vote > enchereMax ||
+    data.vote < enchereMin ||
+    data.vote > nbFut
+  ) {
+    return { message: "Erreur: le nombre de fûts est invalide" };
+  }
+  // comitard id exist and not same cercle
+  const cercleId = getCercleId(data.comitardId, activeEditionCercle);
+
+  if (!cercleId) {
+    return { message: "Erreur: l'id du comitard n'est pas valide" };
+  } else {
+    if (cercleId === senderId) {
+      return { message: "Erreur: Vous ne pouvez pas voter pour vous même" };
     }
+  }
+  const enchereStart =
+    activeEditionCercle[cercleId].comitards[data.comitardId].enchereStart;
+  const enchereStop =
+    activeEditionCercle[cercleId].comitards[data.comitardId].enchereStop;
 
-    // Check if the request is made by an isAdmin
-    if (!context_auth) {
-      throw new HttpsError("permission-denied", "Unauthorized request!"); // return error if not connected
-    } else {
-      isAdmin = await getAdminUid(context_auth.uid);
-      if (!activeEditionCercle[context_auth.uid] && !isAdmin) {
-        throw new HttpsError("permission-denied", "Unauthorized request!"); // return error if not isAdmin or not a active cercle
+  const duration = activeEditionData.data()?.duration;
+
+  if (!duration) {
+    return {
+      message: "Erreur interne lors de l'ajout de l'enchère! No duration",
+    };
+  }
+
+  if (!enchereStart || !enchereStop) {
+    // start enchere
+    // set start and end date for enchere
+    // add enchere
+    // increment jobs
+    // decrement nbFut
+    const secondsToAdd = duration * 60 * 60;
+    const future = test.Timestamp.fromMillis(
+      now.toMillis() + secondsToAdd * 1000
+    );
+    const s = `cercles.${cercleId}.comitards.${data.comitardId}`;
+    const e = `cercles.${senderId}.nbFut`;
+    const enchereId = uuidv4();
+    const encherePath = `${s}.encheres.${enchereId}`;
+
+    activeEdition
+      .update({
+        [encherePath]: {
+          vote: data.vote,
+          sender: senderId,
+          date: now,
+        },
+        [`${s}.enchereStart`]: now,
+        [`${s}.enchereStop`]: future,
+        [`${s}.enchereProcessed`]: false,
+        [e]: test.FieldValue.increment(-data.vote),
+        jobs: test.FieldValue.increment(1),
+      })
+      .catch((error: any) => {
+        console.log("Error adding new enchere:", error);
+        return {
+          message:
+            "Erreur interne lors de l'ajout de l'enchère! Error starting enchère",
+        };
+      })
+      .then(() => {
+        return { message: "Nouvelle enchère ajoutée" };
+      });
+  } else {
+    // need to check here if the vote is bigger than last bigest vote
+    const encheres =
+      activeEditionCercle[cercleId].comitards[data.comitardId].encheres;
+    if (encheres) {
+      const tmp = Object.values(encheres)
+        .filter((enchere) => enchere !== null)
+        .map((enchere) => (enchere as { vote: number }).vote);
+      if (tmp.length > 0) {
+        if (Math.max(Math.max(...tmp) + 1, enchereMin) > data.vote) {
+          return {
+            message: "L'enchère doit etre plus élevée que la dernière enchère",
+          };
+        }
       }
-    }
-
-    // check date
-    //console.log("before now:", admin.firestore.Timestamp);
-    //console.log("before now:", test);
-    //console.log("before now:", test.Timestamp);
-    //const now = admin.firestore.Timestamp.fromDate(new Date());
-
-    const start = activeEditionData.data()?.start;
-    const stop = activeEditionData.data()?.stop;
-    if (start && stop) {
-      if (now < start || now > stop) {
-        throw new HttpsError(
-          "permission-denied",
-          "Vote time frame for the event is over!"
-        );
-      }
     } else {
-      throw new HttpsError("unavailable", "No vote time frame found!");
+      return {
+        message:
+          "Erreur interne lors de l'ajout de l'enchère! No enchère found",
+      };
     }
 
-    let senderId = context_auth.uid;
-
-    // Check if the request contains the required data
-
-    const enchereMin = activeEditionData.data()?.enchereMin;
-    const enchereMax = activeEditionData.data()?.enchereMax;
-    if (!enchereMin || !enchereMax) {
-      throw new HttpsError("unavailable", "No min max enchere found!");
-    }
-
-    let nbFut = 0;
-    if (isAdmin) {
-      nbFut = Infinity;
-    } else {
-      nbFut = activeEditionCercle[senderId].nbFut;
-    }
-    if (!nbFut) {
-      throw new HttpsError("unavailable", "No nbFut found!");
-    }
-
-    // check vote number > 0, > votemin, < votemax, <= nbFut
-    console.log("data.vote: ", data.vote);
     if (
-      data.vote === undefined ||
-      data.vote < 0 ||
-      data.vote == Infinity ||
-      data.vote > enchereMax ||
-      data.vote < enchereMin ||
-      data.vote > nbFut
+      (now >= enchereStart && now <= enchereStop) ||
+      (now.toMillis() <= enchereStop.toMillis() + timeDelay && clientTimestamp <= enchereStop.toMillis() && clientTimestamp >= enchereStop.toMillis() -timeDelay*2)
     ) {
-      throw new HttpsError("invalid-argument", "Vote number is invalide");
-    }
-    // comitard id exist and not same cercle
-    const cercleId = getCercleId(data.comitardId, activeEditionCercle);
-
-    if (!cercleId) {
-      throw new HttpsError("invalid-argument", "Comitard id is invalid");
-    } else {
-      if (cercleId === senderId) {
-        throw new HttpsError(
-          "invalid-argument",
-          "Cannot vote for yourself, comitard id is invalid"
-        );
-      }
-    }
-    const enchereStart =
-      activeEditionCercle[cercleId].comitards[data.comitardId].enchereStart;
-    const enchereStop =
-      activeEditionCercle[cercleId].comitards[data.comitardId].enchereStop;
-
-    const duration = activeEditionData.data()?.duration;
-
-    if (!duration) {
-      throw new HttpsError("unavailable", "No duration found!");
-    }
-
-    if (!enchereStart || !enchereStop) {
-      // start enchere
-      // set start and end date for enchere
-      // add enchere
-      // increment jobs
-      // decrement nbFut
-      const secondsToAdd = duration * 60 * 60;
-      const future = test.Timestamp.fromMillis(
-        now.toMillis() + secondsToAdd * 1000
-      );
+      //console.log(
+      //  "added new enchere to a comitard that has a enchere (might be a little laye but it's okay)"
+      //);
       const s = `cercles.${cercleId}.comitards.${data.comitardId}`;
-      const e = `cercles.${senderId}.nbFut`;
+
       const enchereId = uuidv4();
       const encherePath = `${s}.encheres.${enchereId}`;
-
+      const e = `cercles.${senderId}.nbFut`;
       activeEdition
         .update({
           [encherePath]: {
@@ -173,239 +229,210 @@ exports.vote = onCall(
             sender: senderId,
             date: now,
           },
-          [`${s}.enchereStart`]: now,
-          [`${s}.enchereStop`]: future,
-          [`${s}.enchereProcessed`]: false,
           [e]: test.FieldValue.increment(-data.vote),
-          jobs: test.FieldValue.increment(1),
         })
         .catch((error: any) => {
           console.log("Error adding new enchere:", error);
-          throw new HttpsError("unavailable", "Error adding new enchere!");
+          return {
+            message:
+              "Erreur interne lors de l'ajout de l'enchère! Error updating db",
+          };
         })
         .then(() => {
-          return { message: "Added new enchere" };
+          return { message: "Nouvelle enchère ajoutée" };
         });
     } else {
-      // need to check here if the vote is bigger than last bigest vote
-      const encheres =
-        activeEditionCercle[cercleId].comitards[data.comitardId].encheres;
-      if (encheres) {
-        const tmp = Object.values(encheres)
-          .filter((enchere) => enchere !== null)
-          .map((enchere) => (enchere as { vote: number }).vote);
-        if (tmp.length > 0) {
-          if (Math.max(Math.max(...tmp) + 1, enchereMin) > data.vote) {
-            throw new HttpsError(
-              "invalid-argument",
-              "Vote number has to be bigger than the last bigest vote!"
-            );
-          }
-        }
-      } else {
-        throw new HttpsError("unavailable", "No encheres found!");
-      }
-      if (now < enchereStart || now > enchereStop) {
-        //change this check to let a little more time to the user to vote
-        throw new HttpsError(
-          "permission-denied",
-          "Not in the vote time frame for the comitard!"
-        );
-      } else {
-        // add enchere
-        // decrement nbFut
-        const s = `cercles.${cercleId}.comitards.${data.comitardId}`;
-
-        const enchereId = uuidv4();
-        const encherePath = `${s}.encheres.${enchereId}`;
-        const e = `cercles.${senderId}.nbFut`;
-        activeEdition
-          .update({
-            [encherePath]: {
-              vote: data.vote,
-              sender: senderId,
-              date: now,
-            },
-            [e]: test.FieldValue.increment(-data.vote),
-          })
-          .catch((error: any) => {
-            console.log("Error adding new enchere:", error);
-            throw new HttpsError("unavailable", "Error adding new enchere!");
-          })
-          .then(() => {
-            return { message: "Added new enchere" };
-          });
-      }
+      //console.log("Error: not in timeframe");
+      return { message: "Erreur: Pas dans le temps impartie" };
     }
-    return { message: "Added new enchere" };
   }
-);
+  return { message: "Nouvelle enchère ajoutée" };
+});
 
 //START DEBUG
-exports.votebis = onCall(
+exports.votebis = onCall(async (request) => {
+  const now = test.Timestamp.now();
+  const timeDelay = 2500;
+  const context_auth = request.auth;
+  const data = request.data;
+  let isAdmin = false;
+  console.log(
+    "Time server: ",
+    now.toDate().toISOString(),
+    " Time client: ",
+    data.clientTime
+  );
 
-  async (request) => {
-    const now = test.Timestamp.now();
-    const timeDelay = 2500;
-    const context_auth = request.auth;
-    const data = request.data;
-    let isAdmin = false;
-    console.log("Time server: ", now, " Time client: ", data.clientTime);
+  const serverTimestamp = now.toMillis();
+  const clientTimestamp = Date.parse(data.clientTime);
 
-    console.log("edition id:", data.editionId);
-    if (data.editionId === undefined || data.editionId == null) {
-      throw new HttpsError("invalid-argument", "Edition id is invalid");
-    }
+  console.log(`Server timestamp: ${serverTimestamp}`);
+  console.log(`Client timestamp: ${clientTimestamp}`);
 
-    const activeEdition = await getEditionBis(data.editionId);
-    const activeEditionData = await activeEdition.get();
-    const activeEditionCercle = activeEditionData.data()?.cercles || {};
+  const timeDifference = serverTimestamp - clientTimestamp;
 
-    if (Object.keys(activeEditionCercle).length === 0) {
-      // No editions found
-      throw new HttpsError("unavailable", "No cercles found in edition!");
-    }
+  console.log(`Time difference: ${timeDifference} milliseconds`);
 
-    // Check if the request is made by an isAdmin
-    if (!context_auth) {
-      throw new HttpsError("permission-denied", "Unauthorized request!"); // return error if not connected
-    } else {
-      isAdmin = await getAdminUid(context_auth.uid);
-      if (!activeEditionCercle[context_auth.uid] && !isAdmin) {
-        throw new HttpsError("permission-denied", "Unauthorized request!"); // return error if not isAdmin or not a active cercle
-      }
-    }
+  console.log("edition id:", data.editionId);
+  if (data.editionId === undefined || data.editionId == null) {
+    throw new HttpsError("invalid-argument", "Edition id is invalid");
+  }
 
-    // check date
-    //console.log("before now:", admin.firestore.Timestamp);
-    //console.log("before now:", test);
-    //console.log("before now:", test.Timestamp);
-    //const now = admin.firestore.Timestamp.fromDate(new Date());
+  const activeEdition = await getEditionBis(data.editionId);
+  const activeEditionData = await activeEdition.get();
+  const activeEditionCercle = activeEditionData.data()?.cercles || {};
 
-    const start = activeEditionData.data()?.start;
-    const stop = activeEditionData.data()?.stop;
-    //console.log("start: ", start);
-    //console.log("stop: ", stop);
-    //console.log("now: ", now);
-    //console.log("now < start: ", now < start);
-    if (start && stop) {
-      if (now < start || now > stop) {
-        throw new HttpsError(
-          "permission-denied",
-          "Vote time frame for the event is over!"
-        );
-      }
-    } else {
-      throw new HttpsError("unavailable", "No vote time frame found!");
-    }
+  if (Object.keys(activeEditionCercle).length === 0) {
+    // No editions found
+    throw new HttpsError("unavailable", "No cercles found in edition!");
+  }
 
-    let senderId = context_auth.uid;
-
-    // Check if the request contains the required data
-
-    //GroscestlaPuissance
-
-    const enchereMin = activeEditionData.data()?.enchereMin;
-    const enchereMax = activeEditionData.data()?.enchereMax;
-    if (!enchereMin || !enchereMax) {
-      throw new HttpsError("unavailable", "No min max enchere found!");
-    }
-
-    let nbFut = 0;
-    if (isAdmin) {
-      nbFut = Infinity;
-    } else {
-      nbFut = activeEditionCercle[senderId].nbFut;
-    }
-    if (!nbFut) {
-      throw new HttpsError("unavailable", "No nbFut found!");
-    }
-
-    // check vote number > 0, > votemin, < votemax, <= nbFut
-    console.log("data.vote: ", data.vote);
-    if (
-      data.vote === undefined ||
-      data.vote < 0 ||
-      data.vote == Infinity ||
-      data.vote > enchereMax ||
-      data.vote < enchereMin ||
-      data.vote > nbFut
-    ) {
-      throw new HttpsError("invalid-argument", "Vote number is invalide");
-    }
-    // comitard id exist and not same cercle
-    const cercleId = getCercleId(data.comitardId, activeEditionCercle);
-
-    if (!cercleId) {
-      throw new HttpsError("invalid-argument", "Comitard id is invalid");
-    } else {
-      if (cercleId === senderId) {
-        throw new HttpsError(
-          "invalid-argument",
-          "Cannot vote for yourself, comitard id is invalid"
-        );
-      }
-    }
-    const enchereStart =
-      activeEditionCercle[cercleId].comitards[data.comitardId].enchereStart;
-    const enchereStop =
-      activeEditionCercle[cercleId].comitards[data.comitardId].enchereStop;
-
-    const duration = activeEditionData.data()?.duration;
-
-    if (!duration) {
-      throw new HttpsError("unavailable", "No duration found!");
-    }
-
-    if (!enchereStart || !enchereStop) {
-      return {
-        message: "added new enchere to a comitard that has a no enchere",
-      };
-    } else {
-      // need to check here if the vote is bigger than last bigest vote
-      const encheres =
-        activeEditionCercle[cercleId].comitards[data.comitardId].encheres;
-      if (encheres) {
-        const tmp = Object.values(encheres)
-          .filter((enchere) => enchere !== null)
-          .map((enchere) => (enchere as { vote: number }).vote);
-        if (tmp.length > 0) {
-          //console.log("data.vote: ", data.vote, "Math.max(...tmp)+1", Math.max(...tmp)+1, "enchereMin", enchereMin);
-          //console.log("Math.max(Math.max(...tmp)+1, enchereMin) < data.vote",Math.max(Math.max(...tmp)+1, enchereMin) > data.vote);
-          if (Math.max(Math.max(...tmp) + 1, enchereMin) > data.vote) {
-            throw new HttpsError(
-              "invalid-argument",
-              "Vote number has to be bigger than the last bigest vote!"
-            );
-          }
-        }
-      } else {
-        throw new HttpsError("unavailable", "No encheres found!");
-      }
-      if (now >= enchereStart && now <= enchereStop) {
-        console.log("added new enchere to a comitard that has a enchere");
-        return {
-          message: "added new enchere to a comitard that has a enchere",
-        };
-      } else if (
-        now <= enchereStop + timeDelay &&
-        data.clientTime <= enchereStop
-      ) {
-        //techncally allow the user to cheat (just a bit), hard to implement a cheat in real life.
-        console.log(
-          "added new enchere to a comitard that has a enchere, but a little late"
-        );
-        return {
-          message:
-            "added new enchere to a comitard that has a enchere, but a little late",
-        };
-      } else {
-        console.log("Error: not in timeframe");
-        return { message: "Error: not in timeframe" };
-      }
+  // Check if the request is made by an isAdmin
+  if (!context_auth) {
+    throw new HttpsError("permission-denied", "Unauthorized request!"); // return error if not connected
+  } else {
+    isAdmin = await getAdminUid(context_auth.uid);
+    if (!activeEditionCercle[context_auth.uid] && !isAdmin) {
+      throw new HttpsError("permission-denied", "Unauthorized request!"); // return error if not isAdmin or not a active cercle
     }
   }
-);
+
+  // check date
+  //console.log("before now:", admin.firestore.Timestamp);
+  //console.log("before now:", test);
+  //console.log("before now:", test.Timestamp);
+  //const now = admin.firestore.Timestamp.fromDate(new Date());
+
+  const start = activeEditionData.data()?.start;
+  const stop = activeEditionData.data()?.stop;
+  console.log("start: ", start);
+  // compare start and clientTime
+  console.log("start.toMillis(): ", start.toMillis());
+  console.log("clientTimestamp: ", clientTimestamp);
+  console.log(
+    "start.toMillis() - clientTimestamp: ",
+    start.toMillis() - clientTimestamp
+  );
+  //console.log("stop: ", stop);
+  //console.log("now: ", now);
+  //console.log("now < start: ", now < start);
+  if (start && stop) {
+    if (now < start || now > stop) {
+      throw new HttpsError(
+        "permission-denied",
+        "Vote time frame for the event is over!"
+      );
+    }
+  } else {
+    throw new HttpsError("unavailable", "No vote time frame found!");
+  }
+
+  let senderId = context_auth.uid;
+
+  // Check if the request contains the required data
+
+  //GroscestlaPuissance
+
+  const enchereMin = activeEditionData.data()?.enchereMin;
+  const enchereMax = activeEditionData.data()?.enchereMax;
+  if (!enchereMin || !enchereMax) {
+    throw new HttpsError("unavailable", "No min max enchere found!");
+  }
+
+  let nbFut = 0;
+  if (isAdmin) {
+    nbFut = Infinity;
+  } else {
+    nbFut = activeEditionCercle[senderId].nbFut;
+  }
+  if (!nbFut) {
+    throw new HttpsError("unavailable", "No nbFut found!");
+  }
+
+  // check vote number > 0, > votemin, < votemax, <= nbFut
+  console.log("data.vote: ", data.vote);
+  if (
+    data.vote === undefined ||
+    data.vote < 0 ||
+    data.vote == Infinity ||
+    data.vote > enchereMax ||
+    data.vote < enchereMin ||
+    data.vote > nbFut
+  ) {
+    throw new HttpsError("invalid-argument", "Vote number is invalide");
+  }
+  // comitard id exist and not same cercle
+  const cercleId = getCercleId(data.comitardId, activeEditionCercle);
+
+  if (!cercleId) {
+    throw new HttpsError("invalid-argument", "Comitard id is invalid");
+  } else {
+    if (cercleId === senderId) {
+      throw new HttpsError(
+        "invalid-argument",
+        "Cannot vote for yourself, comitard id is invalid"
+      );
+    }
+  }
+  const enchereStart =
+    activeEditionCercle[cercleId].comitards[data.comitardId].enchereStart;
+  const enchereStop =
+    activeEditionCercle[cercleId].comitards[data.comitardId].enchereStop;
+
+  const duration = activeEditionData.data()?.duration;
+
+  if (!duration) {
+    throw new HttpsError("unavailable", "No duration found!");
+  }
+
+  if (!enchereStart || !enchereStop) {
+    return {
+      message: "added new enchere to a comitard that has a no enchere",
+    };
+  } else {
+    // need to check here if the vote is bigger than last bigest vote
+    const encheres =
+      activeEditionCercle[cercleId].comitards[data.comitardId].encheres;
+    if (encheres) {
+      const tmp = Object.values(encheres)
+        .filter((enchere) => enchere !== null)
+        .map((enchere) => (enchere as { vote: number }).vote);
+      if (tmp.length > 0) {
+        //console.log("data.vote: ", data.vote, "Math.max(...tmp)+1", Math.max(...tmp)+1, "enchereMin", enchereMin);
+        //console.log("Math.max(Math.max(...tmp)+1, enchereMin) < data.vote",Math.max(Math.max(...tmp)+1, enchereMin) > data.vote);
+        if (Math.max(Math.max(...tmp) + 1, enchereMin) > data.vote) {
+          throw new HttpsError(
+            "invalid-argument",
+            "Vote number has to be bigger than the last bigest vote!"
+          );
+        }
+      }
+    } else {
+      throw new HttpsError("unavailable", "No encheres found!");
+    }
+    if (now >= enchereStart && now <= enchereStop) {
+      console.log("added new enchere to a comitard that has a enchere");
+      return {
+        message: "added new enchere to a comitard that has a enchere",
+      };
+    } else if (
+      now <= enchereStop + timeDelay &&
+      data.clientTime <= enchereStop
+    ) {
+      //techncally allow the user to cheat (just a bit), hard to implement a cheat in real life.
+      console.log(
+        "added new enchere to a comitard that has a enchere, but a little late"
+      );
+      return {
+        message:
+          "added new enchere to a comitard that has a enchere, but a little late",
+      };
+    } else {
+      console.log("Error: not in timeframe");
+      return { message: "Error: not in timeframe" };
+    }
+  }
+});
 //END DEBUG
 
 async function remboursement() {
@@ -546,13 +573,10 @@ async function rembourseUser(edition: any, userId: string, amount: number) {
     });
 }
 
-exports.rembour = onCall(
-
-  async (_request) => {
-    await remboursement();
-    return { message: "Remboursement done" };
-  }
-);
+exports.rembour = onCall(async (_request) => {
+  await remboursement();
+  return { message: "Remboursement done" };
+});
 
 //old V1 function
 //export const taskRunner = functions
@@ -583,285 +607,287 @@ function getCercleId(
   return cercleIdFound;
 }
 
-exports.editcomitard = onCall(
+exports.editcomitard = onCall(async (request) => {
+  //changed
+  const context_auth = request.auth;
+  const data = request.data;
+  let admin = false;
+  const txtlenght1 = 30;
+  const txtlenght2 = 150;
 
-  async (request) => {
-    //changed
-    const context_auth = request.auth;
-    const data = request.data;
-    let admin = false;
-    const txtlenght1 = 30;
-    const txtlenght2 = 150;
-
-    console.log("edition id:", data.editionId);
-    if (data.editionId === undefined) {
-      throw new HttpsError("invalid-argument", "Edition id is invalid");
-    }
-
-    const activeEdition = await getEdition(data.editionId);
-    const activeEditionData = await activeEdition.get();
-    const activeEditionCercle = activeEditionData.data()?.cercles || {};
-
-    if (Object.keys(activeEditionCercle).length === 0) {
-      // No editions found
-      throw new HttpsError("unavailable", "No cercles found in edition!");
-    }
-
-    // Check if the request is made by an admin
-    if (!context_auth) {
-      throw new HttpsError("permission-denied", "Unauthorized request!"); // return error if not connected
-    } else {
-      admin = await getAdminUid(context_auth.uid);
-      if (!activeEditionCercle[context_auth.uid] && !admin) {
-        throw new HttpsError("permission-denied", "Unauthorized request!"); // return error if not admin or not a active cercle
-      }
-    }
-    // check if user only update his comitard
-    if (
-      !activeEditionCercle[context_auth.uid]?.comitards[data.comitardId] &&
-      !admin
-    ) {
-      console.log(
-        "!activeEditionCercle[context_auth.uid]?.comitards[data.comitardId]: ",
-        !activeEditionCercle[context_auth.uid]?.comitards[data.comitardId]
-      );
-      //console.log("activeEditionCercel ", activeEditionCercle);
-      //console.log("context_auth.uid ", context_auth.uid);
-      //console.log("data.comitardId ", data.comitardId);
-      //console.log("activeEditionCercle[context_auth.uid]: ", activeEditionCercle[context_auth.uid]);
-      // if comitard does not exist or user try to update not is comitard
-      throw new HttpsError("permission-denied", "Unauthorized request!");
-    }
-
-    let cercle = context_auth.uid;
-
-    if (admin) {
-      cercle = data.cercleId;
-      //console.log("waw c'est un admoin: ", data.cercleId)
-    }
-
-    // Check if the request contains the required data
-    if (
-      data.comitardId === undefined ||
-      data.comitardId.lenght == 0 ||
-      data.name?.length == 0 ||
-      data.name?.length > txtlenght1 ||
-      data.firstname?.length == 0 ||
-      data.firstname?.length > txtlenght1 ||
-      data.nickname?.length == 0 ||
-      data.nickname?.length > txtlenght1 ||
-      data.post?.length == 0 ||
-      data.post?.length > txtlenght1 ||
-      data.teneurTaule?.length < 0 ||
-      data.teneurTaule?.length > 10 ||
-      data.etatCivil?.length == 0 ||
-      data.etatCivil?.length > txtlenght2 ||
-      data.age?.length < 0 ||
-      data.age?.length > 99 ||
-      data.nbEtoiles?.length < 0 ||
-      data.nbEtoiles?.length > 15 ||
-      data.pointFort?.length == 0 ||
-      data.pointFort?.length > txtlenght2 ||
-      data.pointFaible?.length == 0 ||
-      data.pointFaible?.length > txtlenght2 ||
-      data.estLeSeul?.length == 0 ||
-      data.estLeSeul?.length > txtlenght2 ||
-      data.picture === undefined ||
-      data.picture.length == 0
-    ) {
-      throw new HttpsError("invalid-argument", "Missing data!");
-    }
-    // May be usefull later
-    //if (admin) {
-    //  if (data.cercle === undefined || data.cercle.length == 0) {
-    //    throw new HttpsError("invalid-argument", "Missing data!");
-    //  } else {
-    //    // Check if the cercle exists
-    //    if (!activeEditionCercle[data.cercle]) {
-    //      throw new HttpsError("invalid-argument", "Cercle does not exist!");
-    //    } else {
-    //      cercle = data.cercle;
-    //    }
-    //  }
-    //}
-
-    const s = `cercles.${cercle}.comitards.${data.comitardId}`;
-    const updateData: any = {};
-
-    if (data.name) {
-      updateData[`${s}.name`] = data.name;
-    }
-    if (data.firstname) {
-      updateData[`${s}.firstname`] = data.firstname;
-    }
-    if (data.nickname) {
-      updateData[`${s}.nickname`] = data.nickname;
-    }
-    if (data.post) {
-      updateData[`${s}.post`] = data.post;
-    }
-    if (data.teneurTaule) {
-      updateData[`${s}.teneurTaule`] = data.teneurTaule;
-    }
-    if (data.etatCivil) {
-      updateData[`${s}.etatCivil`] = data.etatCivil;
-    }
-    if (data.age) {
-      updateData[`${s}.age`] = data.age;
-    }
-    if (data.nbEtoiles) {
-      updateData[`${s}.nbEtoiles`] = data.nbEtoiles;
-    }
-    if (data.pointFort) {
-      updateData[`${s}.pointFort`] = data.pointFort;
-    }
-    if (data.pointFaible) {
-      updateData[`${s}.pointFaible`] = data.pointFaible;
-    }
-    if (data.estLeSeul) {
-      updateData[`${s}.estLeSeul`] = data.estLeSeul;
-    }
-    if (data.picture) {
-      updateData[`${s}.picture`] = data.picture;
-    }
-
-    activeEdition
-      .update(updateData)
-      .catch((error: any) => {
-        console.log("Error updating comitard:", error);
-        throw new HttpsError("unavailable", "Error updating comitard!");
-      })
-      .then(() => {
-        return { message: "Comitard updated in edition map" };
-      });
-    return { message: "Comitard updated in edition map" };
+  console.log("edition id:", data.editionId);
+  if (data.editionId === undefined) {
+    throw new HttpsError("invalid-argument", "Edition id is invalid");
   }
-);
 
-exports.addcomitard = onCall(
+  const activeEdition = await getEdition(data.editionId);
+  const activeEditionData = await activeEdition.get();
+  const activeEditionCercle = activeEditionData.data()?.cercles || {};
 
-  async (request) => {
-    const context_auth = request.auth;
-    const data = request.data;
-    let admin = false;
-    const txtlenght1 = 30;
-    const txtlenght2 = 150;
+  if (Object.keys(activeEditionCercle).length === 0) {
+    // No editions found
+    throw new HttpsError("unavailable", "No cercles found in edition!");
+  }
 
-    console.log("edition id:", data.editionId);
-    if (data.editionId === undefined) {
-      throw new HttpsError("invalid-argument", "Edition id is invalid");
+  // Check if the request is made by an admin
+  if (!context_auth) {
+    throw new HttpsError("permission-denied", "Unauthorized request!"); // return error if not connected
+  } else {
+    admin = await getAdminUid(context_auth.uid);
+    if (!activeEditionCercle[context_auth.uid] && !admin) {
+      throw new HttpsError("permission-denied", "Unauthorized request!"); // return error if not admin or not a active cercle
     }
+  }
+  // check if user only update his comitard
+  if (
+    !activeEditionCercle[context_auth.uid]?.comitards[data.comitardId] &&
+    !admin
+  ) {
+    console.log(
+      "!activeEditionCercle[context_auth.uid]?.comitards[data.comitardId]: ",
+      !activeEditionCercle[context_auth.uid]?.comitards[data.comitardId]
+    );
+    //console.log("activeEditionCercel ", activeEditionCercle);
+    //console.log("context_auth.uid ", context_auth.uid);
+    //console.log("data.comitardId ", data.comitardId);
+    //console.log("activeEditionCercle[context_auth.uid]: ", activeEditionCercle[context_auth.uid]);
+    // if comitard does not exist or user try to update not is comitard
+    throw new HttpsError("permission-denied", "Unauthorized request!");
+  }
 
-    const activeEdition = await getEdition(data.editionId);
-    const activeEditionData = await activeEdition.get();
-    const activeEditionCercle = activeEditionData.data()?.cercles || {};
+  let cercle = context_auth.uid;
 
-    if (Object.keys(activeEditionCercle).length === 0) {
-      // No editions found
-      throw new HttpsError("unavailable", "No cercles found in edition!");
-    }
+  if (admin) {
+    cercle = data.cercleId;
+    //console.log("waw c'est un admoin: ", data.cercleId)
+  }
 
-    // Check if the request is made by an admin
-    if (!context_auth) {
+  // Check if the request contains the required data
+  if (
+    data.comitardId === undefined ||
+    data.comitardId.lenght == 0 ||
+    data.name?.length == 0 ||
+    data.name?.length > txtlenght1 ||
+    data.firstname?.length == 0 ||
+    data.firstname?.length > txtlenght1 ||
+    data.nickname?.length == 0 ||
+    data.nickname?.length > txtlenght1 ||
+    data.post?.length == 0 ||
+    data.post?.length > txtlenght1 ||
+    data.teneurTaule?.length < 0 ||
+    data.teneurTaule?.length > 10 ||
+    data.etatCivil?.length == 0 ||
+    data.etatCivil?.length > txtlenght2 ||
+    data.age?.length < 0 ||
+    data.age?.length > 99 ||
+    data.nbEtoiles?.length < 0 ||
+    data.nbEtoiles?.length > 15 ||
+    data.pointFort?.length == 0 ||
+    data.pointFort?.length > txtlenght2 ||
+    data.pointFaible?.length == 0 ||
+    data.pointFaible?.length > txtlenght2 ||
+    data.estLeSeul?.length == 0 ||
+    data.estLeSeul?.length > txtlenght2 ||
+    data.picture === undefined ||
+    data.picture.length == 0
+  ) {
+    throw new HttpsError("invalid-argument", "Missing data!");
+  }
+  // May be usefull later
+  //if (admin) {
+  //  if (data.cercle === undefined || data.cercle.length == 0) {
+  //    throw new HttpsError("invalid-argument", "Missing data!");
+  //  } else {
+  //    // Check if the cercle exists
+  //    if (!activeEditionCercle[data.cercle]) {
+  //      throw new HttpsError("invalid-argument", "Cercle does not exist!");
+  //    } else {
+  //      cercle = data.cercle;
+  //    }
+  //  }
+  //}
+
+  const s = `cercles.${cercle}.comitards.${data.comitardId}`;
+  const updateData: any = {};
+
+  if (data.name) {
+    updateData[`${s}.name`] = data.name;
+  }
+  if (data.firstname) {
+    updateData[`${s}.firstname`] = data.firstname;
+  }
+  if (data.nickname) {
+    updateData[`${s}.nickname`] = data.nickname;
+  }
+  if (data.post) {
+    updateData[`${s}.post`] = data.post;
+  }
+  if (data.teneurTaule) {
+    updateData[`${s}.teneurTaule`] = data.teneurTaule;
+  }
+  if (data.etatCivil) {
+    updateData[`${s}.etatCivil`] = data.etatCivil;
+  }
+  if (data.age) {
+    updateData[`${s}.age`] = data.age;
+  }
+  if (data.nbEtoiles) {
+    updateData[`${s}.nbEtoiles`] = data.nbEtoiles;
+  }
+  if (data.pointFort) {
+    updateData[`${s}.pointFort`] = data.pointFort;
+  }
+  if (data.pointFaible) {
+    updateData[`${s}.pointFaible`] = data.pointFaible;
+  }
+  if (data.estLeSeul) {
+    updateData[`${s}.estLeSeul`] = data.estLeSeul;
+  }
+  if (data.picture) {
+    updateData[`${s}.picture`] = data.picture;
+  }
+
+  activeEdition
+    .update(updateData)
+    .catch((error: any) => {
+      console.log("Error updating comitard:", error);
+      throw new HttpsError("unavailable", "Error updating comitard!");
+    })
+    .then(() => {
+      return { message: "Comitard updated in edition map" };
+    });
+  return { message: "Comitard updated in edition map" };
+});
+
+exports.addcomitard = onCall(async (request) => {
+  const context_auth = request.auth;
+  const data = request.data;
+  let admin = false;
+  const txtlenght1 = 30;
+  const txtlenght2 = 150;
+
+  console.log("edition id:", data.editionId);
+  if (data.editionId === undefined) {
+    throw new HttpsError("invalid-argument", "Edition id is invalid");
+  }
+
+  const activeEdition = await getEdition(data.editionId);
+  const activeEditionData = await activeEdition.get();
+  const activeEditionCercle = activeEditionData.data()?.cercles || {};
+
+  if (Object.keys(activeEditionCercle).length === 0) {
+    // No editions found
+    throw new HttpsError("unavailable", "No cercles found in edition!");
+  }
+
+  // Check if the request is made by an admin
+  if (!context_auth) {
+    throw new HttpsError(
+      "permission-denied",
+      "Unauthorized request, not connected!"
+    ); // return error if not connected
+  } else {
+    admin = await getAdminUid(context_auth.uid);
+    if (!activeEditionCercle[context_auth.uid] && !admin) {
       throw new HttpsError(
         "permission-denied",
-        "Unauthorized request, not connected!"
-      ); // return error if not connected
-    } else {
-      admin = await getAdminUid(context_auth.uid);
-      if (!activeEditionCercle[context_auth.uid] && !admin) {
-        throw new HttpsError(
-          "permission-denied",
-          "Unauthorized request, Old account or not admin!"
-        ); // return error if not admin or not a active cercle
-      }
+        "Unauthorized request, Old account or not admin!"
+      ); // return error if not admin or not a active cercle
     }
-
-    let cercle = context_auth.uid;
-
-    // Check if the request contains the required data
-    if (
-      data.name === undefined ||
-      data.name.length == 0 ||
-      data.name.length > txtlenght1 ||
-      data.firstname === undefined ||
-      data.firstname.length == 0 ||
-      data.firstname.length > txtlenght1 ||
-      data.nickname === undefined ||
-      data.nickname.length == 0 ||
-      data.nickname.length > txtlenght1 ||
-      data.post === undefined ||
-      data.post.length == 0 ||
-      data.post.length > txtlenght1 ||
-      data.teneurTaule === undefined ||
-      data.teneurTaule.length < 0 ||
-      data.teneurTaule.length > 10 ||
-      data.etatCivil === undefined ||
-      data.etatCivil.length == 0 ||
-      data.etatCivil.length > txtlenght2 ||
-      data.age === undefined ||
-      data.age.length < 0 ||
-      data.age.length > 99 ||
-      data.nbEtoiles === undefined ||
-      data.nbEtoiles.length < 0 ||
-      data.nbEtoiles.length > 15 ||
-      data.pointFort === undefined ||
-      data.pointFort.length == 0 ||
-      data.pointFort.length > txtlenght2 ||
-      data.pointFaible === undefined ||
-      data.pointFaible.length == 0 ||
-      data.pointFaible.length > txtlenght2 ||
-      data.estLeSeul === undefined ||
-      data.estLeSeul.length == 0 ||
-      data.estLeSeul.length > txtlenght2 ||
-      data.picture === undefined ||
-      data.picture.length == 0
-    ) {
-      throw new HttpsError("invalid-argument", "Missing data!");
-    }
-    if (admin) {
-      if (data.cercle === undefined || data.cercle.length == 0) {
-        throw new HttpsError("invalid-argument", "Missing data!");
-      } else {
-        // Check if the cercle exists
-        if (!activeEditionCercle[data.cercle]) {
-          throw new HttpsError("invalid-argument", "Cercle does not exist!");
-        } else {
-          cercle = data.cercle;
-        }
-      }
-    }
-
-    const s = `cercles.${cercle}.comitards.${uuidv4()}`;
-    activeEdition
-      .update({
-        [s]: {
-          name: data.name,
-          firstname: data.firstname,
-          nickname: data.nickname,
-          post: data.post,
-          teneurTaule: data.teneurTaule,
-          etatCivil: data.etatCivil,
-          age: data.age,
-          nbEtoiles: data.nbEtoiles,
-          pointFort: data.pointFort,
-          pointFaible: data.pointFaible,
-          estLeSeul: data.estLeSeul,
-          picture: data.picture,
-        },
-      })
-      .catch((error: any) => {
-        console.log("Error creating new user:", error);
-        throw new HttpsError("unavailable", "Error creating new user!");
-      })
-      .then(() => {
-        return { message: "Comitard added to edition map" };
-      });
-    return { message: "Comitard added to edition map" };
-
-    // add comitard in the map
   }
-);
+
+  // add check that edition is not finished
+
+  const stop = activeEditionData.data()?.stop;
+  const now = test.Timestamp.now();
+  if (stop && now > stop) {
+    throw new HttpsError("unavailable", "Edition is finished");
+  }
+
+  let cercle = context_auth.uid;
+
+  // Check if the request contains the required data
+  if (
+    data.name === undefined ||
+    data.name.length == 0 ||
+    data.name.length > txtlenght1 ||
+    data.firstname === undefined ||
+    data.firstname.length == 0 ||
+    data.firstname.length > txtlenght1 ||
+    data.nickname === undefined ||
+    data.nickname.length == 0 ||
+    data.nickname.length > txtlenght1 ||
+    data.post === undefined ||
+    data.post.length == 0 ||
+    data.post.length > txtlenght1 ||
+    data.teneurTaule === undefined ||
+    data.teneurTaule.length < 0 ||
+    data.teneurTaule.length > 10 ||
+    data.etatCivil === undefined ||
+    data.etatCivil.length == 0 ||
+    data.etatCivil.length > txtlenght2 ||
+    data.age === undefined ||
+    data.age.length < 0 ||
+    data.age.length > 99 ||
+    data.nbEtoiles === undefined ||
+    data.nbEtoiles.length < 0 ||
+    data.nbEtoiles.length > 15 ||
+    data.pointFort === undefined ||
+    data.pointFort.length == 0 ||
+    data.pointFort.length > txtlenght2 ||
+    data.pointFaible === undefined ||
+    data.pointFaible.length == 0 ||
+    data.pointFaible.length > txtlenght2 ||
+    data.estLeSeul === undefined ||
+    data.estLeSeul.length == 0 ||
+    data.estLeSeul.length > txtlenght2 ||
+    data.picture === undefined ||
+    data.picture.length == 0
+  ) {
+    throw new HttpsError("invalid-argument", "Missing data!");
+  }
+  if (admin) {
+    if (data.cercle === undefined || data.cercle.length == 0) {
+      throw new HttpsError("invalid-argument", "Missing data!");
+    } else {
+      // Check if the cercle exists
+      if (!activeEditionCercle[data.cercle]) {
+        throw new HttpsError("invalid-argument", "Cercle does not exist!");
+      } else {
+        cercle = data.cercle;
+      }
+    }
+  }
+
+  const s = `cercles.${cercle}.comitards.${uuidv4()}`;
+  activeEdition
+    .update({
+      [s]: {
+        name: data.name,
+        firstname: data.firstname,
+        nickname: data.nickname,
+        post: data.post,
+        teneurTaule: data.teneurTaule,
+        etatCivil: data.etatCivil,
+        age: data.age,
+        nbEtoiles: data.nbEtoiles,
+        pointFort: data.pointFort,
+        pointFaible: data.pointFaible,
+        estLeSeul: data.estLeSeul,
+        picture: data.picture,
+      },
+    })
+    .catch((error: any) => {
+      console.log("Error creating new user:", error);
+      throw new HttpsError("unavailable", "Error creating new user!");
+    })
+    .then(() => {
+      return { message: "Comitard added to edition map" };
+    });
+  return { message: "Comitard added to edition map" };
+
+  // add comitard in the map
+});
 
 /**
  * Reset all passwords for users in the cercle and send reset password emails.
@@ -873,73 +899,70 @@ exports.addcomitard = onCall(
  * @throws {functions.https.HttpsError} - Throws an error if the request is unauthorized or if there is an internal error.
  */
 
-exports.resetpasswords = onCall(
+exports.resetpasswords = onCall(async (request) => {
+  const context_auth = request.auth;
+  const data = request.data;
+  //const auth = getAuth();
 
-  async (request) => {
-    const context_auth = request.auth;
-    const data = request.data;
-    //const auth = getAuth();
-
-    // Check if the request is made by an admin
-    if (!context_auth || !(await getAdminUid(context_auth.uid))) {
-      throw new HttpsError("permission-denied", "Unauthorized request!");
-    }
-
-    console.log("edition id:", data.editionId);
-    if (data.editionId === undefined) {
-      throw new HttpsError("invalid-argument", "Edition id is invalid");
-    }
-
-    const activeEdition = await getEdition(data.editionId);
-    const activeEditionData = await activeEdition.get();
-    const activeEditionCercle = activeEditionData.data()?.cercles || {};
-
-    console.log("activeEditionCercle: ", activeEditionCercle);
-
-    if (Object.keys(activeEditionCercle).length === 0) {
-      // No editions found
-      throw new HttpsError("unavailable", "No editions found!");
-    }
-
-    //
-
-    const userUIDs = Object.keys(activeEditionCercle);
-    const emailArray = [];
-
-    // Loop through user UIDs in the cercle
-    for (const uid of userUIDs) {
-      // Generate a random password
-      console.log("uid: ", uid);
-      const newPassword = data.password || generateRandomPassword();
-
-      // Reset password for each user
-      try {
-        await admin.auth().updateUser(uid, { password: newPassword });
-        //console.log("Password reset for user: ", uid, newPassword); //FOR DEBUG
-      } catch (error: any) {
-        console.log("Error resetting password for user: ", uid);
-      }
-
-      const user = await admin.auth().getUser(uid);
-      const email = user.email;
-
-      // Send reset password email
-      // admin sdk give us email, send password reset email with firebase auth sdk
-      // necessary to do that. Only way to track user eamil is with firebase admin sdk.
-      // Firebase auth sdk only give us uid.
-      if (email) {
-        emailArray.push(email);
-
-        console.log("email: ", email);
-      } else {
-        throw new Error("No email found for user!");
-      }
-    }
-
-    return { message: "Passwords reseted to all users.", emails: emailArray };
-    //return { message: "Passwords reset and reset email sent to all users." };
+  // Check if the request is made by an admin
+  if (!context_auth || !(await getAdminUid(context_auth.uid))) {
+    throw new HttpsError("permission-denied", "Unauthorized request!");
   }
-);
+
+  console.log("edition id:", data.editionId);
+  if (data.editionId === undefined) {
+    throw new HttpsError("invalid-argument", "Edition id is invalid");
+  }
+
+  const activeEdition = await getEdition(data.editionId);
+  const activeEditionData = await activeEdition.get();
+  const activeEditionCercle = activeEditionData.data()?.cercles || {};
+
+  console.log("activeEditionCercle: ", activeEditionCercle);
+
+  if (Object.keys(activeEditionCercle).length === 0) {
+    // No editions found
+    throw new HttpsError("unavailable", "No editions found!");
+  }
+
+  //
+
+  const userUIDs = Object.keys(activeEditionCercle);
+  const emailArray = [];
+
+  // Loop through user UIDs in the cercle
+  for (const uid of userUIDs) {
+    // Generate a random password
+    console.log("uid: ", uid);
+    const newPassword = data.password || generateRandomPassword();
+
+    // Reset password for each user
+    try {
+      await admin.auth().updateUser(uid, { password: newPassword });
+      //console.log("Password reset for user: ", uid, newPassword); //FOR DEBUG
+    } catch (error: any) {
+      console.log("Error resetting password for user: ", uid);
+    }
+
+    const user = await admin.auth().getUser(uid);
+    const email = user.email;
+
+    // Send reset password email
+    // admin sdk give us email, send password reset email with firebase auth sdk
+    // necessary to do that. Only way to track user eamil is with firebase admin sdk.
+    // Firebase auth sdk only give us uid.
+    if (email) {
+      emailArray.push(email);
+
+      console.log("email: ", email);
+    } else {
+      throw new Error("No email found for user!");
+    }
+  }
+
+  return { message: "Passwords reseted to all users.", emails: emailArray };
+  //return { message: "Passwords reset and reset email sent to all users." };
+});
 
 /**
  * Generate a random password.
@@ -960,225 +983,210 @@ function generateRandomPassword(): string {
   //return "123456";
 }
 
-exports.disableuser = onCall(
+exports.disableuser = onCall(async (request) => {
+  const auth = request.auth;
+  const data = request.data;
+  const uid = data.uid; //user uid
 
-  async (request) => {
-    const auth = request.auth;
-    const data = request.data;
-    const uid = data.uid; //user uid
-
-    if (!auth || !(await getAdminUid(auth.uid))) {
-      throw new HttpsError("permission-denied", "Unauthorized request!");
-    }
-
-    if (!uid) {
-      throw new HttpsError("invalid-argument", "User id is invalid");
-    }
-
-    try {
-      admin.auth().updateUser(uid, {
-        disabled: true,
-      });
-      return { message: "User disabled" };
-    } catch (error: any) {
-      throw new HttpsError(
-        "internal",
-        "Failed to disable user: " + error.message
-      );
-    }
+  if (!auth || !(await getAdminUid(auth.uid))) {
+    throw new HttpsError("permission-denied", "Unauthorized request!");
   }
-);
 
-exports.enableuser = onCall(
-
-  async (request) => {
-    const auth = request.auth;
-    const data = request.data;
-    const uid = data.uid; //user uid
-
-    if (!auth || !(await getAdminUid(auth.uid))) {
-      throw new HttpsError("permission-denied", "Unauthorized request!");
-    }
-
-    if (!uid) {
-      throw new HttpsError("invalid-argument", "User id is invalid");
-    }
-
-    try {
-      admin.auth().updateUser(uid, {
-        disabled: false,
-      });
-      return { message: "User disabled" };
-    } catch (error: any) {
-      throw new HttpsError(
-        "internal",
-        "Failed to disable user: " + error.message
-      );
-    }
+  if (!uid) {
+    throw new HttpsError("invalid-argument", "User id is invalid");
   }
-);
 
-exports.deleteuser = onCall(
+  try {
+    admin.auth().updateUser(uid, {
+      disabled: true,
+    });
+    return { message: "User disabled" };
+  } catch (error: any) {
+    throw new HttpsError(
+      "internal",
+      "Failed to disable user: " + error.message
+    );
+  }
+});
 
-  async (request) => {
-    const auth = request.auth;
-    const data = request.data;
-    const uid = data.uid; //user uid
-    const editionId = data.editionId;
+exports.enableuser = onCall(async (request) => {
+  const auth = request.auth;
+  const data = request.data;
+  const uid = data.uid; //user uid
 
-    if (!auth || !(await getAdminUid(auth.uid))) {
-      throw new HttpsError("permission-denied", "Unauthorized request!");
+  if (!auth || !(await getAdminUid(auth.uid))) {
+    throw new HttpsError("permission-denied", "Unauthorized request!");
+  }
+
+  if (!uid) {
+    throw new HttpsError("invalid-argument", "User id is invalid");
+  }
+
+  try {
+    admin.auth().updateUser(uid, {
+      disabled: false,
+    });
+    return { message: "User disabled" };
+  } catch (error: any) {
+    throw new HttpsError(
+      "internal",
+      "Failed to disable user: " + error.message
+    );
+  }
+});
+
+exports.deleteuser = onCall(async (request) => {
+  const auth = request.auth;
+  const data = request.data;
+  const uid = data.uid; //user uid
+  const editionId = data.editionId;
+
+  if (!auth || !(await getAdminUid(auth.uid))) {
+    throw new HttpsError("permission-denied", "Unauthorized request!");
+  }
+
+  console.log("edition id:", editionId);
+  if (editionId === undefined) {
+    throw new HttpsError("invalid-argument", "Edition id is invalid");
+  }
+
+  if (!uid) {
+    throw new HttpsError("invalid-argument", "User id is invalid");
+  }
+
+  const activeEdition = await getEdition(editionId);
+  const activeEditionData = await activeEdition.get();
+  const activeEditionCercle = activeEditionData.data()?.cercles || {};
+
+  if (Object.keys(activeEditionCercle).length === 0) {
+    // No editions found
+    throw new HttpsError("unavailable", "No cercles found in edition!");
+  }
+
+  Object.keys(activeEditionCercle).forEach((cercleId) => {
+    if (cercleId === uid) {
+      delete activeEditionCercle[cercleId];
     }
+  });
 
-    console.log("edition id:", editionId);
-    if (editionId === undefined) {
-      throw new HttpsError("invalid-argument", "Edition id is invalid");
-    }
+  const editionRef = admin.firestore().collection("editions").doc(editionId);
 
-    if (!uid) {
-      throw new HttpsError("invalid-argument", "User id is invalid");
-    }
+  await editionRef.update({ cercles: activeEditionCercle });
 
-    const activeEdition = await getEdition(editionId);
-    const activeEditionData = await activeEdition.get();
-    const activeEditionCercle = activeEditionData.data()?.cercles || {};
+  await deleteUserAuth(uid);
 
-    if (Object.keys(activeEditionCercle).length === 0) {
-      // No editions found
-      throw new HttpsError("unavailable", "No cercles found in edition!");
-    }
+  return { message: "User deleted" };
+});
 
-    Object.keys(activeEditionCercle).forEach((cercleId) => {
-      if (cercleId === uid) {
-        delete activeEditionCercle[cercleId];
-      }
+exports.signupuser = onCall(async (request) => {
+  const auth = request.auth;
+  const data = request.data;
+  const description = data.description || "";
+
+  if (!auth || !(await getAdminUid(auth.uid))) {
+    console.log("Error not admin");
+    throw new HttpsError("permission-denied", "Unauthorized request!");
+  }
+  console.log("OK is admin");
+
+  if (data.email === undefined || data.displayName === undefined) {
+    console.log("Error missing data");
+    throw new HttpsError("invalid-argument", "Missing data!");
+  }
+
+  console.log("edition id:", data.editionId);
+  if (data.editionId === undefined) {
+    throw new HttpsError("invalid-argument", "Edition id is invalid");
+  }
+
+  const activeEdition = await getEdition(data.editionId);
+  const activeEditionData = await activeEdition.get();
+  const activeEditionVotes = activeEditionData.data()?.nbFut;
+
+  console.log("activeEditionVotes: ", activeEditionVotes);
+
+  if (activeEditionVotes === undefined) {
+    // No editions found
+    throw new HttpsError("unavailable", "No editions found!");
+  }
+
+  // create user account, catch uid
+  getAuth()
+    .createUser({
+      email: data.email,
+      password: generateRandomPassword(),
+      displayName: data.displayName,
+    })
+    .then((userRecord) => {
+      // See the UserRecord reference doc for the contents of userRecord.
+      console.log("Successfully created new user:", userRecord.uid);
+      // add user to cercle
+      const s = `cercles.${userRecord.uid}`;
+      activeEdition
+        .update({
+          [s]: {
+            description: description,
+            nbFut: activeEditionVotes,
+            name: data.displayName,
+            comitards: {},
+          },
+        })
+        .catch((error: any) => {
+          console.log("Error creating new user:", error);
+          throw new HttpsError("unavailable", "Error creating new user!");
+        });
+
+      // send pawword reset email to user. NOPE
+
+      return 1;
+    })
+    .catch((error) => {
+      console.log("Error creating new user:", error);
+      throw new HttpsError("unavailable", "Error creating new user!");
     });
 
-    const editionRef = admin.firestore().collection("editions").doc(editionId);
+  return { message: "User created and added to edition map" };
+});
 
-    await editionRef.update({ cercles: activeEditionCercle });
+exports.getdisabledstatus = onCall(async (request) => {
+  const auth = request.auth;
+  const data = request.data;
+  const editionId = data.editionId;
 
-    await deleteUserAuth(uid);
-
-    return { message: "User deleted" };
+  if (!auth || !(await getAdminUid(auth.uid))) {
+    throw new HttpsError("permission-denied", "Unauthorized request!");
   }
-);
 
-exports.signupuser = onCall(
-
-  async (request) => {
-    const auth = request.auth;
-    const data = request.data;
-    const description = data.description || "";
-
-    if (!auth || !(await getAdminUid(auth.uid))) {
-      console.log("Error not admin");
-      throw new HttpsError("permission-denied", "Unauthorized request!");
-    }
-    console.log("OK is admin");
-
-    if (data.email === undefined || data.displayName === undefined) {
-      console.log("Error missing data");
-      throw new HttpsError("invalid-argument", "Missing data!");
-    }
-
-    console.log("edition id:", data.editionId);
-    if (data.editionId === undefined) {
-      throw new HttpsError("invalid-argument", "Edition id is invalid");
-    }
-
-    const activeEdition = await getEdition(data.editionId);
-    const activeEditionData = await activeEdition.get();
-    const activeEditionVotes = activeEditionData.data()?.nbFut;
-
-    console.log("activeEditionVotes: ", activeEditionVotes);
-
-    if (activeEditionVotes === undefined) {
-      // No editions found
-      throw new HttpsError("unavailable", "No editions found!");
-    }
-
-    // create user account, catch uid
-    getAuth()
-      .createUser({
-        email: data.email,
-        password: generateRandomPassword(),
-        displayName: data.displayName,
-      })
-      .then((userRecord) => {
-        // See the UserRecord reference doc for the contents of userRecord.
-        console.log("Successfully created new user:", userRecord.uid);
-        // add user to cercle
-        const s = `cercles.${userRecord.uid}`;
-        activeEdition
-          .update({
-            [s]: {
-              description: description,
-              nbFut: activeEditionVotes,
-              name: data.displayName,
-              comitards: {},
-            },
-          })
-          .catch((error: any) => {
-            console.log("Error creating new user:", error);
-            throw new HttpsError("unavailable", "Error creating new user!");
-          });
-
-        // send pawword reset email to user. NOPE
-
-        return 1;
-      })
-      .catch((error) => {
-        console.log("Error creating new user:", error);
-        throw new HttpsError("unavailable", "Error creating new user!");
-      });
-
-    return { message: "User created and added to edition map" };
+  if (!editionId) {
+    throw new HttpsError("invalid-argument", "Edition id is invalid");
   }
-);
+  // get all cercles uid
 
-exports.getdisabledstatus = onCall(
+  const activeEdition = await getEdition(editionId);
+  const activeEditionData = await activeEdition.get();
+  const activeEditionCercle = activeEditionData.data()?.cercles || {};
 
-  async (request) => {
-    const auth = request.auth;
-    const data = request.data;
-    const editionId = data.editionId;
+  console.log("activeEditionCercle: ", activeEditionCercle);
 
-    if (!auth || !(await getAdminUid(auth.uid))) {
-      throw new HttpsError("permission-denied", "Unauthorized request!");
-    }
-
-    if (!editionId) {
-      throw new HttpsError("invalid-argument", "Edition id is invalid");
-    }
-    // get all cercles uid
-
-    const activeEdition = await getEdition(editionId);
-    const activeEditionData = await activeEdition.get();
-    const activeEditionCercle = activeEditionData.data()?.cercles || {};
-
-    console.log("activeEditionCercle: ", activeEditionCercle);
-
-    if (Object.keys(activeEditionCercle).length === 0) {
-      // No editions found
-      throw new HttpsError("unavailable", "No editions found!");
-    }
-
-    const statusDict: { [key: string]: boolean } = {};
-
-    try {
-      const userUIDs = Object.keys(activeEditionCercle);
-      for (const uid of userUIDs) {
-        const user = await admin.auth().getUser(uid);
-        statusDict[uid] = user.disabled;
-      }
-    } catch (error: any) {
-      console.log("Error retrieving user status:", error);
-    }
-
-    return { status: statusDict };
+  if (Object.keys(activeEditionCercle).length === 0) {
+    // No editions found
+    throw new HttpsError("unavailable", "No editions found!");
   }
-);
+
+  const statusDict: { [key: string]: boolean } = {};
+
+  try {
+    const userUIDs = Object.keys(activeEditionCercle);
+    for (const uid of userUIDs) {
+      const user = await admin.auth().getUser(uid);
+      statusDict[uid] = user.disabled;
+    }
+  } catch (error: any) {
+    console.log("Error retrieving user status:", error);
+  }
+
+  return { status: statusDict };
+});
 
 async function deleteUserAuth(uid: string): Promise<void> {
   const admin_auth = admin.auth();
