@@ -51,8 +51,18 @@ export default function Account({ data, refetchData }: AccountProps) {
           Hi, Welcome back {user && user?.displayName} 👋
         </Typography>
       </Stack>
-
-      <NewComitard data={data} admin={false} refetchData={refetchData} />
+      
+      {new Date().getTime() < data?.data().stop ? (
+        <NewComitard data={data} admin={false} refetchData={refetchData} />
+      ) : (
+        <Card sx={{ width: "100%", mb: 4, p: 2 }}>
+          <CardContent>
+            <Typography variant="h5" sx={{ mb: 1 }}>
+              Plus moyen de créer un comitard!
+            </Typography>
+          </CardContent>
+        </Card>
+      )}
 
       <Card sx={{ width: "100%", mb: 4, p: 2 }}>
         <CardContent>
@@ -159,10 +169,12 @@ export default function Account({ data, refetchData }: AccountProps) {
               size={"large"}
               onClick={async () => {
                 const addMessage = httpsCallable(functions, "votebis");
-                addMessage({ timeClient: new Date().toISOString() }).then((result) => {
-                  const data: any = result.data;
-                  console.log("Retunr message:", data);
-                });
+                addMessage({ clientTime: new Date().toISOString() }).then(
+                  (result) => {
+                    const data: any = result.data;
+                    console.log("Retunr message:", data);
+                  }
+                );
               }}
             >
               DEBUG VOTE
