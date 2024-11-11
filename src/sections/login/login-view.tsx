@@ -8,7 +8,6 @@ import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import IconButton from "@mui/material/IconButton";
 import LoadingButton from "@mui/lab/LoadingButton";
-import { alpha, useTheme } from "@mui/material/styles";
 import InputAdornment from "@mui/material/InputAdornment";
 import Alert from "@mui/material/Alert";
 
@@ -20,12 +19,13 @@ import { useRouter } from "../../routes/hooks/use-router";
 import Logo from "../../components/logo/logo";
 import Iconify from "../../components/iconify/iconify";
 import { auth } from "../../firebase_config";
-import { bgGradient } from "../../theme/css";
+import LogoFull from '../../assets/gcl_full.svg';
+
 
 // ----------------------------------------------------------------------
 
 export default function LoginView() {
-  const theme = useTheme();
+  
 
   const router = useRouter();
 
@@ -59,13 +59,7 @@ export default function LoginView() {
       setError("Un email vous a été envoyé");
     } catch (error: any) {
       console.log("Error: ", error?.code);
-      if (error?.code == "auth/too-many-requests") {
-        setError("Trop d'essais, essayer plus tard");
-      } else if (error?.code == "auth/invalid-credential") {
-        setError("Mauvais mot de passe ou email");
-      } else {
         setError("Erreur de connection");
-      }
       setLoading(false);
     }
   };
@@ -84,14 +78,7 @@ export default function LoginView() {
       setLoading(false);
       router.push("/");
     } catch (error: any) {
-      console.log("Error: ", error?.code);
-      if (error?.code == "auth/too-many-requests") {
-        setError("Trop d'essais, essayer plus tard");
-      } else if (error?.code == "auth/invalid-credential") {
-        setError("Mauvais mot de passe ou email");
-      } else {
         setError("Erreur de connection");
-      }
       setLoading(false);
     }
   };
@@ -199,10 +186,21 @@ export default function LoginView() {
   return (
     <Box
       sx={{
-        ...bgGradient({
-          color: alpha(theme.palette.background.default, 0.9),
-          imgUrl: "/assets/background/overlay_4.jpg",
-        }),
+        "&::before": {
+          content: "''",
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          mask: `url(${LogoFull})`,
+          maskRepeat: 'no-repeat',
+          maskPosition: 'center',
+          maskSize: 'contain',
+          backgroundColor: (theme) => theme.palette.primary.main,
+          opacity: (theme) => theme.palette.action.hoverOpacity,
+          zIndex: -1,
+      },
         height: 1,
       }}
     >
