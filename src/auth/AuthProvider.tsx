@@ -11,11 +11,13 @@ export const AuthContext = React.createContext<AuthContextValue | null>(null);
 
 interface AuthContextValue {
     user: User | null;
+    loading: boolean;
     isAdmin: () => boolean;
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({children}) => {
     const [user, setUser] = useState<User | null>(null);
+    const [loading, setLoading] = useState(true);
     const [adminMap, setAdminMap] = useState<string[]>([]);
 
     useEffect(() => {
@@ -37,6 +39,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({children}) => {
 
         const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
             setUser(firebaseUser);
+            setLoading(false);
             //console.log("Firebase user: ", firebaseUser?.email);
             //console.log("Firebase user full: ", firebaseUser?.uid);
         });
@@ -50,7 +53,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({children}) => {
         return adminMap.includes(user?.uid as string);
     }
 
-    return <AuthContext.Provider value={{user, isAdmin}}>{children}</AuthContext.Provider>;
+    return <AuthContext.Provider value={{user, loading, isAdmin}}>{children}</AuthContext.Provider>;
     //return children
 };
 
