@@ -213,7 +213,7 @@ export default function ComitardCard({
       vote <= nbFutsLeft
     ) {
       const Vote = httpsCallable(functions, "vote");
-      Vote({ vote: vote, comitardId: comitardId, editionId: editionId })
+      Vote({ vote: vote, comitardId: comitardId, editionId: editionId, clientTime: new Date() })
         .then((result) => {
           // Read result of the Cloud Function.
           /** @type {any} */
@@ -240,7 +240,7 @@ export default function ComitardCard({
             refetchData();
           }, 2000);
           console.log("error:", message, details);
-          setVoteError(`Erreur serveur: ${message}`);
+          setVoteError(message);
           setLoading(false);
         });
     } else {
