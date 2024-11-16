@@ -94,7 +94,9 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   }, [user]); // Re-run the effect if `user` changes
 
   const refetchData = () => {
-    fetchData(); // Function to refetch data
+    if (!user) {
+      fetchData(); // Function to refetch data
+    }
   };
 
   return (
