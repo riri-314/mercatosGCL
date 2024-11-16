@@ -2,15 +2,15 @@ import { useEffect, useState } from "react";
 import { useData } from "../../data/DataProvider";
 import Container from "@mui/material/Container";
 import Typography from "@mui/material/Typography";
-import {Box} from "@mui/material";
+import { Box } from "@mui/material";
 import Iconify from "../../components/iconify/iconify";
-
-
+import { useAuth } from "../../auth/AuthProvider";
 
 export default function DataRefresh() {
   const [refreshTime, setRefreshTime] = useState("");
   const [refreshing, setRefreshing] = useState(false);
   const { data, refetchData, fetchedTime } = useData();
+  const { user } = useAuth();
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -34,13 +34,15 @@ export default function DataRefresh() {
   }
 
   function refresh() {
-    setRefreshing(true);
-    console.log("refresh");
-    refetchData();
-    const time = 4000;
-    setTimeout(() => {
-      setRefreshing(false);
-    }, time);
+    if (!user) {
+      setRefreshing(true);
+      console.log("refresh");
+      refetchData();
+      const time = 4000;
+      setTimeout(() => {
+        setRefreshing(false);
+      }, time);
+    }
   }
 
   return (
@@ -58,10 +60,18 @@ export default function DataRefresh() {
             }}
             onClick={() => refresh()}
           >
-            <Typography variant="body1" sx={{ marginLeft: "5px" }}>
+            <Typography
+              variant="body1"
+              sx={{
+                marginLeft: "5px",
+                "&:hover": {
+                  cursor:  !user ? "pointer" : "default"
+                },
+              }}
+            >
               Rafraîchi il y a {refreshTime}.
             </Typography>
-            <Iconify icon="material-symbols-light:refresh" />
+            {!user && <Iconify icon="material-symbols-light:refresh" />}
           </Box>
         </>
       ) : (
