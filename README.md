@@ -32,17 +32,19 @@ I have no fucking idea.
 
 Todo Henri:
 
-Logo tshirt mercatos
+eventListener sur le document de l'edition si connecté
 
-
-modifier supprimer encheres, tout à faire
-admin peut voter dans backend???
+Opti:
+optimiser page comitards
 optimiser page résultats, trop lente
+
+admin:
+admin peut voter dans backend??? Yes
+Retirer admin vote dans la page comitards
+ajouter, modifier supprimer encheres, tout à faire
+ajouter boutton pour bloquer edit comitard (par admin)
 changer adresse mail d'un président //caca mais faisable en backend admin
 
-
 Todo Flo:
-modifier supprimer encheres, tout à faire
-admin devrait pas avoir un nombre de futs dans UI
 changer create comitard pour avoir petite photo
 

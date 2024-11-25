@@ -13,9 +13,12 @@ import { getAuth } from "firebase-admin/auth";
 import { beforeUserCreated } from "firebase-functions/v2/identity";
 import { v4 as uuidv4 } from "uuid";
 import { onSchedule } from "firebase-functions/scheduler";
+import { setGlobalOptions } from "firebase-functions/options";
 //import { Timestamp, increment } from "@firebase/firestore";
 
 admin.initializeApp();
+
+setGlobalOptions({ region: "europe-west1" });
 
 /**
  * Get the UID of the admin user.
@@ -42,10 +45,233 @@ export const beforecreated = beforeUserCreated((_event) => {
 
 exports.vote = onCall(async (request) => {
   const now = test.Timestamp.now();
-  
+  const context_auth = request.auth;
+  if (!context_auth) {
+    throw new HttpsError("permission-denied", "Unauthorized request!"); // return error if not connected
+  }
+  let isAdmin = false;
+  const timeDelay = 2500;
+  const data = request.data;
+
+  //console.log("edition id:", data.editionId);
+  if (data.editionId === undefined || data.editionId == null) {
+    return { message: "Erreur interne: Pas d'édition trouvée" };
+  }
+
+  const activeEdition = await getEditionBis(data.editionId);
+  const activeEditionData = await activeEdition.get();
+  const activeEditionCercle = activeEditionData.data()?.cercles || {};
+
+  if (Object.keys(activeEditionCercle).length === 0) {
+    // No editions found
+    return { message: "Erreur interne: Pas de cercles trouvés dans l'édition" };
+  }
+
+  // Check if the request is made by an isAdmin
+
+  isAdmin = await getAdminUid(context_auth.uid);
+  if (!activeEditionCercle[context_auth.uid] && !isAdmin) {
+    throw new HttpsError("permission-denied", "Unauthorized request!"); // return error if not isAdmin or not a active cercle
+  }
+
+  // check clientTime
+
+  if (data.clientTime === undefined) {
+    return { message: "Erreur interne: Ne peut pas vérifier l'enchère" };
+  }
+  const clientTimestamp = Date.parse(data.clientTime);
+
+  const start = activeEditionData.data()?.start;
+  const stop = activeEditionData.data()?.stop;
+
+  if (start && stop) {
+    if (now < start || now > stop) {
+      return {
+        message:
+          "Pas dans le temps impartie pour les enchères. Too soon or too late",
+      };
+    }
+  } else {
+    return { message: "Erreur interne: Pas de temps d'enchère trouvé" };
+  }
+
+  let senderId = context_auth.uid;
+
+  // Check if the request contains the required data
+
+  const enchereMin = activeEditionData.data()?.enchereMin;
+  const enchereMax = activeEditionData.data()?.enchereMax;
+  if (!enchereMin || !enchereMax) {
+    return { message: "Erreur interne: pas de min max enchere" };
+  }
+
+  let nbFut = 0;
+  if (isAdmin) {
+    nbFut = Infinity;
+  } else {
+    nbFut = activeEditionCercle[senderId].nbFut;
+  }
+  if (!nbFut) {
+    return { message: "Erreur: le nombre de fûts est invalide" };
+  }
+
+  // check vote number > 0, > votemin, < votemax, <= nbFut
+  //console.log("data.vote: ", data.vote);
+  if (
+    data.vote === undefined ||
+    data.vote < 0 ||
+    data.vote == Infinity ||
+    data.vote > enchereMax ||
+    data.vote < enchereMin ||
+    data.vote > nbFut
+  ) {
+    return { message: "Erreur: le nombre de fûts est invalide" };
+  }
+  // comitard id exist and not same cercle
+  const cercleId = getCercleId(data.comitardId, activeEditionCercle);
+
+  if (!cercleId) {
+    return { message: "Erreur: l'id du comitard n'est pas valide" };
+  } else {
+    if (cercleId === senderId) {
+      return { message: "Erreur: Vous ne pouvez pas voter pour vous même" };
+    }
+  }
+  const enchereStart =
+    activeEditionCercle[cercleId].comitards[data.comitardId].enchereStart;
+  const enchereStop =
+    activeEditionCercle[cercleId].comitards[data.comitardId].enchereStop;
+
+  const duration = activeEditionData.data()?.duration;
+
+  if (!duration) {
+    return {
+      message: "Erreur interne lors de l'ajout de l'enchère! No duration",
+    };
+  }
+
+  if (!enchereStart || !enchereStop) {
+    // start enchere
+    // set start and end date for enchere
+    // add enchere
+    // increment jobs
+    // decrement nbFut
+    const secondsToAdd = duration * 60 * 60;
+    const future = test.Timestamp.fromMillis(
+      now.toMillis() + secondsToAdd * 1000
+    );
+    const s = `cercles.${cercleId}.comitards.${data.comitardId}`;
+    const e = `cercles.${senderId}.nbFut`;
+    const enchereId = uuidv4();
+    const encherePath = `${s}.encheres.${enchereId}`;
+
+    activeEdition
+      .update({
+        [encherePath]: {
+          vote: data.vote,
+          sender: senderId,
+          date: now,
+        },
+        [`${s}.enchereStart`]: now,
+        [`${s}.enchereStop`]: future,
+        [`${s}.enchereProcessed`]: false,
+        [e]: test.FieldValue.increment(-data.vote),
+        jobs: test.FieldValue.increment(1),
+      })
+      .catch((error: any) => {
+        console.log("Error adding new enchere:", error);
+        return {
+          message:
+            "Erreur interne lors de l'ajout de l'enchère! Error starting enchère",
+        };
+      })
+      .then(() => {
+        return { message: "Nouvelle enchère ajoutée" };
+      });
+  } else {
+    // need to check here if the vote is bigger than last bigest vote
+    const encheres =
+      activeEditionCercle[cercleId].comitards[data.comitardId].encheres;
+    if (encheres) {
+      const tmp = Object.values(encheres)
+        .filter((enchere) => enchere !== null)
+        .map((enchere) => (enchere as { vote: number }).vote);
+      if (tmp.length > 0) {
+        if (Math.max(Math.max(...tmp) + 1, enchereMin) > data.vote) {
+          return {
+            message: "L'enchère doit etre plus élevée que la dernière enchère",
+          };
+        }
+      }
+    } else {
+      return {
+        message:
+          "Erreur interne lors de l'ajout de l'enchère! No enchère found",
+      };
+    }
+
+    if (
+      (now >= enchereStart && now <= enchereStop) ||
+      (now.toMillis() <= enchereStop.toMillis() + timeDelay && clientTimestamp <= enchereStop.toMillis() && clientTimestamp >= enchereStop.toMillis() -timeDelay*2)
+    ) {
+      //console.log(
+      //  "added new enchere to a comitard that has a enchere (might be a little laye but it's okay)"
+      //);
+      const s = `cercles.${cercleId}.comitards.${data.comitardId}`;
+
+      const enchereId = uuidv4();
+      const encherePath = `${s}.encheres.${enchereId}`;
+      const e = `cercles.${senderId}.nbFut`;
+      activeEdition
+        .update({
+          [encherePath]: {
+            vote: data.vote,
+            sender: senderId,
+            date: now,
+          },
+          [e]: test.FieldValue.increment(-data.vote),
+        })
+        .catch((error: any) => {
+          console.log("Error adding new enchere:", error);
+          return {
+            message:
+              "Erreur interne lors de l'ajout de l'enchère! Error updating db",
+          };
+        })
+        .then(() => {
+          return { message: "Nouvelle enchère ajoutée" };
+        });
+    } else {
+      //console.log("Error: not in timeframe");
+      return { message: "Erreur: Pas dans le temps impartie" };
+    }
+  }
+  return { message: "Nouvelle enchère ajoutée" };
+});
+
+//START DEBUG
+exports.votebis = onCall(async (request) => {
+  const now = test.Timestamp.now();
+  const timeDelay = 2500;
   const context_auth = request.auth;
   const data = request.data;
   let isAdmin = false;
+  console.log(
+    "Time server: ",
+    now.toDate().toISOString(),
+    " Time client: ",
+    data.clientTime
+  );
+
+  const serverTimestamp = now.toMillis();
+  const clientTimestamp = Date.parse(data.clientTime);
+
+  console.log(`Server timestamp: ${serverTimestamp}`);
+  console.log(`Client timestamp: ${clientTimestamp}`);
+
+  const timeDifference = serverTimestamp - clientTimestamp;
+
+  console.log(`Time difference: ${timeDifference} milliseconds`);
 
   console.log("edition id:", data.editionId);
   if (data.editionId === undefined || data.editionId == null) {
@@ -79,7 +305,14 @@ exports.vote = onCall(async (request) => {
 
   const start = activeEditionData.data()?.start;
   const stop = activeEditionData.data()?.stop;
-  //console.log("start: ", start);
+  console.log("start: ", start);
+  // compare start and clientTime
+  console.log("start.toMillis(): ", start.toMillis());
+  console.log("clientTimestamp: ", clientTimestamp);
+  console.log(
+    "start.toMillis() - clientTimestamp: ",
+    start.toMillis() - clientTimestamp
+  );
   //console.log("stop: ", stop);
   //console.log("now: ", now);
   //console.log("now < start: ", now < start);
@@ -97,6 +330,8 @@ exports.vote = onCall(async (request) => {
   let senderId = context_auth.uid;
 
   // Check if the request contains the required data
+
+  //GroscestlaPuissance
 
   const enchereMin = activeEditionData.data()?.enchereMin;
   const enchereMax = activeEditionData.data()?.enchereMax;
@@ -151,54 +386,9 @@ exports.vote = onCall(async (request) => {
   }
 
   if (!enchereStart || !enchereStop) {
-    // start enchere
-    // set start and end date for enchere
-    // add enchere
-    // increment jobs
-    // decrement nbFut
-    const secondsToAdd = duration * 60 * 60;
-    //const test = Timestamp.fromDate(new Date());
-
-    //const hoursToAdd = 5; // replace with the number of hours you want to add
-    //const futureDate = new Date(Date.now() + duration * 60 * 60 * 1000);
-    //const future = Timestamp.fromDate(futureDate);
-
-    const future = test.Timestamp.fromMillis(
-      now.toMillis() + secondsToAdd * 1000
-    );
-    //console.log("future: ", future.toMillis());
-
-    const s = `cercles.${cercleId}.comitards.${data.comitardId}`;
-    //const d = `cercles.${cercleId}.comitards.${
-    //  data.comitardId
-    //}.encheres.${uuidv4()}`;
-    const e = `cercles.${senderId}.nbFut`;
-    //console.log("fieldValue: ", test.FieldValue);
-    //console.log("fieldValue: ", test.FieldValue.increment);
-    //console.log("fieldValue: ", test.FieldValue.increment(4));
-    const enchereId = uuidv4();
-    const encherePath = `${s}.encheres.${enchereId}`;
-
-    activeEdition
-      .update({
-        [encherePath]: {
-          vote: data.vote,
-          sender: senderId,
-          date: now,
-        },
-        [`${s}.enchereStart`]: now,
-        [`${s}.enchereStop`]: future,
-        [`${s}.enchereProcessed`]: false,
-        [e]: test.FieldValue.increment(-data.vote),
-        jobs: test.FieldValue.increment(1),
-      })
-      .catch((error: any) => {
-        console.log("Error adding new enchere:", error);
-        throw new HttpsError("unavailable", "Error adding new enchere!");
-      })
-      .then(() => {
-        return { message: "Added new enchere" };
-      });
+    return {
+      message: "added new enchere to a comitard that has a no enchere",
+    };
   } else {
     // need to check here if the vote is bigger than last bigest vote
     const encheres =
@@ -220,39 +410,30 @@ exports.vote = onCall(async (request) => {
     } else {
       throw new HttpsError("unavailable", "No encheres found!");
     }
-    if (now < enchereStart || now > enchereStop) {
-      throw new HttpsError(
-        "permission-denied",
-        "Not in the vote time frame for the comitard!"
+    if (now >= enchereStart && now <= enchereStop) {
+      console.log("added new enchere to a comitard that has a enchere");
+      return {
+        message: "added new enchere to a comitard that has a enchere",
+      };
+    } else if (
+      now <= enchereStop + timeDelay &&
+      data.clientTime <= enchereStop
+    ) {
+      //techncally allow the user to cheat (just a bit), hard to implement a cheat in real life.
+      console.log(
+        "added new enchere to a comitard that has a enchere, but a little late"
       );
+      return {
+        message:
+          "added new enchere to a comitard that has a enchere, but a little late",
+      };
     } else {
-      // add enchere
-      // decrement nbFut
-      const s = `cercles.${cercleId}.comitards.${data.comitardId}`;
-
-      const enchereId = uuidv4();
-      const encherePath = `${s}.encheres.${enchereId}`;
-      const e = `cercles.${senderId}.nbFut`;
-      activeEdition
-        .update({
-          [encherePath]: {
-            vote: data.vote,
-            sender: senderId,
-            date: now,
-          },
-          [e]: test.FieldValue.increment(-data.vote),
-        })
-        .catch((error: any) => {
-          console.log("Error adding new enchere:", error);
-          throw new HttpsError("unavailable", "Error adding new enchere!");
-        })
-        .then(() => {
-          return { message: "Added new enchere" };
-        });
+      console.log("Error: not in timeframe");
+      return { message: "Error: not in timeframe" };
     }
   }
-  return { message: "Added new enchere" };
 });
+//END DEBUG
 
 async function remboursement() {
   // Consistent timestamp
@@ -408,10 +589,8 @@ exports.rembour = onCall(async (_request) => {
 
 //new V2 function
 exports.taskrunner = onSchedule("*/10 * * * *", async (_event) => {
-  async (_event: any) => {
-    // Consistent timestamp
-    await remboursement();
-  }
+  // Consistent timestamp
+  await remboursement();
 });
 
 function getCercleId(
@@ -617,6 +796,14 @@ exports.addcomitard = onCall(async (request) => {
     }
   }
 
+  // add check that edition is not finished, admin can do whatever the fuck he wants
+
+  const stop = activeEditionData.data()?.stop;
+  const now = test.Timestamp.now();
+  if ((stop && now > stop) || !admin) {
+    throw new HttpsError("unavailable", "Edition is finished");
+  }
+
   let cercle = context_auth.uid;
 
   // Check if the request contains the required data
@@ -711,8 +898,6 @@ exports.addcomitard = onCall(async (request) => {
  * @returns {Promise<Object>} - A promise that resolves to an object with a success message.
  * @throws {functions.https.HttpsError} - Throws an error if the request is unauthorized or if there is an internal error.
  */
-
-
 
 exports.resetpasswords = onCall(async (request) => {
   const context_auth = request.auth;

@@ -2,12 +2,13 @@ import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import Card from "@mui/material/Card";
 import {
-    Accordion,
-    AccordionDetails,
-    AccordionSummary,
-    Alert,
-    CardContent,
-    Modal, Theme,
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
+  Alert,
+  CardContent,
+  Modal,
+  Theme,
 } from "@mui/material";
 import { useAuth } from "../../auth/AuthProvider";
 import { LoadingButton } from "@mui/lab";
@@ -69,13 +70,18 @@ export default function AdminAccount({
       <Card sx={{ width: "100%", mb: 4 }}>
         <CardContent>
           <Accordion>
-            <AccordionSummary expandIcon={
+            <AccordionSummary
+              expandIcon={
                 <Iconify
-                    width={40}
-                    icon="solar:double-alt-arrow-down-bold-duotone"
-                    sx={{color: (theme : Theme) => `${theme.palette.primary.main}`}}
-                    fallback={<span>↓</span>}
-                />}>
+                  width={40}
+                  icon="solar:double-alt-arrow-down-bold-duotone"
+                  sx={{
+                    color: (theme: Theme) => `${theme.palette.primary.main}`,
+                  }}
+                  fallback={<span>↓</span>}
+                />
+              }
+            >
               <Typography variant="h5">Créer une nouvelle édition</Typography>
             </AccordionSummary>
             <AccordionDetails>
@@ -237,13 +243,18 @@ export default function AdminAccount({
       <Card sx={{ width: "100%", mb: 4 }}>
         <CardContent>
           <Accordion>
-              <AccordionSummary expandIcon={
-                  <Iconify
-                      width={40}
-                      icon="solar:double-alt-arrow-down-bold-duotone"
-                      sx={{color: (theme : Theme) => `${theme.palette.primary.main}`}}
-                      fallback={<span>↓</span>}
-                  />}>
+            <AccordionSummary
+              expandIcon={
+                <Iconify
+                  width={40}
+                  icon="solar:double-alt-arrow-down-bold-duotone"
+                  sx={{
+                    color: (theme: Theme) => `${theme.palette.primary.main}`,
+                  }}
+                  fallback={<span>↓</span>}
+                />
+              }
+            >
               <Typography variant="h5">
                 Modifier/Supprimer des enchères
               </Typography>
@@ -318,6 +329,21 @@ export default function AdminAccount({
                 }}
               >
                 Remboursement
+              </LoadingButton>
+              <LoadingButton
+                variant={"outlined"}
+                size={"large"}
+                onClick={async () => {
+                  const addMessage = httpsCallable(functions, "votebis");
+                  addMessage({ editionId: "quCYmyzHQqh9ebm9EN2m", vote: 77, clientTime: new Date() }).then(
+                    (result) => {
+                      const data: any = result.data;
+                      console.log("Retunr message:", data);
+                    }
+                  );
+                }}
+              >
+                DEBUG VOTE
               </LoadingButton>
             </Stack>
           </Stack>
