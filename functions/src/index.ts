@@ -588,7 +588,7 @@ exports.rembour = onCall(async (_request) => {
 //  });
 
 //new V2 function
-exports.taskrunner = onSchedule("*/10 * * * *", async (_event) => {
+exports.taskrunner = onSchedule("*/10 * * * *", async (_event: any) => {
   // Consistent timestamp
   await remboursement();
 });
@@ -842,7 +842,10 @@ exports.addcomitard = onCall(async (request) => {
     data.estLeSeul.length == 0 ||
     data.estLeSeul.length > txtlenght2 ||
     data.picture === undefined ||
-    data.picture.length == 0
+    data.picture.length == 0 ||
+    data.campus === undefined ||
+    data.campus.length == 0 ||
+    ![1, 2, 3, 4].includes(data.campus)
   ) {
     throw new HttpsError("invalid-argument", "Missing data!");
   }
@@ -875,6 +878,7 @@ exports.addcomitard = onCall(async (request) => {
         pointFaible: data.pointFaible,
         estLeSeul: data.estLeSeul,
         picture: data.picture,
+        campus: data.campus,
       },
     })
     .catch((error: any) => {
