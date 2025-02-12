@@ -32,6 +32,13 @@ interface NewComitardProps {
   refetchData: () => void;
 }
 
+const changerCampus = {
+  "Possible": 1,
+  "Pas possible": 2,
+  "Bouillant mort!": 3,
+  "Pas du tout possible": 4,
+};
+
 export default function NewComitard({
   data,
   admin,
@@ -71,6 +78,8 @@ export default function NewComitard({
     "error"
   );
   const [loading, setLoading] = useState(false);
+  const [campus, setCampus] = useState(null);
+  const [campusError, setCampusError] = useState(false);
 
   const { user } = useAuth();
 
@@ -171,6 +180,12 @@ export default function NewComitard({
       error = true;
       setPictureError(true);
     }
+    if (!campus) {
+      error = true;
+      setCampusError(true);
+    } else {
+      setCampusError(false);
+    }
 
     if (!error) {
       console.log("Check user input ok");
@@ -222,6 +237,7 @@ export default function NewComitard({
                 teneurTaule: teneurTaule,
                 etatCivil: etatCivil,
                 age: age,
+                campus: campus,
                 nbEtoiles: nbEtoiles,
                 pointFort: pointFort,
                 pointFaible: pointFaible,
@@ -555,6 +571,17 @@ export default function NewComitard({
                   <FormHelperText>
                     Max {txtlenght2} caractères. {estLeSeul.length}/{txtlenght2}
                   </FormHelperText>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <UnstyledSelectIntroduction
+                    isError={campusError}
+                    option={changerCampus}
+                    helpText={"Chaud changer de campus?"}
+                    change={(_event: any, val: any) => {
+                      setCampus(val);
+                      setCampusError(false);
+                    }}
+                  />
                 </Grid>
                 <Grid item xs={12} sm={12}>
                   <PictureInput
