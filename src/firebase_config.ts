@@ -1,14 +1,14 @@
 // Import the functions you need from the SDKs you need
 
-import { initializeApp } from "@firebase/app";
+import { initializeApp } from "firebase/app";
 
-import { getAnalytics } from "@firebase/analytics";
+import { getAnalytics } from "firebase/analytics";
 
 //import { getAnalytics } from "firebase/analytics";
-import { connectFirestoreEmulator, getFirestore } from "@firebase/firestore";
-import { connectAuthEmulator, getAuth } from "@firebase/auth";
-import { connectStorageEmulator, getStorage } from "@firebase/storage";
-import { connectFunctionsEmulator, getFunctions } from "@firebase/functions";
+import { connectFirestoreEmulator, getFirestore } from "firebase/firestore";
+import { connectAuthEmulator, getAuth } from "firebase/auth";
+import { connectStorageEmulator, getStorage } from "firebase/storage";
+import { connectFunctionsEmulator, getFunctions } from "firebase/functions";
 //import { getFunctions } from "@firebase/functions";
 
 // https://firebase.google.com/docs/web/setup#available-libraries
