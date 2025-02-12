@@ -467,10 +467,10 @@ export default function ComitardCard({
                   {cerclesData[cercleId].name}
                   <br />
                   <strong>Teneur en taule</strong> : {" "}
-                  {Array.from({ length: product.nbEtoiles }, (_, i) => (
+                  {Array.from({ length: product.teneurTaule }, (_, i) => (
                     <span key={i}>🍺</span>
                   ))}
-                  {Array.from({ length: 10-product.nbEtoiles }, (_, i) => (
+                  {Array.from({ length: 10-product.teneurTaule }, (_, i) => (
                     <span key={i} style={{ filter: "grayscale(100%)" }}>🍺</span>
                   ))}
                   <br />

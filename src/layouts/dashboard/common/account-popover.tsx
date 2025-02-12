@@ -25,7 +25,7 @@ export default function AccountPopover() {
 
   function displayName(): string {
     if (isAdmin()) {
-      return "Admin Sigma Boy";
+      return "Admin Sigma Boy 🗿";
     }
     if (user?.displayName) {
       return user.displayName;
@@ -36,7 +36,7 @@ export default function AccountPopover() {
 
   function picture(): string {
     if (isAdmin()) {
-      return "assets/images/admin.jpg";
+      return "assets/images/sigma.jpeg";
     }
     if (user?.displayName) {
       return (
