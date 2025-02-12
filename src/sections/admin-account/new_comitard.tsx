@@ -218,7 +218,7 @@ export default function NewComitard({
           console.log("error uploading file: ", error);
           setPictureUpload(undefined);
           setErrorSeverity("error");
-          setError("Une erreur est survenue lors de l'upload de l'image.");
+          setError("Une erreur est survenue lors de l'upload de l'image." + error);
           setLoading(false);
 
           return;
@@ -276,7 +276,7 @@ export default function NewComitard({
                   setPictureUpload(undefined);
                   setErrorSeverity("error");
                   setError(
-                    "Une erreur est survenue lors de la création du comitard. serveur error."
+                    "Une erreur est survenue lors de la création du comitard. serveur error." + error
                   );
                   setLoading(false);
                 });
@@ -286,7 +286,7 @@ export default function NewComitard({
               console.log("error uploading file: ", error);
               setPictureUpload(undefined);
               setErrorSeverity("error");
-              setError("Une erreur est survenue lors de l'upload de l'image.");
+              setError("Une erreur est survenue lors de l'upload de l'image." + error);
               setLoading(false);
             });
         }

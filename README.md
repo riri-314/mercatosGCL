@@ -34,10 +34,8 @@ firebase emulators:start --import ./2025-02-10T17:25:33_46845 --export-on-exit
 
 Todo Henri:
 modifier supprimer encheres, tout à faire
-optimiser page résultats, trop lente
-changer adresse mail d'un président //caca mais faisable en backend admin
-
 
 Todo Flo:
 modifier supprimer encheres, tout à faire
 changer create comitard pour avoir petite photo
+optimiser page résultats, trop lente
