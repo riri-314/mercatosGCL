@@ -12,7 +12,7 @@
 ## Quick start
 
 - **Clone** `git clone https://github.com/riri-314/mercatosGCL.git`
-- Recommended `Node.js v20.x`.
+- Need to use `Node.js v20.x`!!!!
 - **Install:** `npm install`
 - **Start:** `npm run dev`
 - **Build:** `npm build`

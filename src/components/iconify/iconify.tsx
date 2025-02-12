@@ -36,7 +36,6 @@ Iconify.propTypes = {
   icon: PropTypes.oneOfType([PropTypes.element, PropTypes.string]),
   sx: PropTypes.object,
   width: PropTypes.number,
-    children: PropTypes.node,
 };
 
 export default Iconify;
