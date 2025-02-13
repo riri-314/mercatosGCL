@@ -44,6 +44,113 @@ export default function Account({ data, refetchData }: AccountProps) {
     "test: ",
     new Date().getTime() < data?.data().stop.toDate().getTime()
   );
+
+  function getNbComitard(): [boolean, number, boolean, any] {
+    // it return [did the function work (error?), number of comitard left, can the user add a comitard]
+    if (user) {
+      try {
+        const cercleData = data?.data().cercles;
+        const nbComitard = Object.keys(
+          cercleData[user?.uid]["comitards"]
+        ).length;
+        const maxComitards = data?.data().nbComitard;
+        const nbComitardsLeft = maxComitards - nbComitard;
+        if (nbComitardsLeft < 0) {
+          return [true, 0, false, ""];
+        } else {
+          return [true, nbComitardsLeft, true, ""];
+        }
+      } catch (error: any) {
+        return [false, 0, true, error];
+      }
+    } else {
+      console.log("no user");
+      return [false, 0, true, "no user"];
+    }
+  }
+
+  function element() {
+    if (new Date().getTime() < data?.data().stop.toDate().getTime()) {
+      if (getNbComitard()[0] && getNbComitard()[2]) {
+        //function is ok and comitards left
+        if (new Date().getTime() < data?.data().start.toDate().getTime()) {
+          return (
+            <>
+              <Alert severity="info" sx={{ mb: 4 }}>
+                Créez votre comitard avant le début des enchères{" "}
+                {data?.data().start.toDate().toLocaleString()}
+                <br />
+                il vous reste jusqu'a {getNbComitard()[1]} comitards à créer
+              </Alert>
+              <NewComitard
+                data={data}
+                admin={false}
+                refetchData={refetchData}
+              />
+            </>
+          );
+        } else {
+          return (
+            <>
+              <Alert severity="warning" sx={{ mb: 4 }}>
+                {" "}
+                Vous pouvez toujours créer un comitard mais les enchères ont
+                déja commencées depuis le{" "}
+                {data?.data().start.toDate().toLocaleString()}
+                <br />
+                il vous reste jusqu'a {getNbComitard()[1]}  comitards à créer
+              </Alert>
+              <NewComitard
+                data={data}
+                admin={false}
+                refetchData={refetchData}
+              />
+            </>
+          );
+        }
+      } else if (getNbComitard()[0] && !getNbComitard()[2]) {
+        return (
+          <Card sx={{ width: "100%", mb: 4, p: 2 }}>
+            <CardContent>
+              <Typography variant="h5" sx={{ mb: 1 }}>
+                Plus moyen de créer un comitard! Vous avez atteint le nombre
+                maximum de comitards
+              </Typography>
+            </CardContent>
+          </Card>
+        );
+      } else {
+        return (
+          <Card sx={{ width: "100%", mb: 4, p: 2 }}>
+            <CardContent>
+              <Typography variant="h5" sx={{ mb: 1 }}>
+                Pas moyen de créer un comitard! Erreur: {String(getNbComitard()[3])} 
+              </Typography>
+            </CardContent>
+          </Card>
+        );
+      }
+    } else {
+      return (
+        <Card sx={{ width: "100%", mb: 4, p: 2 }}>
+          <CardContent>
+            <Typography variant="h5" sx={{ mb: 1 }}>
+              Plus moyen de créer un comitard! Les enchères sont terminées
+            </Typography>
+          </CardContent>
+        </Card>
+      );
+    }
+  }
+
+  // in time
+  // comitards left
+  // before enchere
+  // between enchere
+  // no comitards left
+  // not in time
+
+  //getNbComitard();
   return (
     <>
       <Stack
@@ -56,19 +163,7 @@ export default function Account({ data, refetchData }: AccountProps) {
           Bonjour, bienvenue {user && user?.displayName} 👋
         </Typography>
       </Stack>
-
-      {new Date().getTime() < data?.data().stop.toDate().getTime() ? (
-        <NewComitard data={data} admin={false} refetchData={refetchData} />
-      ) : (
-        <Card sx={{ width: "100%", mb: 4, p: 2 }}>
-          <CardContent>
-            <Typography variant="h5" sx={{ mb: 1 }}>
-              Plus moyen de créer un comitard!
-            </Typography>
-          </CardContent>
-        </Card>
-      )}
-
+      {element()}
       <Card sx={{ width: "100%", mb: 4, p: 2 }}>
         <CardContent>
           <Typography variant="h5" sx={{ mb: 1 }}>

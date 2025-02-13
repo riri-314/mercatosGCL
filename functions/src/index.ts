@@ -808,6 +808,8 @@ exports.addcomitard = onCall(async (request) => {
   }
   //admin = false //DEBUG
 
+  //check if cercle has not reached to maximum of comitards
+
   let cercle = context_auth.uid;
   console.log("campus: ", data.campus)
   // Check if the request contains the required data
