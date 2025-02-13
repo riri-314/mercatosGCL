@@ -2,30 +2,21 @@ import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import Card from "@mui/material/Card";
 
-import {
-  Accordion,
-  AccordionDetails,
-  AccordionSummary,
-  CardContent,
-  Modal,
-  Alert,
-  Theme,
-} from "@mui/material";
+import { CardContent, Modal, Alert } from "@mui/material";
 import { useAuth } from "../../auth/AuthProvider";
 
 import { DocumentData } from "@firebase/firestore";
 import NewComitard from "../admin-account/new_comitard";
 import ComitardTable from "../admin-account/comitard_table.tsx";
-import Container from "@mui/material/Container";
 import { getAuth, sendPasswordResetEmail } from "@firebase/auth";
 import { LoadingButton } from "@mui/lab";
 import Box from "@mui/material/Box";
 
 import { useState } from "react";
 import EditComitard from "../admin-account/edit_comitard";
-import Iconify from "../../components/iconify/iconify.tsx";
 import { httpsCallable } from "@firebase/functions";
 import { functions } from "../../firebase_config.ts";
+import EncheresTable from "../admin-account/enchere_table.tsx";
 
 interface AccountProps {
   data: DocumentData;
@@ -98,7 +89,7 @@ export default function Account({ data, refetchData }: AccountProps) {
                 déja commencées depuis le{" "}
                 {data?.data().start.toDate().toLocaleString()}
                 <br />
-                il vous reste jusqu'a {getNbComitard()[1]}  comitards à créer
+                il vous reste jusqu'a {getNbComitard()[1]} comitards à créer
               </Alert>
               <NewComitard
                 data={data}
@@ -124,7 +115,8 @@ export default function Account({ data, refetchData }: AccountProps) {
           <Card sx={{ width: "100%", mb: 4, p: 2 }}>
             <CardContent>
               <Typography variant="h5" sx={{ mb: 1 }}>
-                Pas moyen de créer un comitard! Erreur: {String(getNbComitard()[3])} 
+                Pas moyen de créer un comitard! Erreur:{" "}
+                {String(getNbComitard()[3])}
               </Typography>
             </CardContent>
           </Card>
@@ -210,31 +202,20 @@ export default function Account({ data, refetchData }: AccountProps) {
         />
       </Modal>
 
-      <Card sx={{ width: "100%", mb: 4 }}>
+      <Card sx={{ width: "100%", mb: 4, p: 2 }}>
         <CardContent>
-          <Accordion>
-            <AccordionSummary
-              expandIcon={
-                <Iconify
-                  width={40}
-                  icon="solar:double-alt-arrow-down-bold-duotone"
-                  sx={{
-                    color: (theme: Theme) => `${theme.palette.primary.main}`,
-                  }}
-                  fallback={<span>↓</span>}
-                />
-              }
-            >
-              <Typography variant="h5">Enchères posées</Typography>
-            </AccordionSummary>
-            <AccordionDetails>
-              <Container>
-                <Typography variant="h6" align="center">
-                  Coming soon !
-                </Typography>
-              </Container>
-            </AccordionDetails>
-          </Accordion>
+          <Typography variant="h5" sx={{ mb: 1 }}>
+            Mes enchère
+          </Typography>
+          <EncheresTable
+            data={data}
+            admin={false}
+            refetchData={refetchData}
+            error={(error) => console.log("error: ", error)}
+            handleOpenModalEnchere={(data: any) => {
+              console.log("data open modale: ", data);
+            }}
+          />
         </CardContent>
       </Card>
 
