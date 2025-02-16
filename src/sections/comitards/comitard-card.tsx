@@ -169,6 +169,24 @@ export default function ComitardCard({
     }
   }
 
+  function campus(cmp: number): string {
+    if (product.campus) {
+      if (cmp == 1) {
+        return "Possible 👌";
+      } else if (cmp == 2) {
+        return "Pas possible 👎";
+      } else if (cmp == 3) {
+        return "Bouillant mort! 🔥";
+      } else if (cmp == 4) {
+        return "Pas du tout possible 🙅";
+      } else {
+        return "Non renseigné";
+      }
+    } else {
+      return "Non renseigné";
+    }
+  }
+
   // console.log("product: ", product.name, "maxEnchere: ", minEnchere())
 
   // function to display the time left of the enchère
@@ -213,7 +231,12 @@ export default function ComitardCard({
       vote <= nbFutsLeft
     ) {
       const Vote = httpsCallable(functions, "vote");
-      Vote({ vote: vote, comitardId: comitardId, editionId: editionId, clientTime: new Date() })
+      Vote({
+        vote: vote,
+        comitardId: comitardId,
+        editionId: editionId,
+        clientTime: new Date(),
+      })
         .then((result) => {
           // Read result of the Cloud Function.
           /** @type {any} */
@@ -443,7 +466,13 @@ export default function ComitardCard({
                   <strong>Maison d'appartenance </strong>:{" "}
                   {cerclesData[cercleId].name}
                   <br />
-                  <strong>Teneur en taule</strong> : {product.teneurTaule}
+                  <strong>Teneur en taule</strong> : {" "}
+                  {Array.from({ length: product.teneurTaule }, (_, i) => (
+                    <span key={i}>🍺</span>
+                  ))}
+                  {Array.from({ length: 10-product.teneurTaule }, (_, i) => (
+                    <span key={i} style={{ filter: "grayscale(100%)" }}>🍺</span>
+                  ))}
                   <br />
                   <strong>État civil</strong> : {product.etatCivil}
                   <br />
@@ -451,7 +480,7 @@ export default function ComitardCard({
                   <br />
                   <strong>Nombre d'étoiles</strong> :{" "}
                   {Array.from({ length: product.nbEtoiles }, (_, i) => (
-                    <span key={i}>★</span>
+                    <span key={i}>⭐</span>
                   ))}
                   <br />
                   <strong>Point fort</strong> : {product.pointFort}
@@ -459,6 +488,9 @@ export default function ComitardCard({
                   <strong>Point faible </strong>: {product.pointFaible}
                   <br />
                   <strong>Est le seul</strong> : {product.estLeSeul}
+                  <br />
+                  <strong>Chaud changer campus</strong> :{" "}
+                  {campus(product.campus)}
                 </Typography>
                 {displayVote && isInTimeFrame && (
                   <Stack

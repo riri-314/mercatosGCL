@@ -81,7 +81,7 @@ interface QuantityInputProps {
       | React.FocusEvent<HTMLInputElement>
       | React.PointerEvent
       | React.KeyboardEvent,
-    val: number | undefined
+    val: any
   ) => void;
 }
 

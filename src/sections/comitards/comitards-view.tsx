@@ -26,7 +26,6 @@ export default function ComitardsView() {
   const { data, refetchData } = useData();
   const [isInTimeFrame, setIsInTimeFrame] = useState(false);
 
-
   useEffect(() => {
     isInTimeFrameFN();
     const interval = setInterval(() => {
@@ -89,7 +88,6 @@ export default function ComitardsView() {
     }
   }
 
-
   function getCerclesDataWithNames(cerclesData: any): any {
     const cerclesWithNames: any = {};
 
@@ -102,7 +100,7 @@ export default function ComitardsView() {
 
   return (
     <Container>
-      <DataRefresh/>
+      <DataRefresh />
       {data ? (
         Object.keys(data.data().cercles)
           .sort((a, b) =>
@@ -134,11 +132,17 @@ export default function ComitardsView() {
                   <AccordionDetails>
                     {(!data.data().cercles[cercleId].comitards ||
                       Object.keys(data.data().cercles[cercleId].comitards)
-                        .length == 0) && (
-                      <Box sx={{ mb: 4, mt: -4, ml: 3 }}>
-                        Aucun comitard n'a pu participer, snif 😥
-                      </Box>
-                    )}
+                        .length == 0) &&
+                      (isInTimeFrame ? (
+                        <Box sx={{ mb: 4, mt: -4, ml: 3 }}>
+                          Aucun comitard n'a pu participer, snif 😥
+                        </Box>
+                      ) : (
+                        <Box sx={{ mb: 4, mt: -4, ml: 3 }}>
+                          Aucun comitard {data.data().cercles[cercleId].name}{" "}
+                          pour le moment ⌛
+                        </Box>
+                      ))}
                     <Grid container spacing={3}>
                       {data.data().cercles[cercleId].comitards &&
                         Object.keys(data.data().cercles[cercleId].comitards)
@@ -187,9 +191,16 @@ export default function ComitardsView() {
                   {(!data.data().cercles[cercleId].comitards ||
                     Object.keys(data.data().cercles[cercleId].comitards)
                       .length == 0) && (
-                    <Box sx={{ m: 3 }}>
-                      Aucun comitard n'a pu participer, snif 😥
-                    </Box>
+                        (isInTimeFrame ? (
+                          <Box sx={{ mb: 4, mt: -4, ml: 3 }}>
+                            Aucun comitard n'a pu participer, snif 😥
+                          </Box>
+                        ) : (
+                          <Box sx={{ mb: 4, mt: -4, ml: 3 }}>
+                            Aucun comitard {data.data().cercles[cercleId].name}{" "}
+                            pour le moment ⌛
+                          </Box>
+                        ))
                   )}
                   <Grid container spacing={3}>
                     {data.data().cercles[cercleId].comitards &&

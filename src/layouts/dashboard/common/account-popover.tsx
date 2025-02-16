@@ -23,6 +23,32 @@ export default function AccountPopover() {
 
   const { data } = useData();
 
+  function displayName(): string {
+    if (isAdmin()) {
+      return "Admin Sigma Boy 🗿";
+    }
+    if (user?.displayName) {
+      return user.displayName;
+    } else {
+      return "Pas de nom fourni";
+    }
+  }
+
+  function picture(): string {
+    if (isAdmin()) {
+      return "assets/images/sigma.jpeg";
+    }
+    if (user?.displayName) {
+      return (
+        "assets/images/logos_cercles/" +
+        user?.displayName.toLowerCase() +
+        ".svg"
+      );
+    } else {
+      return "assets/images/transparent.png";
+    }
+  }
+
   function nbFutsLeft(): number {
     const nbFuts = user?.uid && data?.data()?.cercles[user.uid]?.nbFut;
     return nbFuts ?? 0;
@@ -50,11 +76,9 @@ export default function AccountPopover() {
 
   return (
     <>
-      {!isAdmin() && (
-        <StyledTypography variant="subtitle1">
-          Fûts restants : {nbFutsLeft()}
-        </StyledTypography>
-      )}
+      <StyledTypography variant="subtitle1">
+        {isAdmin()? "" : ("Fûts restants :"+ nbFutsLeft())}
+      </StyledTypography>
       <IconButton
         onClick={handleOpen}
         sx={{
@@ -76,13 +100,7 @@ export default function AccountPopover() {
         }}
       >
         <Avatar
-          src={
-            user?.displayName
-              ? "assets/images/logos_cercles/" +
-                user?.displayName.toLowerCase() +
-                ".svg"
-              : (isAdmin() ? "assets/images/admin_profile_picture.svg" : "assets/images/default_profile_picture.svg")
-          }
+          src={picture()}
           imgProps={{
             sx: {
               objectFit: "scale-down",
@@ -115,7 +133,7 @@ export default function AccountPopover() {
       >
         <Box sx={{ my: 1.5, px: 2 }}>
           <Typography variant="subtitle2" noWrap>
-            {user?.displayName ? user.displayName : (isAdmin() ? "Admin" : "Pas de nom fourni")}
+            {displayName()}
           </Typography>
           <Typography variant="body2" sx={{ color: "text.secondary" }} noWrap>
             {user?.email ? user.email : ""}

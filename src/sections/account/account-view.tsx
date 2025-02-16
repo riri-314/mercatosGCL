@@ -38,7 +38,12 @@ export default function Account({ data, refetchData }: AccountProps) {
   const [errorComitardEdit, setErrorComitardEdit] = useState("");
   const [openModalComitard, setOpenModalComitard] = useState(false);
   const [modalComitardData, setModalComitardData] = useState<any | null>(null);
-
+  console.log("now: ", new Date().getTime());
+  console.log("stop: ", data?.data().stop.toDate().getTime());
+  console.log(
+    "test: ",
+    new Date().getTime() < data?.data().stop.toDate().getTime()
+  );
   return (
     <>
       <Stack
@@ -52,7 +57,7 @@ export default function Account({ data, refetchData }: AccountProps) {
         </Typography>
       </Stack>
 
-      {new Date().getTime() < data?.data().stop ? (
+      {new Date().getTime() < data?.data().stop.toDate().getTime() ? (
         <NewComitard data={data} admin={false} refetchData={refetchData} />
       ) : (
         <Card sx={{ width: "100%", mb: 4, p: 2 }}>

@@ -588,7 +588,7 @@ exports.rembour = onCall(async (_request) => {
 //  });
 
 //new V2 function
-exports.taskrunner = onSchedule("*/10 * * * *", async (_event) => {
+exports.taskrunner = onSchedule("*/10 * * * *", async (_event: any) => {
   // Consistent timestamp
   await remboursement();
 });
@@ -788,6 +788,7 @@ exports.addcomitard = onCall(async (request) => {
     ); // return error if not connected
   } else {
     admin = await getAdminUid(context_auth.uid);
+    //admin = true; //DEBUG
     if (!activeEditionCercle[context_auth.uid] && !admin) {
       throw new HttpsError(
         "permission-denied",
@@ -795,17 +796,20 @@ exports.addcomitard = onCall(async (request) => {
       ); // return error if not admin or not a active cercle
     }
   }
-
   // add check that edition is not finished, admin can do whatever the fuck he wants
 
   const stop = activeEditionData.data()?.stop;
   const now = test.Timestamp.now();
-  if ((stop && now > stop) || !admin) {
+  //console.log("Now: ", now)
+  //console.log("stop: ", stop)
+  //console.log("test now stop: ", (stop && now > stop))
+  if ((stop && now > stop) && !admin) {
     throw new HttpsError("unavailable", "Edition is finished");
   }
+  //admin = false //DEBUG
 
   let cercle = context_auth.uid;
-
+  console.log("campus: ", data.campus)
   // Check if the request contains the required data
   if (
     data.name === undefined ||
@@ -842,8 +846,12 @@ exports.addcomitard = onCall(async (request) => {
     data.estLeSeul.length == 0 ||
     data.estLeSeul.length > txtlenght2 ||
     data.picture === undefined ||
-    data.picture.length == 0
+    data.picture.length == 0 ||
+    data.campus === undefined ||
+    data.campus.length == 0 ||
+    ![1, 2, 3, 4].includes(data.campus)
   ) {
+    console.log("missing data");
     throw new HttpsError("invalid-argument", "Missing data!");
   }
   if (admin) {
@@ -875,6 +883,7 @@ exports.addcomitard = onCall(async (request) => {
         pointFaible: data.pointFaible,
         estLeSeul: data.estLeSeul,
         picture: data.picture,
+        campus: data.campus,
       },
     })
     .catch((error: any) => {
