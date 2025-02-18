@@ -25,8 +25,8 @@ import CercleTable from "./cercle_table";
 import EditCerle from "./edit_cercle";
 import ComitardTable from "./comitard_table";
 import EditComitard from "./edit_comitard";
-import Container from "@mui/material/Container";
 import Iconify from "../../components/iconify/iconify.tsx";
+import EncheresTable from "./enchere_table.tsx";
 
 interface AdminAccountProps {
   data: DocumentData[];
@@ -240,33 +240,26 @@ export default function AdminAccount({
         />
       </Modal>
 
-      <Card sx={{ width: "100%", mb: 4 }}>
+      <Card sx={{ width: "100%", mb: 4, p: 2 }}>
         <CardContent>
-          <Accordion>
-            <AccordionSummary
-              expandIcon={
-                <Iconify
-                  width={40}
-                  icon="solar:double-alt-arrow-down-bold-duotone"
-                  sx={{
-                    color: (theme: Theme) => `${theme.palette.primary.main}`,
-                  }}
-                  fallback={<span>↓</span>}
-                />
-              }
-            >
-              <Typography variant="h5">
-                Modifier/Supprimer des enchères
-              </Typography>
-            </AccordionSummary>
-            <AccordionDetails>
-              <Container>
-                <Typography variant="h6" align="center">
-                  Coming soon !
-                </Typography>
-              </Container>
-            </AccordionDetails>
-          </Accordion>
+          <Typography variant="h5" sx={{ mb: 1 }}>
+            Éditer, supprimer enchère
+          </Typography>
+          <EncheresTable
+            data={activeData}
+            admin={true}
+            refetchData={refetchData}
+            error={(error) => setErrorCercleEdit(error)}
+            handleOpenModalEnchere={(data: any) => {
+              setOpenModalCercle(true);
+              setModalCercleData(data);
+            }}
+          />
+          {errorCercleEdit && (
+            <Alert sx={{ mt: 3 }} severity={"error"}>
+              {errorCercleEdit}
+            </Alert>
+          )}
         </CardContent>
       </Card>
 
