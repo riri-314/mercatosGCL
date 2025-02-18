@@ -2,7 +2,15 @@ import { Card, CardHeader, CardContent } from "@mui/material";
 import { DataGrid } from "@mui/x-data-grid";
 import { frFR } from "@mui/x-data-grid";
 
-const ResultGrid = ({ title, rows, columns }) => {
+import { GridColDef, GridRowsProp } from "@mui/x-data-grid";
+
+interface ResultGridProps {
+    title: string;
+    rows: GridRowsProp;
+    columns: GridColDef[];
+}
+
+const ResultGrid = ({ title, rows, columns }: ResultGridProps) => {
     return (
         <Card>
             <CardHeader title={title} />
