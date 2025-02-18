@@ -1,12 +1,10 @@
-import {Helmet} from "react-helmet-async";
 import Grid from "@mui/material/Unstable_Grid2";
-import Container from "@mui/material/Container";
 import {useData} from "../data/DataProvider.tsx";
-import {CardContent, CardHeader, Theme, Typography} from "@mui/material";
+import {CardContent, CardHeader, Theme } from "@mui/material";
 import Box from "@mui/material/Box";
 import Card from "@mui/material/Card";
 import {Timestamp} from "@firebase/firestore";
-import {useState, useEffect} from "react";
+import {useState } from "react";
 import Avatar from "@mui/material/Avatar";
 import Iconify from "../components/iconify/iconify.tsx";
 import Label from "../components/label/label.tsx";
@@ -15,7 +13,6 @@ import {LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, LabelList} 
 
 
 import {useTheme} from "@mui/material/styles";
-import {LoadingButton} from "@mui/lab";
 
 import Tab from '@mui/material/Tab';
 import TabContext from '@mui/lab/TabContext';
@@ -66,8 +63,9 @@ interface ComitardResultCardProps {
 const ComitardResultCard = ({comitard}: ComitardResultCardProps) => {
     const theme: Theme = useTheme();
     const [timeOrDate, setTimeOrDate] = useState(true);
-    const isClosed = comitard.enchereStop?.toMillis() < Date.now();
-    console.log(comitard)
+    //const isClosed = comitard.enchereStop?.toMillis() < Date.now();
+    const isClosed = (comitard.enchereStop?.toMillis() ?? Infinity) < Date.now();
+    //console.log(comitard)
 
 
     // Format the last vote
@@ -247,8 +245,10 @@ export default function ResultsPage() {
             if (comitard.enchereStop) {
                 const enchereArray: Enchere[] = [];
                 const enchereData = comitard.encheres;
+                //const enchereData: { [key: string]: Enchere } = comitard.encheres;
+
                 if (enchereData && typeof enchereData === 'object') {
-                    Object.keys(enchereData).forEach((enchereID: string) => {
+                    Object.keys(enchereData).forEach((enchereID: any) => {
                         // build correct Enchere object
                         const enchere: Enchere = {
                             date: enchereData[enchereID].date,
@@ -275,7 +275,7 @@ export default function ResultsPage() {
 
     const [value, setValue] = useState('1');
 
-    const handleChange = (event: React.SyntheticEvent, newValue: string) => {
+    const handleChange = (_event: React.SyntheticEvent, newValue: string) => {
         setValue(newValue);
     };
 
@@ -295,7 +295,7 @@ export default function ResultsPage() {
                     <Grid container spacing={2}>
                         {/* for each Comitard in runningComitards */}
                         {runningComitards.map((comitard) => (
-                            <Grid item xl={3} md={4} sm={6} xs={12}>
+                            <Grid xl={3} md={4} sm={6} xs={12}>
                                 <ComitardResultCard comitard={comitard}/>
                             </Grid>
                         ))}
@@ -305,7 +305,7 @@ export default function ResultsPage() {
                     <Grid container spacing={2}>
                     {/* for each Comitard in runningComitards */}
                     {closedComitards.map((comitard) => (
-                        <Grid item xl={3} md={4} sm={6} xs={12}>
+                        <Grid xl={3} md={4} sm={6} xs={12}>
                             <ComitardResultCard comitard={comitard}/>
                         </Grid>
                     ))}
