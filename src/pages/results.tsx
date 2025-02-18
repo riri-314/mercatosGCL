@@ -63,7 +63,6 @@ interface ComitardResultCardProps {
 const ComitardResultCard = ({comitard}: ComitardResultCardProps) => {
     const theme: Theme = useTheme();
     const [timeOrDate, setTimeOrDate] = useState(true);
-    //const isClosed = comitard.enchereStop?.toMillis() < Date.now();
     const isClosed = (comitard.enchereStop?.toMillis() ?? Infinity) < Date.now();
     //console.log(comitard)
 
@@ -272,6 +271,8 @@ export default function ResultsPage() {
         });
     });
 
+    runningComitards.sort((a, b) => (a.enchereStop?.toMillis() ?? Infinity) - (b.enchereStop?.toMillis() ?? Infinity));
+    closedComitards.sort((a, b) => (b.enchereStop?.toMillis() ?? Infinity) - (a.enchereStop?.toMillis() ?? Infinity));
 
     const [value, setValue] = useState('1');
 
@@ -293,7 +294,6 @@ export default function ResultsPage() {
                         Il est possible de voir la date de fin de l'enchère ou le temps restant en cliquant sur l'étiquette orange
                     </Alert>
                     <Grid container spacing={2}>
-                        {/* for each Comitard in runningComitards */}
                         {runningComitards.map((comitard) => (
                             <Grid xl={3} md={4} sm={6} xs={12}>
                                 <ComitardResultCard comitard={comitard}/>
@@ -303,7 +303,6 @@ export default function ResultsPage() {
                 </TabPanel>
                 <TabPanel value="2">
                     <Grid container spacing={2}>
-                    {/* for each Comitard in runningComitards */}
                     {closedComitards.map((comitard) => (
                         <Grid xl={3} md={4} sm={6} xs={12}>
                             <ComitardResultCard comitard={comitard}/>
