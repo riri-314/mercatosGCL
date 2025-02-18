@@ -103,23 +103,23 @@ export default function ComitardCard({
   // only for logged in users
   // also update the time left of the enchère
   function displayVoteFn(): void {
-    if (!user || user.uid === cercleId) {
+    if (!user || user.uid === cercleId) { // only vote for a comitard not in the same cercle
       setDisplayVote(false);
       return;
     }
 
-    if (isAdmin()) {
-      setDisplayVote(true);
+    if (isAdmin()) { // admin has no vote
+      setDisplayVote(false);
       return;
     }
 
-    if (nbFutsLeft <= 0 || nbFutsLeft < enchereMin) {
+    if (nbFutsLeft <= 0 || nbFutsLeft < enchereMin) { // enough futs
       //console.log("Number of futs left: ", nbFutsLeft);
       setDisplayVote(false);
       return;
     }
 
-    if (product.enchereStart && product.enchereStop) {
+    if (product.enchereStart && product.enchereStop) { // enchere is in timeframe
       const now = new Date().getTime();
       const enchereStart = product.enchereStart.toMillis();
       const enchereStop = product.enchereStop.toMillis();
