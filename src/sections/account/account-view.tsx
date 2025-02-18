@@ -46,7 +46,7 @@ export default function Account({ data, refetchData }: AccountProps) {
         ).length;
         const maxComitards = data?.data().nbComitard;
         const nbComitardsLeft = maxComitards - nbComitard;
-        if (nbComitardsLeft < 0) {
+        if (nbComitardsLeft <= 0) {
           return [true, 0, false, ""];
         } else {
           return [true, nbComitardsLeft, true, ""];

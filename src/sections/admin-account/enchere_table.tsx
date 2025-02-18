@@ -111,7 +111,7 @@ export default function EncheresTable({
     });
   }
 
-  console.log("enchereDataArray: ", enchereDataArray);
+  //console.log("enchereDataArray: ", enchereDataArray);
 
   async function handleClick(comitardUid: string, cercleUid: string) {
     setLoading(true);
@@ -177,7 +177,7 @@ export default function EncheresTable({
     },
   ];
 
-  if (admin) {
+  if (false) {
     columns.push(
       {
         field: "actions",
