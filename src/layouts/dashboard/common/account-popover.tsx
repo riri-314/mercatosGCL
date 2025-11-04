@@ -77,7 +77,7 @@ export default function AccountPopover() {
   return (
     <>
       <StyledTypography variant="subtitle1">
-        {isAdmin()? "" : ("Fûts restants :"+ nbFutsLeft())}
+        {isAdmin()? "" : ("Fûts restants : "+ nbFutsLeft())}
       </StyledTypography>
       <IconButton
         onClick={handleOpen}

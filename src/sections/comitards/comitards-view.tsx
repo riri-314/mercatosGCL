@@ -28,6 +28,7 @@ export default function ComitardsView() {
 
   useEffect(() => {
     isInTimeFrameFN();
+    // new function that only execute when data change, check if is admin, number of futs left and if enchere is in progress
     const interval = setInterval(() => {
       isInTimeFrameFN();
     }, 1000); // Update every second
@@ -190,18 +191,17 @@ export default function ComitardsView() {
                   </Typography>
                   {(!data.data().cercles[cercleId].comitards ||
                     Object.keys(data.data().cercles[cercleId].comitards)
-                      .length == 0) && (
-                        (isInTimeFrame ? (
-                          <Box sx={{ mb: 4, mt: -4, ml: 3 }}>
-                            Aucun comitard n'a pu participer, snif 😥
-                          </Box>
-                        ) : (
-                          <Box sx={{ mb: 4, mt: -4, ml: 3 }}>
-                            Aucun comitard {data.data().cercles[cercleId].name}{" "}
-                            pour le moment ⌛
-                          </Box>
-                        ))
-                  )}
+                      .length == 0) &&
+                    (isInTimeFrame ? (
+                      <Box sx={{ mb: 4, mt: -4, ml: 3 }}>
+                        Aucun comitard n'a pu participer, snif 😥
+                      </Box>
+                    ) : (
+                      <Box sx={{ mb: 4, mt: -4, ml: 3 }}>
+                        Aucun comitard {data.data().cercles[cercleId].name} pour
+                        le moment ⌛
+                      </Box>
+                    ))}
                   <Grid container spacing={3}>
                     {data.data().cercles[cercleId].comitards &&
                       Object.keys(data.data().cercles[cercleId].comitards)
