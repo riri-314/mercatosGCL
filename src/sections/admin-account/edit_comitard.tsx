@@ -31,11 +31,14 @@ interface EditComitardProps {
   refetchData: () => void;
 }
 
-function getCercleIdByComitardId(activeData: DocumentData, comitardId: string): string | undefined {
+function getCercleIdByComitardId(
+  activeData: DocumentData,
+  comitardId: string
+): string | undefined {
   for (const [cercleId, cercle] of Object.entries(activeData.data().cercles)) {
-      if ((cercle as any).comitards && comitardId in (cercle as any).comitards) {
-          return cercleId;
-      }
+    if ((cercle as any).comitards && comitardId in (cercle as any).comitards) {
+      return cercleId;
+    }
   }
   return undefined; // Return undefined if the comitard ID is not found
 }
@@ -71,6 +74,8 @@ export default function EditComitard({
   const [pointFaibleError, setPointFaibleError] = useState(false);
   const [estLeSeul, setEstLeSeul] = useState(ComitardData.estLeSeul);
   const [estLeSeulError, setEstLeSeulError] = useState(false);
+  const [campus, setCampus] = useState(ComitardData.campus);
+  const [campusError, setCampusError] = useState(false);
   const [picture, setPicture] = useState(ComitardData.picture);
   const [pictureUpdated, setPictureUpdated] = useState(false);
   const [pictureError, setPictureError] = useState(false);
@@ -82,6 +87,13 @@ export default function EditComitard({
     "error"
   );
   const [loading, setLoading] = useState(false);
+
+  const changerCampus = {
+    Possible: 1,
+    "Pas possible": 2,
+    "Bouillant mort!": 3,
+    "Pas du tout possible": 4,
+  };
 
   const { user } = useAuth();
 
@@ -203,7 +215,10 @@ export default function EditComitard({
             return;
           }
         }
-        const storageRef = ref(storage, `${activeData.id}/${cerlcleUID}/${uuidv4()}`);
+        const storageRef = ref(
+          storage,
+          `${activeData.id}/${cerlcleUID}/${uuidv4()}`
+        );
 
         const uploadTask = uploadBytesResumable(
           storageRef,
@@ -257,6 +272,7 @@ export default function EditComitard({
                   pointFort: pointFort,
                   pointFaible: pointFaible,
                   estLeSeul: estLeSeul,
+                  campus: campus,
                   picture: downloadURL,
                 };
                 // call another cloud function to update the doc
@@ -312,6 +328,7 @@ export default function EditComitard({
           pointFort: pointFort,
           pointFaible: pointFaible,
           estLeSeul: estLeSeul,
+          campus: campus,
           picture: picture,
         };
         // call another cloud function to update the doc
@@ -609,10 +626,20 @@ export default function EditComitard({
                 {txtlenght2}
               </FormHelperText>
             </Grid>
-
+            <Grid item xs={12} sm={6}>
+              <UnstyledSelectIntroduction
+                defaultValue={campus}
+                isError={campusError}
+                option={changerCampus}
+                helpText={"Chaud changer de campus?"}
+                change={(_event: any, val: any) => {
+                  console.log("campus changed to ", val);
+                  setCampus(val);
+                  setCampusError(false);
+                }}
+              />
+            </Grid>
             <Divider />
-
-       
 
             {pictureUpdated ? (
               <Grid item xs={12} sm={12}>

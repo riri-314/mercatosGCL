@@ -688,6 +688,9 @@ exports.editcomitard = onCall(async (request) => {
     data.pointFaible?.length > txtlenght2 ||
     data.estLeSeul?.length == 0 ||
     data.estLeSeul?.length > txtlenght2 ||
+    data.campus === undefined ||
+    data.campus.length == 0 ||
+    ![1, 2, 3, 4].includes(data.campus)||
     data.picture === undefined ||
     data.picture.length == 0
   ) {
@@ -742,6 +745,9 @@ exports.editcomitard = onCall(async (request) => {
   }
   if (data.estLeSeul) {
     updateData[`${s}.estLeSeul`] = data.estLeSeul;
+  }
+  if (data.campus) {
+    updateData[`${s}.campus`] = data.campus;
   }
   if (data.picture) {
     updateData[`${s}.picture`] = data.picture;
