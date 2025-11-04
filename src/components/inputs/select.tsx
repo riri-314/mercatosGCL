@@ -163,7 +163,6 @@ const Option = styled(BaseOption)(
   padding: 8px;
   border-radius: 8px;
   cursor: default;
-
   &:last-of-type {
     border-bottom: none;
   }
@@ -198,6 +197,10 @@ const Option = styled(BaseOption)(
   `
 );
 
-const Popper = styled(BasePopper)`
-  z-index: 1500; 
+const PopperRoot = React.forwardRef(function PopperRoot(props: any, ref: React.ForwardedRef<any>) {
+  return <BasePopper keepMounted disablePortal={false} {...props} ref={ref} />;
+});
+
+const Popper = styled(PopperRoot)`
+  z-index: 2000 !important;
 `;
