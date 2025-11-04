@@ -8,10 +8,9 @@ import {
   GridToolbar,
 } from "@mui/x-data-grid";
 import Iconify from "../../components/iconify/iconify";
-import { doc, DocumentData, updateDoc } from "@firebase/firestore";
+import { DocumentData } from "@firebase/firestore";
 import { LoadingButton } from "@mui/lab";
 import { useState } from "react";
-import { db } from "../../firebase_config";
 import WarningModal from "../../components/modal/warning_modal";
 import { Avatar } from "@mui/material";
 import { useAuth } from "../../auth/AuthProvider";
@@ -20,7 +19,6 @@ interface enchereTableProps {
   data: DocumentData;
   admin: boolean;
   refetchData: () => void;
-  error: (error: string) => void;
   handleOpenModalEnchere: (id: number) => void;
 }
 
@@ -28,12 +26,13 @@ export default function EncheresTable({
   data,
   admin,
   refetchData,
-  error,
   handleOpenModalEnchere,
 }: enchereTableProps) {
   const [loading, setLoading] = useState<boolean>(false);
   const [openModal, setOpenModal] = useState<boolean>(false);
-  const [modalData, setModalData] = useState<any | null>([]);
+  const [modalData, setModalData] = useState<any | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState<boolean>(false);
   const { user } = useAuth();
 
   const enchereDataArray: any[] = [];
@@ -113,26 +112,22 @@ export default function EncheresTable({
 
   //console.log("enchereDataArray: ", enchereDataArray);
 
-  async function handleClick(comitardUid: string, cercleUid: string) {
+  async function handleClick(enchereUid: string) {
     setLoading(true);
+    setError(null);
+    setDone(false);
     try {
-      const docRef = doc(db, "editions", data.id);
-
-      const cercles = data.data()?.cercles;
-      if (cercles && cercles[cercleUid]) {
-        delete cercles[cercleUid].comitards[comitardUid];
-        await updateDoc(docRef, { cercles });
-      }
-      setLoading(false);
-      refetchData();
-
-      setOpenModal(false);
+      // call cloud function to delete enchere
+      setTimeout(() => {
+        setLoading(false);
+        refetchData();
+        setDone(true);
+      }, 2000);
+      console.log("Deleting enchere: ", enchereUid);
     } catch (errorMessage) {
-      error("Error while deleting comitard");
       setLoading(false);
-      setOpenModal(false);
-
-      console.error("Error deleting comitard:", error);
+      setError(`Error while deleting enchere: ${errorMessage}`);
+      console.error("Error deleting enchere:", error);
     }
   }
 
@@ -169,6 +164,44 @@ export default function EncheresTable({
       editable: false,
     },
     {
+      field: "date",
+      headerName: "Date",
+      type: "dateTime",
+      minWidth: 180,
+      editable: false,
+      valueGetter: (params) => {
+        const value = params.value;
+        if (!value) return null;
+
+        // Firestore Timestamp object
+        if (typeof value.toDate === "function") {
+          return value.toDate();
+        }
+
+        // Serialized Firestore timestamp object
+        if (value.seconds) {
+          return new Date(value.seconds * 1000);
+        }
+
+        // Fallback for ISO strings or other formats
+        return new Date(value);
+      },
+      valueFormatter: (params) => {
+        const date = params.value;
+        if (!date) return "";
+        return date.toLocaleString(undefined, {
+          year: "numeric",
+          month: "short",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+          hour12: false, // set true if you want 12-hour AM/PM format
+        });
+      },
+    },
+
+    {
       field: "amount",
       headerName: "Montant",
       type: "number",
@@ -177,7 +210,7 @@ export default function EncheresTable({
     },
   ];
 
-  if (false) {
+  if (admin) {
     columns.push(
       {
         field: "actions",
@@ -209,11 +242,7 @@ export default function EncheresTable({
             color="error"
             onClick={() => {
               setOpenModal(true);
-              setModalData([
-                params.row.id,
-                params.row.cercleId,
-                "Êtes-vous sûr de vouloir supprimer ce comitard? Cela va supprimer le comitard et toutes les données associées. Cette action est irreversible et dangeureuse.",
-              ]);
+              setModalData(params.row.id);
             }}
             variant="contained"
           >
@@ -243,12 +272,16 @@ export default function EncheresTable({
         />
       </Box>
       <WarningModal
+        done={done}
+        error={error}
         loading={loading}
         title="Attention!"
-        message={modalData[2]}
+        message={
+          "Êtes-vous sûr de vouloir supprimer cette enchère? Le cercle enchérisseur sera remboursé. Cette action est irreversible et dangeureuse."
+        }
         open={openModal}
         close={() => setOpenModal(false)}
-        onProceed={() => handleClick(modalData[0], modalData[1])}
+        onProceed={() => handleClick(modalData)}
       />
     </>
   );
