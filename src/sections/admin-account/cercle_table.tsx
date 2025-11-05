@@ -19,7 +19,6 @@ import WarningModal from "../../components/modal/warning_modal";
 interface CercleTableProps {
   data: DocumentData;
   refetchData: () => void;
-  error: (error: string) => void;
   handleOpenModalCercle: (id: number) => void;
 }
 
@@ -33,7 +32,6 @@ type StatusDict = { [key: string]: boolean };
 export default function CercleTable({
   data,
   refetchData,
-  error,
   handleOpenModalCercle,
 }: CercleTableProps) {
   const [loading, setLoading] = useState<boolean>(false);
@@ -41,6 +39,8 @@ export default function CercleTable({
   const [modalData, setModalData] = useState<any | null>([]);
   const [loadingStatus, setLoadingStatus] = useState<boolean>(true);
   const [statusDict, setStatusDict] = useState<StatusDict>({});
+  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState<boolean>(false);
 
   const fetchData = async () => {
     try {
@@ -93,6 +93,8 @@ export default function CercleTable({
   function handleClick(uid: string, functionName: string) {
     //delete th elogin of the user, not it's data
     setLoading(true);
+    setDone(false);
+    setError(null);
     const addMessage = httpsCallable(functions, functionName);
     addMessage({ uid: uid, editionId: data.id })
       .then((result) => {
@@ -101,13 +103,12 @@ export default function CercleTable({
         // refetch disabled status
         fetchData();
         setLoading(false);
-        setOpenModal(false);
+        setDone(true);
       })
       .catch((errorMessage) => {
         console.log("error:", errorMessage);
-        error("Error while deleting cercle");
         setLoading(false);
-        setOpenModal(false);
+        setError(`Error. Please try again later.${errorMessage}`);
       });
   }
 
@@ -222,6 +223,8 @@ export default function CercleTable({
         />
       </Box>
       <WarningModal
+        error={error}
+        done={done}
         loading={loading}
         title="Attention!"
         message={modalData[2]}

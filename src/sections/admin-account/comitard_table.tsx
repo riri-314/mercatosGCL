@@ -20,7 +20,6 @@ interface ComitardTableProps {
   data: DocumentData;
   admin: boolean;
   refetchData: () => void;
-  error: (error: string) => void;
   handleOpenModalComitard: (id: number) => void;
 }
 
@@ -28,12 +27,13 @@ export default function ComitardTable({
   data,
   admin,
   refetchData,
-  error,
   handleOpenModalComitard,
 }: ComitardTableProps) {
   const [loading, setLoading] = useState<boolean>(false);
   const [openModal, setOpenModal] = useState<boolean>(false);
   const [modalData, setModalData] = useState<any | null>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState<boolean>(false);
   const { user } = useAuth();
 
   const cercleDataArray: any[] = [];
@@ -66,6 +66,8 @@ export default function ComitardTable({
 
   async function handleClick(comitardUid: string, cercleUid: string) {
     setLoading(true);
+    setDone(false);
+    setError(null);
     try {
       const docRef = doc(db, "editions", data.id);
 
@@ -76,13 +78,10 @@ export default function ComitardTable({
       }
       setLoading(false);
       refetchData();
-
-      setOpenModal(false);
+      setDone(true);
     } catch (errorMessage) {
-      error("Error while deleting comitard");
+      setError(`Error while deleting comitard: ${errorMessage}`);
       setLoading(false);
-      setOpenModal(false);
-
       console.error("Error deleting comitard:", error);
     }
   }
@@ -243,6 +242,8 @@ export default function ComitardTable({
         />
       </Box>
       <WarningModal
+        error={error}
+        done={done}
         loading={loading}
         title="Attention!"
         message={modalData[2]}
