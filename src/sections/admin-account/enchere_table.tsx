@@ -126,7 +126,7 @@ export default function EncheresTable({
       console.log("Deleting enchere: ", enchereUid);
     } catch (errorMessage) {
       setLoading(false);
-      setError(`Error while deleting enchere: ${errorMessage}`);
+      setError(`Error while deleting enchere. See console for more info.`);
       console.error("Error deleting enchere:", error);
     }
   }

@@ -261,6 +261,7 @@ export default function AdminAccount({
         }}
       >
         <EditEnchere
+          data={activeData}
           enchereData={modalEnchereData}
           refetchData={refetchData}
           close={() => setOpenModalEnchere(false)}
