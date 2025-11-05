@@ -7,6 +7,7 @@ import {
   writeBatch,
   query,
   where,
+  DocumentData,
 } from "@firebase/firestore";
 import { auth, db, functions } from "../firebase_config";
 import { Dayjs } from "dayjs";
@@ -195,4 +196,45 @@ export async function editComitard(id: string, comitardID: string, data: Dict) {
 }
 
 
+export async function editEnchereAmount(
+  data: DocumentData,
+  enchereID: string,
+  amount: number
+) {
+  const editionId = data.id;
+  const activeEditionCercle = data.data().cercles;
 
+  let enchereFound = null;
+  let comitardIdFound = null;
+  let cercleIdFound = null;
+
+  Object.keys(activeEditionCercle).forEach(function (cercleId) {
+    const cercle = activeEditionCercle[cercleId];
+    Object.keys(cercle.comitards).forEach(function (comitardId) {
+      const comitard = cercle.comitards[comitardId];
+      const encheres = comitard.encheres || {};
+      Object.keys(encheres).forEach(function (enchereId) {
+        if (enchereId === enchereID) {
+          enchereFound = encheres[enchereId];
+          comitardIdFound = comitardId;
+          cercleIdFound = cercleId;
+        }
+      });
+    });
+  });
+
+  if (enchereFound === null) {
+    console.log("Error enchere not found")
+    return -1;
+  } else {
+    console.log("enchereFound: ", enchereFound);
+    // only update enchere amount
+    const s = `cercles.${cercleIdFound}.comitards.${comitardIdFound}.encheres.${enchereID}.vote`;
+    // update the document
+    const docRef = doc(db, "editions", editionId);
+    await updateDoc(docRef, {
+      [s]: amount,
+    });
+    return 0;
+  }
+}
