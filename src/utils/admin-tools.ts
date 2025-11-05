@@ -8,6 +8,7 @@ import {
   query,
   where,
   DocumentData,
+  increment,
 } from "@firebase/firestore";
 import { auth, db, functions } from "../firebase_config";
 import { Dayjs } from "dayjs";
@@ -197,6 +198,7 @@ export async function editComitard(id: string, comitardID: string, data: Dict) {
 
 
 export async function editEnchereAmount(
+  amountReemboursement: number,
   data: DocumentData,
   enchereID: string,
   amount: number
@@ -207,6 +209,7 @@ export async function editEnchereAmount(
   let enchereFound = null;
   let comitardIdFound = null;
   let cercleIdFound = null;
+  let senderId = null;
 
   Object.keys(activeEditionCercle).forEach(function (cercleId) {
     const cercle = activeEditionCercle[cercleId];
@@ -218,6 +221,7 @@ export async function editEnchereAmount(
           enchereFound = encheres[enchereId];
           comitardIdFound = comitardId;
           cercleIdFound = cercleId;
+          senderId = encheres[enchereId].sender;
         }
       });
     });
@@ -234,6 +238,13 @@ export async function editEnchereAmount(
     const docRef = doc(db, "editions", editionId);
     await updateDoc(docRef, {
       [s]: amount,
+    });
+
+    // increment fut amount of the enchere sender by amountReemboursement
+    console.log("Reimbursing cercle ", senderId, " by ", amountReemboursement);
+    const t = `cercles.${senderId}.nbFut`;
+    await updateDoc(docRef, {
+      [t]: increment(amountReemboursement),
     });
     return 0;
   }

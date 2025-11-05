@@ -30,8 +30,14 @@ export default function EditEnchere({
     setLoading(true);
     setError(null);
     setFinished(false);
+    let valueToReembourse = 0;
+    if (reemboursement === true) {
+      valueToReembourse = oldValue - value;
+    } else {
+      valueToReembourse = 0;
+    }
     try {
-      const ret = await editEnchereAmount(data, enchereData.id, value);
+      const ret = await editEnchereAmount(valueToReembourse, data, enchereData.id, value);
       if (ret !== 0) {
         setError("Error updating enchere.");
       }
