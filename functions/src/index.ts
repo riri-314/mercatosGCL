@@ -593,6 +593,21 @@ exports.taskrunner = onSchedule("*/10 * * * *", async (_event: any) => {
   await remboursement();
 });
 
+//Test, ajouter un admin
+function isCercleAdminFor(
+  userUid: string,
+  cercleId: string,
+  cercles: any
+): boolean {
+  const cercle = cercles[cercleId];
+  if (!cercle) return false;
+
+  const admins: string[] = cercle.admins || [];
+  // owner is admin by definition
+  return cercleId === userUid || admins.includes(userUid);
+}
+
+
 function getCercleId(
   comitardId: string,
   activeEditionCercle: any
@@ -606,6 +621,7 @@ function getCercleId(
   });
   return cercleIdFound;
 }
+
 
 exports.editcomitard = onCall(async (request) => {
   //changed
