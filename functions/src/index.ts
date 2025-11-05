@@ -804,6 +804,7 @@ exports.addcomitard = onCall(async (request) => {
   }
   // add check that edition is not finished, admin can do whatever the fuck he wants
 
+  // 3. Edition time check
   const stop = activeEditionData.data()?.stop;
   const now = test.Timestamp.now();
   //console.log("Now: ", now)
@@ -816,9 +817,7 @@ exports.addcomitard = onCall(async (request) => {
 
   //check if cercle has not reached to maximum of comitards
 
-  let cercle = context_auth.uid;
-  console.log("campus: ", data.campus)
-  // Check if the request contains the required data
+  // 4. Validate payload
   if (
     data.name === undefined ||
     data.name.length == 0 ||
@@ -902,9 +901,6 @@ exports.addcomitard = onCall(async (request) => {
       return { message: "Comitard added to edition map" };
     });
   return { message: "Comitard added to edition map" };
-
-  // add comitard in the map
-});
 
 /**
  * Reset all passwords for users in the cercle and send reset password emails.
@@ -1146,6 +1142,7 @@ exports.signupuser = onCall(async (request) => {
             nbFut: activeEditionVotes,
             name: data.displayName,
             comitards: {},
+            admins : [],
           },
         })
         .catch((error: any) => {

@@ -48,12 +48,12 @@ interface Comitard {
     cercle: string;
     encheres: Enchere[];
 }
-
 interface Cercle {
-    name: string;
-    description: string;
-    nbFut: number;
-    comitards: Comitard[];
+  name: string;
+  description: string;
+  nbFut: number;
+  comitards: Comitard[]; 
+  admins?: string[];     
 }
 
 interface ComitardResultCardProps {
