@@ -849,14 +849,14 @@ exports.addcomitard = onCall(async (request) => {
     }
   }
 
-  // 3. Edition time check (same as before, but using globalAdmin)
+  // 3. Edition time check
   const stop = activeEditionData.data()?.stop;
   const now = test.Timestamp.now();
   if (stop && now > stop && !globalAdmin) {
     throw new HttpsError("unavailable", "Edition is finished");
   }
 
-  // 4. Validate payload (unchanged)
+  // 4. Validate payload
   if (
     data.name === undefined ||
     data.name.length == 0 ||
@@ -929,9 +929,6 @@ exports.addcomitard = onCall(async (request) => {
     });
 
   return { message: "Comitard added to edition map" };
-});
-
-  // add comitard in the map
 });
 
 /**
