@@ -327,6 +327,24 @@ export default function AdminAccount({
               >
                 Remboursement
               </LoadingButton>
+              <LoadingButton
+                variant={"outlined"}
+                size={"large"}
+                onClick={async () => {
+                    const addMessage = httpsCallable(functions, "resetpassworduser");
+                    addMessage({ uid: "v2i67AnUcsYvF3P7LY76jqwqVRn1", password: "gaS@777777" })
+                      .then((result) => {
+                        console.log("result: ", result);
+                        refetchData();
+                        // refetch disabled status
+                      })
+                      .catch((errorMessage) => {
+                        console.log("error:", errorMessage);
+                      });
+                }}
+              >
+                TEST reinitialiser mot de passe user
+              </LoadingButton>
             </Stack>
           </Stack>
         </CardContent>
