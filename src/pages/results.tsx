@@ -50,10 +50,11 @@ interface Comitard {
 }
 
 interface Cercle {
-    name: string;
-    description: string;
-    nbFut: number;
-    comitards: Comitard[];
+  name: string;
+  description: string;
+  nbFut: number;
+  admins?: string[];                    
+  comitards: Record<string, Comitard>;  // map of id -> Comitard
 }
 
 interface ComitardResultCardProps {
