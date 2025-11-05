@@ -1171,6 +1171,7 @@ exports.signupuser = onCall(async (request) => {
             nbFut: activeEditionVotes,
             name: data.displayName,
             comitards: {},
+            admins : [],
           },
         })
         .catch((error: any) => {
