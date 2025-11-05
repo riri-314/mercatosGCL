@@ -593,40 +593,6 @@ exports.taskrunner = onSchedule("*/10 * * * *", async (_event: any) => {
   await remboursement();
 });
 
-//Test, ajouter un admin
-function isCercleAdminFor(
-  userUid: string,
-  cercleId: string,
-  cercles: any
-): boolean {
-  const cercle = cercles[cercleId];
-  if (!cercle) return false;
-
-  const admins: string[] = cercle.admins || [];
-  // owner is admin by definition
-  return cercleId === userUid || admins.includes(userUid);
-}
-
-function findCercleForUser(
-  userUid: string,
-  cercles: any
-): string | null {
-  // Case 1: user is the owner (old behavior)
-  if (cercles[userUid]) return userUid;
-
-  // Case 2: user is in admins[] of some cercle
-  for (const [cercleId, cercleData] of Object.entries<any>(cercles)) {
-    const admins: string[] = cercleData.admins || [];
-    if (admins.includes(userUid)) {
-      return cercleId;
-    }
-  }
-
-  return null;
-}
-
-
-
 function getCercleId(
   comitardId: string,
   activeEditionCercle: any
@@ -641,16 +607,13 @@ function getCercleId(
   return cercleIdFound;
 }
 
-
 exports.editcomitard = onCall(async (request) => {
+  //changed
   const context_auth = request.auth;
   const data = request.data;
+  let admin = false;
   const txtlenght1 = 30;
   const txtlenght2 = 150;
-
-  if (!context_auth) {
-    throw new HttpsError("permission-denied", "Unauthorized request!");
-  }
 
   console.log("edition id:", data.editionId);
   if (data.editionId === undefined) {
@@ -662,40 +625,42 @@ exports.editcomitard = onCall(async (request) => {
   const activeEditionCercle = activeEditionData.data()?.cercles || {};
 
   if (Object.keys(activeEditionCercle).length === 0) {
+    // No editions found
     throw new HttpsError("unavailable", "No cercles found in edition!");
   }
 
-  // Check global admin
-  const globalAdmin = await getAdminUid(context_auth.uid);
-
-  // Determine which cercle this user is allowed to manage
-  let cercleId: string | null = null;
-
-  if (globalAdmin && data.cercleId) {
-    // Global admin can target any cercle explicitly
-    cercleId = data.cercleId;
-    if (!activeEditionCercle[cercleId]) {
-      throw new HttpsError("invalid-argument", "Cercle does not exist!");
-    }
+  // Check if the request is made by an admin
+  if (!context_auth) {
+    throw new HttpsError("permission-denied", "Unauthorized request!"); // return error if not connected
   } else {
-    // Non-global admin → infer from owner/admins[]
-    cercleId = findCercleForUser(context_auth.uid, activeEditionCercle);
-    if (!cercleId) {
-      throw new HttpsError("permission-denied", "Unauthorized request!");
+    admin = await getAdminUid(context_auth.uid);
+    if (!activeEditionCercle[context_auth.uid] && !admin) {
+      throw new HttpsError("permission-denied", "Unauthorized request!"); // return error if not admin or not a active cercle
     }
   }
-
-  // Check that this comitard actually belongs to that cercle
+  // check if user only update his comitard
   if (
-    !activeEditionCercle[cercleId]?.comitards ||
-    !activeEditionCercle[cercleId].comitards[data.comitardId]
+    !activeEditionCercle[context_auth.uid]?.comitards[data.comitardId] &&
+    !admin
   ) {
+    console.log(
+      "!activeEditionCercle[context_auth.uid]?.comitards[data.comitardId]: ",
+      !activeEditionCercle[context_auth.uid]?.comitards[data.comitardId]
+    );
+    //console.log("activeEditionCercel ", activeEditionCercle);
+    //console.log("context_auth.uid ", context_auth.uid);
+    //console.log("data.comitardId ", data.comitardId);
+    //console.log("activeEditionCercle[context_auth.uid]: ", activeEditionCercle[context_auth.uid]);
+    // if comitard does not exist or user try to update not is comitard
     throw new HttpsError("permission-denied", "Unauthorized request!");
   }
 
-  // From here on, we use `cercleId` instead of context_auth.uid
-  let cercle = cercleId;
-  
+  let cercle = context_auth.uid;
+
+  if (admin) {
+    cercle = data.cercleId;
+    //console.log("waw c'est un admoin: ", data.cercleId)
+  }
 
   // Check if the request contains the required data
   if (
@@ -803,15 +768,9 @@ exports.editcomitard = onCall(async (request) => {
 exports.addcomitard = onCall(async (request) => {
   const context_auth = request.auth;
   const data = request.data;
+  let admin = false;
   const txtlenght1 = 30;
   const txtlenght2 = 150;
-
-  if (!context_auth) {
-    throw new HttpsError(
-      "permission-denied",
-      "Unauthorized request, not connected!"
-    );
-  }
 
   console.log("edition id:", data.editionId);
   if (data.editionId === undefined) {
@@ -823,38 +782,40 @@ exports.addcomitard = onCall(async (request) => {
   const activeEditionCercle = activeEditionData.data()?.cercles || {};
 
   if (Object.keys(activeEditionCercle).length === 0) {
+    // No editions found
     throw new HttpsError("unavailable", "No cercles found in edition!");
   }
 
-  // 1. Global admin?
-  const globalAdmin = await getAdminUid(context_auth.uid);
-
-  // 2. Determine which cercle this user can add a comitard to
-  let cercleId: string | null = null;
-
-  if (globalAdmin && data.cercle) {
-    // Global admin can target any cercle explicitly
-    if (!activeEditionCercle[data.cercle]) {
-      throw new HttpsError("invalid-argument", "Cercle does not exist!");
-    }
-    cercleId = data.cercle;
+  // Check if the request is made by an admin
+  if (!context_auth) {
+    throw new HttpsError(
+      "permission-denied",
+      "Unauthorized request, not connected!"
+    ); // return error if not connected
   } else {
-    // Non-global admin → owner or local admin of a cercle
-    cercleId = findCercleForUser(context_auth.uid, activeEditionCercle);
-    if (!cercleId) {
+    admin = await getAdminUid(context_auth.uid);
+    //admin = true; //DEBUG
+    if (!activeEditionCercle[context_auth.uid] && !admin) {
       throw new HttpsError(
         "permission-denied",
-        "Unauthorized request, not cercle admin!"
-      );
+        "Unauthorized request, Old account or not admin!"
+      ); // return error if not admin or not a active cercle
     }
   }
+  // add check that edition is not finished, admin can do whatever the fuck he wants
 
   // 3. Edition time check
   const stop = activeEditionData.data()?.stop;
   const now = test.Timestamp.now();
-  if (stop && now > stop && !globalAdmin) {
+  //console.log("Now: ", now)
+  //console.log("stop: ", stop)
+  //console.log("test now stop: ", (stop && now > stop))
+  if ((stop && now > stop) && !admin) {
     throw new HttpsError("unavailable", "Edition is finished");
   }
+  //admin = false //DEBUG
+
+  //check if cercle has not reached to maximum of comitards
 
   // 4. Validate payload
   if (
@@ -900,12 +861,21 @@ exports.addcomitard = onCall(async (request) => {
     console.log("missing data");
     throw new HttpsError("invalid-argument", "Missing data!");
   }
+  if (admin) {
+    if (data.cercle === undefined || data.cercle.length == 0) {
+      throw new HttpsError("invalid-argument", "Missing data!");
+    } else {
+      // Check if the cercle exists
+      if (!activeEditionCercle[data.cercle]) {
+        throw new HttpsError("invalid-argument", "Cercle does not exist!");
+      } else {
+        cercle = data.cercle;
+      }
+    }
+  }
 
-  // 5. Build path with the resolved cercleId and create the comitard
-  const newComitardId = uuidv4();
-  const s = `cercles.${cercleId}.comitards.${newComitardId}`;
-
-  await activeEdition
+  const s = `cercles.${cercle}.comitards.${uuidv4()}`;
+  activeEdition
     .update({
       [s]: {
         name: data.name,
@@ -926,10 +896,11 @@ exports.addcomitard = onCall(async (request) => {
     .catch((error: any) => {
       console.log("Error creating new user:", error);
       throw new HttpsError("unavailable", "Error creating new user!");
+    })
+    .then(() => {
+      return { message: "Comitard added to edition map" };
     });
-
   return { message: "Comitard added to edition map" };
-});
 
 /**
  * Reset all passwords for users in the cercle and send reset password emails.
