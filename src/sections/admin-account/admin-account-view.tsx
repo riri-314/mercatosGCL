@@ -27,6 +27,7 @@ import ComitardTable from "./comitard_table";
 import EditComitard from "./edit_comitard";
 import Iconify from "../../components/iconify/iconify.tsx";
 import EncheresTable from "./enchere_table.tsx";
+import EditEnchere from "./edit_enchere.tsx";
 
 interface AdminAccountProps {
   data: DocumentData[];
@@ -46,13 +47,14 @@ export default function AdminAccount({
   const handleCloseModalEdition = () => setOpenModalEdition(false);
   const [modalEditionData, setModalEditionData] = useState<any | null>(null);
 
-  const [errorCercleEdit, setErrorCercleEdit] = useState("");
   const [openModalCercle, setOpenModalCercle] = useState(false);
   const [modalCercleData, setModalCercleData] = useState<any | null>(null);
 
-  const [errorComitardEdit, setErrorComitardEdit] = useState("");
   const [openModalComitard, setOpenModalComitard] = useState(false);
   const [modalComitardData, setModalComitardData] = useState<any | null>(null);
+
+  const [openModalEnchere, setOpenModalEnchere] = useState(false);
+  const [modalEnchereData, setModalEnchereData] = useState<any | null>(null);
 
   return (
     <>
@@ -150,17 +152,11 @@ export default function AdminAccount({
           <CercleTable
             data={activeData}
             refetchData={refetchData}
-            error={(error) => setErrorCercleEdit(error)}
             handleOpenModalCercle={(data: any) => {
               setOpenModalCercle(true);
               setModalCercleData(data);
             }}
           />
-          {errorCercleEdit && (
-            <Alert sx={{ mt: 3 }} severity={"error"}>
-              {errorCercleEdit}
-            </Alert>
-          )}
         </CardContent>
       </Card>
 
@@ -203,18 +199,12 @@ export default function AdminAccount({
             data={activeData}
             refetchData={refetchData}
             admin={true}
-            error={(error) => setErrorComitardEdit(error)}
             handleOpenModalComitard={(data: any) => {
               setOpenModalComitard(true);
               setModalComitardData(data);
               console.log("modal open:", data);
             }}
           />
-          {errorComitardEdit && (
-            <Alert sx={{ mt: 3 }} severity={"error"}>
-              {errorComitardEdit}
-            </Alert>
-          )}
         </CardContent>
       </Card>
 
@@ -249,19 +239,33 @@ export default function AdminAccount({
             data={activeData}
             admin={true}
             refetchData={refetchData}
-            error={(error) => setErrorCercleEdit(error)}
             handleOpenModalEnchere={(data: any) => {
-              setOpenModalCercle(true);
-              setModalCercleData(data);
+              setOpenModalEnchere(true);
+              setModalEnchereData(data);
             }}
           />
-          {errorCercleEdit && (
-            <Alert sx={{ mt: 3 }} severity={"error"}>
-              {errorCercleEdit}
-            </Alert>
-          )}
         </CardContent>
       </Card>
+
+      <Modal
+        open={openModalEnchere}
+        onClose={() => setOpenModalEnchere(false)}
+        aria-labelledby="modal-modal-title"
+        aria-describedby="modal-modal-description"
+        sx={{
+          m: 3,
+          overflow: "scroll",
+          maxWidth: 800,
+          ml: "auto",
+          mr: "auto",
+        }}
+      >
+        <EditEnchere
+          enchereData={modalEnchereData}
+          refetchData={refetchData}
+          close={() => setOpenModalEnchere(false)}
+        />
+      </Modal>
 
       <Card sx={{ width: "100%", mb: 4, p: 2 }}>
         <CardContent>
@@ -322,21 +326,6 @@ export default function AdminAccount({
                 }}
               >
                 Remboursement
-              </LoadingButton>
-              <LoadingButton
-                variant={"outlined"}
-                size={"large"}
-                onClick={async () => {
-                  const addMessage = httpsCallable(functions, "votebis");
-                  addMessage({ editionId: "quCYmyzHQqh9ebm9EN2m", vote: 77, clientTime: new Date() }).then(
-                    (result) => {
-                      const data: any = result.data;
-                      console.log("Retunr message:", data);
-                    }
-                  );
-                }}
-              >
-                DEBUG VOTE
               </LoadingButton>
             </Stack>
           </Stack>
