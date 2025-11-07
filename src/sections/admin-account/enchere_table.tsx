@@ -238,7 +238,7 @@ export default function EncheresTable({
         editable: false,
         renderCell: (params: GridRenderCellParams<any, string>) => (
           <LoadingButton
-            disabled={params.row.active}
+            disabled={true}
             color="error"
             onClick={() => {
               setOpenModal(true);
@@ -246,7 +246,7 @@ export default function EncheresTable({
             }}
             variant="contained"
           >
-            Supprimer
+            Coming soon !
           </LoadingButton>
         ),
       }
