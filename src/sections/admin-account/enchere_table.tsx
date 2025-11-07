@@ -14,6 +14,7 @@ import { useState } from "react";
 import WarningModal from "../../components/modal/warning_modal";
 import { Avatar } from "@mui/material";
 import { useAuth } from "../../auth/AuthProvider";
+import { deleteEnchereWithStates } from "../../utils/admin-tools";
 
 interface enchereTableProps {
   data: DocumentData;
@@ -117,13 +118,30 @@ export default function EncheresTable({
     setError(null);
     setDone(false);
     try {
-      // call cloud function to delete enchere
-      setTimeout(() => {
-        setLoading(false);
-        refetchData();
-        setDone(true);
-      }, 2000);
-      console.log("Deleting enchere: ", enchereUid);
+      const res = await deleteEnchereWithStates(data, enchereUid, true);
+      switch (res.status) {
+        case "ok":
+          // show success toast
+          refetchData();
+          setLoading(false);
+          setDone(true);
+          break;
+        case "stale_client":
+          // show "page is outdated" toast / dialog
+          setLoading(false);
+          setError("Page is outdated. Please refresh.");
+          break;
+        case "concurrent_write":
+          // show "someone else changed it, please retry" toast
+          setLoading(false);
+          setError("Someone else changed it. Please retry.");
+          break;
+        case "error":
+          // show generic error + maybe res.message
+          setLoading(false);
+          setError(`Error while deleting enchere, see console for more info.`);
+          break;
+      }
     } catch (errorMessage) {
       setLoading(false);
       setError(`Error while deleting enchere. See console for more info.`);
@@ -238,7 +256,7 @@ export default function EncheresTable({
         editable: false,
         renderCell: (params: GridRenderCellParams<any, string>) => (
           <LoadingButton
-            disabled={true}
+            disabled={false}
             color="error"
             onClick={() => {
               setOpenModal(true);
