@@ -861,6 +861,7 @@ exports.addcomitard = onCall(async (request) => {
     console.log("missing data");
     throw new HttpsError("invalid-argument", "Missing data!");
   }
+  let cercle = context_auth.uid;
   if (admin) {
     if (data.cercle === undefined || data.cercle.length == 0) {
       throw new HttpsError("invalid-argument", "Missing data!");
@@ -901,7 +902,7 @@ exports.addcomitard = onCall(async (request) => {
       return { message: "Comitard added to edition map" };
     });
   return { message: "Comitard added to edition map" };
-
+});
 /**
  * Reset all passwords for users in the cercle and send reset password emails.
  * This function can only be called by an admin.
@@ -992,7 +993,7 @@ function generateRandomPassword(): string {
     newPassword += chars.charAt(Math.floor(Math.random() * chars.length));
   }
 
-  return newPassword;
+  return newPassword+"1!A"; // Ensure the password meets complexity requirements
   //return "123456";
 }
 
