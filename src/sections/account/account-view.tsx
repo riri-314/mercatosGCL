@@ -26,7 +26,6 @@ interface AccountProps {
 export default function Account({ data, refetchData }: AccountProps) {
   const { user } = useAuth();
 
-  const [errorComitardEdit, setErrorComitardEdit] = useState("");
   const [openModalComitard, setOpenModalComitard] = useState(false);
   const [modalComitardData, setModalComitardData] = useState<any | null>(null);
   console.log("now: ", new Date().getTime());
@@ -165,18 +164,12 @@ export default function Account({ data, refetchData }: AccountProps) {
             data={data}
             refetchData={refetchData}
             admin={false}
-            error={(error) => setErrorComitardEdit(error)}
             handleOpenModalComitard={(data: any) => {
               setOpenModalComitard(true);
               setModalComitardData(data);
               console.log("modal open:", data);
             }}
           />
-          {errorComitardEdit && (
-            <Alert sx={{ mt: 3 }} severity={"error"}>
-              {errorComitardEdit}
-            </Alert>
-          )}
         </CardContent>
       </Card>
 
@@ -211,7 +204,6 @@ export default function Account({ data, refetchData }: AccountProps) {
             data={data}
             admin={false}
             refetchData={refetchData}
-            error={(error) => console.log("error: ", error)}
             handleOpenModalEnchere={(data: any) => {
               console.log("data open modale: ", data);
             }}

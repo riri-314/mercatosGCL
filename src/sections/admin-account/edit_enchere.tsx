@@ -2,14 +2,19 @@ import { Card, CardContent, Grid, Typography } from "@mui/material";
 import LoadingButton from "@mui/lab/LoadingButton";
 import { useState } from "react";
 import QuantityInput from "../../components/inputs/numberInput";
+import { DocumentData } from "firebase/firestore";
+import { editEnchereAmount } from "../../utils/admin-tools";
+
 
 interface EditEnchereProps {
+  data: DocumentData;
   enchereData: any;
   close: () => void;
   refetchData: () => void;
 }
 
 export default function EditEnchere({
+  data,
   enchereData,
   close,
   refetchData,
@@ -23,12 +28,27 @@ export default function EditEnchere({
 
   const handleEditEnchere = async () => {
     setLoading(true);
-    // Simulate an API call to update the enchere data
-    setTimeout(() => {
-      setLoading(false);
+    setError(null);
+    setFinished(false);
+    let valueToReembourse = 0;
+    if (reemboursement === true) {
+      valueToReembourse = oldValue - value;
+    } else {
+      valueToReembourse = 0;
+    }
+    try {
+      const ret = await editEnchereAmount(valueToReembourse, data, enchereData.id, value);
+      if (ret !== 0) {
+        setError("Error updating enchere.");
+      }
       setFinished(true);
       refetchData();
-    }, 2000);
+    } catch (e: any) {
+      console.error("Error editing enchere:", e);
+      setError("An error occurred while editing the enchere." + e.message);
+    } finally {
+      setLoading(false);
+    }
   };
   return (
     <>
@@ -55,7 +75,7 @@ export default function EditEnchere({
                   }}
                 />
                 <span>
-                    Refléter cette enchère dans le total des fûts du cercle
+                  Refléter cette enchère dans le total des fûts du cercle
                 </span>
               </label>
               <Typography>
