@@ -56,7 +56,7 @@ export default function LoginView() {
       setLoading(true);
       await sendPasswordResetEmail(auth, email);
       setLoading(false);
-      setError("Un email vous a été envoyé");
+      setError("Un email vous a été envoyé. N'oublie pas de vérifier tes spams !");
     } catch (error: any) {
       console.log("Error: ", error?.code);
         setError("Erreur de connection");
