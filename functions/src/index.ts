@@ -903,6 +903,95 @@ exports.addcomitard = onCall(async (request) => {
     });
   return { message: "Comitard added to edition map" };
 });
+
+/**
+ * Reset password for a specific user.
+ * This function can only be called by an admin.
+ *
+ * @param {Object} data - The data passed to the function.
+ * @param {Object} context - The context object containing information about the authenticated user.
+ * @returns {Promise<Object>} - A promise that resolves to an object with a success message.
+ * @throws {functions.https.HttpsError} - Throws an error if the request is unauthorized or if there is an internal error.
+ */
+
+exports.resetpassworduser = onCall(async (request) => {
+  const context_auth = request.auth;
+  const data = request.data;
+  //const auth = getAuth();
+  // Check if the request is made by an admin
+  if (!context_auth || !(await getAdminUid(context_auth.uid))) {
+    throw new HttpsError("permission-denied", "Unauthorized request!");
+  }
+
+  if (data.uid === undefined || data.uid.length == 0) {
+    throw new HttpsError("invalid-argument", "User id is invalid");
+  }
+
+  // Generate a random password
+  if (!data.password || data.password.length == 0) {
+    throw new HttpsError("invalid-argument", "Password is invalid");
+  }
+  const newPassword = data.password;
+
+  // Reset password for each user
+  try {
+    await admin.auth().updateUser(data.uid, { password: newPassword });
+    //console.log("Password reset for user: ", uid, newPassword); //FOR DEBUG
+  } catch (error: any) {
+    console.log("Error resetting password for user: ", data.uid, "error: ", error);
+    throw new HttpsError(
+      "internal",
+      "Failed to reset password for user: " + error.message
+    );
+  }
+
+  return { message: "Password reseted for user." };
+});
+
+/**
+ * Reset password for a specific user.
+ * This function can only be called by an admin.
+ *
+ * @param {Object} data - The data passed to the function.
+ * @param {Object} context - The context object containing information about the authenticated user.
+ * @returns {Promise<Object>} - A promise that resolves to an object with a success message.
+ * @throws {functions.https.HttpsError} - Throws an error if the request is unauthorized or if there is an internal error.
+ */
+
+exports.resetpassworduser = onCall(async (request) => {
+  const context_auth = request.auth;
+  const data = request.data;
+  //const auth = getAuth();
+  // Check if the request is made by an admin
+  if (!context_auth || !(await getAdminUid(context_auth.uid))) {
+    throw new HttpsError("permission-denied", "Unauthorized request!");
+  }
+
+  if (data.uid === undefined || data.uid.length == 0) {
+    throw new HttpsError("invalid-argument", "User id is invalid");
+  }
+
+  // Generate a random password
+  if (!data.password || data.password.length == 0) {
+    throw new HttpsError("invalid-argument", "Password is invalid");
+  }
+  const newPassword = data.password;
+
+  // Reset password for each user
+  try {
+    await admin.auth().updateUser(data.uid, { password: newPassword });
+    //console.log("Password reset for user: ", uid, newPassword); //FOR DEBUG
+  } catch (error: any) {
+    console.log("Error resetting password for user: ", data.uid, "error: ", error);
+    throw new HttpsError(
+      "internal",
+      "Failed to reset password for user: " + error.message
+    );
+  }
+
+  return { message: "Password reseted for user." };
+});
+
 /**
  * Reset all passwords for users in the cercle and send reset password emails.
  * This function can only be called by an admin.
@@ -993,7 +1082,19 @@ function generateRandomPassword(): string {
     newPassword += chars.charAt(Math.floor(Math.random() * chars.length));
   }
 
-  return newPassword+"1!A"; // Ensure the password meets complexity requirements
+  // add a special character
+  const specialChars = "!@#$%^&*()_+[]{}|;:,.<>?";
+  newPassword += specialChars.charAt(Math.floor(Math.random() * specialChars.length));
+
+  // add a uppercase letter
+  const upperChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  newPassword += upperChars.charAt(Math.floor(Math.random() * upperChars.length));
+
+  // add a number
+  const numberChars = "0123456789";
+  newPassword += numberChars.charAt(Math.floor(Math.random() * numberChars.length));
+
+  return newPassword+"1!Ab"; // Ensure the password meets complexity requirements
   //return "123456";
 }
 

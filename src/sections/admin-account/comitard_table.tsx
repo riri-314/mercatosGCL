@@ -80,9 +80,9 @@ export default function ComitardTable({
       refetchData();
       setDone(true);
     } catch (errorMessage) {
-      setError(`Error while deleting comitard: ${errorMessage}`);
+      setError(`Error while deleting comitard. See console for more info.`);
       setLoading(false);
-      console.error("Error deleting comitard:", error);
+      console.error("Error deleting comitard:", errorMessage);
     }
   }
 
