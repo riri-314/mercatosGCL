@@ -19,11 +19,11 @@ import QuantityInput from "../../components/inputs/numberInput";
 import EncheresList from "./comitard-encheres";
 import FadeImage from "./comitard-picture";
 
-interface CerclesData {
+export interface CerclesData {
   [key: string]: { name: string };
 }
 
-interface ComitardModalProps {
+export interface ComitardModalProps {
   open: boolean;
   onClose: () => void;
 
@@ -49,15 +49,6 @@ interface ComitardModalProps {
   handleVote: () => void;
 
   won: boolean;
-}
-
-function campusLabel(cmp: number | undefined): string {
-  if (!cmp) return "Non renseigné";
-  if (cmp === 1) return "Possible 👌";
-  if (cmp === 2) return "Pas possible 👎";
-  if (cmp === 3) return "Bouillant mort! 🔥";
-  if (cmp === 4) return "Pas du tout possible 🙅";
-  return "Non renseigné";
 }
 
 export default function ComitardModal({
@@ -96,54 +87,69 @@ export default function ComitardModal({
       border: "none",
       outline: "none",
     }),
-    [isMediumScreen],
+    [isMediumScreen]
   );
 
   return (
     <Modal open={open} onClose={onClose}>
       <Card sx={style}>
         <Box sx={{ pt: "40vh", position: "relative" }}>
+          {/* Image */}
+          <FadeImage src={product?.picture} alt={product?.name ?? ""} absolute />
+
+          {/* Labels */}
           {timeLeft > 0 && renderStatus}
           {timeLeft > 0 && renderPrice}
-          {timeLeft <= 0 && product.encheres && renderWinner}
-          <FadeImage src={product.picture} alt={product.name} absolute />
+          {timeLeft <= 0 && product?.encheres && renderWinner}
         </Box>
 
         {timeLeft > 0 && <LinearProgress color="error" />}
 
         <Box
           sx={{
-            p: (theme) => theme.spacing(3),
+            p: (t) => t.spacing(3),
             maxHeight: "50vh",
             overflowY: "auto",
           }}
         >
           <Typography variant="h3">
-            {product.firstname} "{product.nickname}" {product.name}
+            {product?.firstname} "{product?.nickname}" {product?.name}
           </Typography>
 
           <Divider sx={{ my: 1 }} />
 
           <Stack spacing={1}>
             <Typography>
-              <strong>Poste</strong> : {product.post}
+              <strong>Poste</strong> : {product?.post}
               <br />
               <strong>Maison</strong> : {cerclesData?.[cercleId]?.name ?? "—"}
               <br />
-              <strong>Teneur en taule</strong> :
-              {Array.from({ length: product.teneurTaule ?? 0 }, (_, i) => (
-                <span key={i}> 🍺</span>
+              <strong>Teneur en taule</strong> :{" "}
+              {Array.from({ length: product?.teneurTaule ?? 0 }, (_, i) => (
+                <span key={i}>🍺</span>
+              ))}
+              {Array.from({ length: Math.max(0, 10 - (product?.teneurTaule ?? 0)) }, (_, i) => (
+                <span key={i} style={{ filter: "grayscale(100%)" }}>
+                  🍺
+                </span>
               ))}
               <br />
-              <strong>État civil</strong> : {product.etatCivil}
+              <strong>État civil</strong> : {product?.etatCivil}
               <br />
-              <strong>Age</strong> : {product.age}
+              <strong>Age</strong> : {product?.age}
               <br />
-              <strong>Point fort</strong> : {product.pointFort}
+              <strong>Nombre d&apos;étoiles</strong> :{" "}
+              {Array.from({ length: product?.nbEtoiles ?? 0 }, (_, i) => (
+                <span key={i}>⭐</span>
+              ))}
               <br />
-              <strong>Point faible</strong> : {product.pointFaible}
+              <strong>Point fort</strong> : {product?.pointFort}
               <br />
-              <strong>Campus</strong> : {campusLabel(product.campus)}
+              <strong>Point faible</strong> : {product?.pointFaible}
+              <br />
+              <strong>Est le seul</strong> : {product?.estLeSeul}
+              <br />
+              <strong>Chaud changer campus</strong> : {product?.campus}
             </Typography>
 
             {displayVote && (
@@ -168,24 +174,13 @@ export default function ComitardModal({
                   {isDisabled ? "Enchère max atteinte" : "Enchérir"}
                 </LoadingButton>
 
-                {voteError && (
-                  <Alert severity={voteErrorSeverity}>{voteError}</Alert>
-                )}
+                {voteError && <Alert severity={voteErrorSeverity}>{voteError}</Alert>}
               </>
             )}
 
-            <EncheresList
-              encheres={product.encheres}
-              cerclesData={cerclesData}
-              won={won}
-            />
+            <EncheresList encheres={product?.encheres} cerclesData={cerclesData} won={won} />
 
-            <LoadingButton
-              onClick={onClose}
-              variant="contained"
-              color="error"
-              fullWidth
-            >
+            <LoadingButton onClick={onClose} variant="contained" color="error" fullWidth>
               Fermer
             </LoadingButton>
           </Stack>
