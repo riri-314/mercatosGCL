@@ -1,19 +1,13 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-
-import { useTheme } from "@mui/material/styles";
-import useMediaQuery from "@mui/material/useMediaQuery";
+import React, { useCallback, useMemo, useState } from "react";
 
 import Box from "@mui/material/Box";
 import Card from "@mui/material/Card";
 import Stack from "@mui/material/Stack";
-import Modal from "@mui/material/Modal";
 import Typography from "@mui/material/Typography";
-import Divider from "@mui/material/Divider";
 import LinearProgress from "@mui/material/LinearProgress";
 import { Alert, AlertColor } from "@mui/material";
 import { LoadingButton } from "@mui/lab";
 
-import LazyLoad from "react-lazy-load";
 
 import Iconify from "../../components/iconify/iconify";
 import Label from "../../components/label/label";
@@ -23,7 +17,8 @@ import { httpsCallable } from "@firebase/functions";
 import { functions } from "../../firebase_config";
 import { useAuth } from "../../auth/AuthProvider";
 
-import EncheresList from "./comitard-encheres.tsx";
+import ComitardModal from "./comitard-modal.tsx";
+import FadeImage from "./comitard-picture.tsx";
 
 // ----------------------------------------------------------------------
 
@@ -56,15 +51,6 @@ function formatTimeLeft(time: number): string {
   return `${seconds}s`;
 }
 
-function campusLabel(cmp: number | undefined): string {
-  if (!cmp) return "Non renseigné";
-  if (cmp === 1) return "Possible 👌";
-  if (cmp === 2) return "Pas possible 👎";
-  if (cmp === 3) return "Bouillant mort! 🔥";
-  if (cmp === 4) return "Pas du tout possible 🙅";
-  return "Non renseigné";
-}
-
 function ComitardCardInner({
   product,
   cercleId,
@@ -85,16 +71,8 @@ function ComitardCardInner({
     AlertColor | undefined
   >("error");
   const [loading, setLoading] = useState(false);
-  const [imgLoaded, setImgLoaded] = useState(false);
-
-  useEffect(() => {
-    setImgLoaded(false);
-  }, [product?.picture]);
 
   const { user, isAdmin } = useAuth();
-
-  const theme = useTheme();
-  const isMediumScreen = useMediaQuery(theme.breakpoints.down("md"));
 
   const handleOpen = useCallback(() => setOpen(true), []);
   const handleClose = useCallback(() => setOpen(false), []);
@@ -240,21 +218,6 @@ function ComitardCardInner({
     refetchData,
   ]);
 
-  const style = useMemo(
-    () => ({
-      position: "absolute" as const,
-      top: "50%",
-      left: "50%",
-      transform: "translate(-50%, -50%)",
-      width: isMediumScreen ? "90%" : "50%",
-      height: "90vh",
-      boxShadow: "none",
-      border: "none",
-      outline: "none",
-    }),
-    [isMediumScreen],
-  );
-
   const renderStatus = useMemo(
     () => (
       <Label
@@ -320,74 +283,6 @@ function ComitardCardInner({
     );
   }, [firstEnchere, cerclesData]);
 
-  const renderImg = useMemo(() => {
-    const src = product?.picture;
-    const alt = product?.name ?? "";
-
-    return (
-      <LazyLoad>
-        <Box
-          sx={{
-            top: 0,
-            left: 0,
-            width: 1,
-            height: 1,
-            position: "absolute",
-            overflow: "hidden",
-          }}
-        >
-          {/* Placeholder layer */}
-          <Box
-            sx={{
-              position: "absolute",
-              inset: 0,
-              // lightweight placeholder: subtle neutral gradient
-              background:
-                "linear-gradient(110deg, rgba(0,0,0,0.06) 8%, rgba(0,0,0,0.10) 18%, rgba(0,0,0,0.06) 33%)",
-              // optional very subtle shimmer (cheap): comment out if you want zero animation
-              backgroundSize: "200% 100%",
-              animation: imgLoaded
-                ? "none"
-                : "placeholderShimmer 1.2s linear infinite",
-              opacity: imgLoaded ? 0 : 1,
-              transition: "opacity 180ms ease-out",
-            }}
-          />
-
-          <Box
-            component="img"
-            alt={alt}
-            src={src}
-            loading="lazy"
-            onLoad={() => setImgLoaded(true)}
-            onError={() => setImgLoaded(true)} // prevent placeholder stuck forever
-            sx={{
-              position: "absolute",
-              inset: 0,
-              width: 1,
-              height: 1,
-              objectFit: "cover",
-              opacity: imgLoaded ? 1 : 0,
-              transition: "opacity 220ms ease-out",
-              // helps GPU do the fade cheaply
-              willChange: "opacity",
-            }}
-          />
-
-          {/* Keyframes for shimmer */}
-          <Box
-            sx={{
-              "@keyframes placeholderShimmer": {
-                "0%": { backgroundPosition: "200% 0" },
-                "100%": { backgroundPosition: "-200% 0" },
-              },
-            }}
-          />
-        </Box>
-      </LazyLoad>
-    );
-  }, [product?.picture, product?.name, imgLoaded]);
-
   const voteMax = useMemo(
     () => Math.min(nbFutsLeft, enchereMax),
     [nbFutsLeft, enchereMax],
@@ -405,7 +300,7 @@ function ComitardCardInner({
           {timeLeft > 0 && renderStatus}
           {timeLeft > 0 && renderPrice}
           {timeLeft <= 0 && product.encheres && renderWinner}
-          {renderImg}
+          <FadeImage src={product.picture} alt={product.name} absolute />
         </Box>
 
         {timeLeft > 0 && <LinearProgress color={"error"} />}
@@ -449,140 +344,27 @@ function ComitardCardInner({
       </Card>
 
       {/* Optional perf win: only mount modal when open */}
-      {open && (
-        <Modal
-          open={open}
-          onClose={handleClose}
-          aria-labelledby="modal-modal-title"
-          aria-describedby="modal-modal-description"
-        >
-          <Card sx={style}>
-            <Box sx={{ pt: "40vh", position: "relative" }}>
-              {timeLeft > 0 && renderStatus}
-              {timeLeft > 0 && renderPrice}
-              {timeLeft <= 0 && product.encheres && renderWinner}
-              {renderImg}
-            </Box>
-
-            {timeLeft > 0 && <LinearProgress color={"error"} />}
-
-            <Box
-              sx={{
-                p: (theme) => `${theme.spacing(3)}`,
-                maxHeight: "50vh",
-                overflowY: "auto",
-              }}
-            >
-              <Typography variant="h3">
-                {product.firstname} "{product.nickname}" {product.name}
-              </Typography>
-
-              <Divider
-                variant="fullWidth"
-                sx={{ my: (theme) => `${theme.spacing(1)}` }}
-              />
-
-              <Box>
-                <Stack>
-                  <Typography>
-                    <strong>Poste</strong> : {product.post}
-                    <br />
-                    <strong>Maison d'appartenance </strong>:{" "}
-                    {cerclesData?.[cercleId]?.name ?? "—"}
-                    <br />
-                    <strong>Teneur en taule</strong> :{" "}
-                    {Array.from(
-                      { length: product.teneurTaule ?? 0 },
-                      (_, i) => (
-                        <span key={i}>🍺</span>
-                      ),
-                    )}
-                    {Array.from(
-                      { length: 10 - (product.teneurTaule ?? 0) },
-                      (_, i) => (
-                        <span key={i} style={{ filter: "grayscale(100%)" }}>
-                          🍺
-                        </span>
-                      ),
-                    )}
-                    <br />
-                    <strong>État civil</strong> : {product.etatCivil}
-                    <br />
-                    <strong>Age</strong> : {product.age}
-                    <br />
-                    <strong>Nombre d'étoiles</strong> :{" "}
-                    {Array.from({ length: product.nbEtoiles ?? 0 }, (_, i) => (
-                      <span key={i}>⭐</span>
-                    ))}
-                    <br />
-                    <strong>Point fort</strong> : {product.pointFort}
-                    <br />
-                    <strong>Point faible </strong>: {product.pointFaible}
-                    <br />
-                    <strong>Est le seul</strong> : {product.estLeSeul}
-                    <br />
-                    <strong>Chaud changer campus</strong> :{" "}
-                    {campusLabel(product.campus)}
-                  </Typography>
-
-                  {displayVote && (
-                    <Stack
-                      spacing={1}
-                      sx={{ my: (theme) => `${theme.spacing(1)}` }}
-                    >
-                      <QuantityInput
-                        title="Enchère"
-                        min={minEnchere}
-                        max={voteMax}
-                        error={false}
-                        helpText={""}
-                        change={(_event: any, val: any) => setVote(val)}
-                      />
-
-                      <LoadingButton
-                        onClick={handleVote}
-                        loading={loading}
-                        disabled={isDisabled}
-                        variant="contained"
-                        size="large"
-                        fullWidth
-                        color="inherit"
-                        startIcon={
-                          <Iconify icon="solar:user-hand-up-bold-duotone" />
-                        }
-                      >
-                        {isDisabled ? "Enchére max atteinte" : "Enchérir"}
-                      </LoadingButton>
-
-                      {voteError && (
-                        <Alert sx={{ mt: 3 }} severity={voteErrorSeverity}>
-                          {voteError}
-                        </Alert>
-                      )}
-                    </Stack>
-                  )}
-
-                  <EncheresList
-                    encheres={product.encheres}
-                    cerclesData={cerclesData}
-                    won={won}
-                  />
-
-                  <LoadingButton
-                    onClick={handleClose}
-                    variant="contained"
-                    size="large"
-                    fullWidth
-                    color="error"
-                  >
-                    Fermer
-                  </LoadingButton>
-                </Stack>
-              </Box>
-            </Box>
-          </Card>
-        </Modal>
-      )}
+      <ComitardModal
+        open={open}
+        onClose={handleClose}
+        product={product}
+        cercleId={cercleId}
+        cerclesData={cerclesData}
+        timeLeft={timeLeft}
+        renderStatus={renderStatus}
+        renderPrice={renderPrice}
+        renderWinner={renderWinner}
+        displayVote={displayVote}
+        minEnchere={minEnchere}
+        voteMax={voteMax}
+        isDisabled={isDisabled}
+        voteError={voteError}
+        voteErrorSeverity={voteErrorSeverity}
+        loading={loading}
+        setVote={setVote}
+        handleVote={handleVote}
+        won={won}
+      />
     </>
   );
 }
