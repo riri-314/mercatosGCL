@@ -22,6 +22,22 @@ type Dict = {
 
 const editionsRef = collection(db, "editions");
 
+
+export async function updateMDP(uid: string, newMDP: string): Promise<number> {
+  const addMessage = httpsCallable(functions, "resetpassworduser");
+
+  try {
+    const result = await addMessage({ uid: uid, password: newMDP });
+    console.log("Password updated successfully:", result);
+    return 1;
+  } catch (error) {
+    console.log("Error while changing password:", error);
+    return 0;
+  } finally {
+    console.log("updateMDP function finished");
+  }
+}
+
 // This function is used to add a new edition to the database.
 // It takes a string (description), two dates (start and end) and a number (votes) as parameters.
 // The string represents the description of the edition, the first date is the start date and the second date is the end date.
@@ -302,7 +318,7 @@ export async function deleteEnchereWithStates(
       if (!snap.exists()) {
         return {
           status: "error",
-          message: "L’édition n’existe plus.",
+          message: "L'édition n'existe plus.",
         } as DeleteEnchereResult;
       }
 
@@ -375,7 +391,7 @@ export async function deleteEnchereWithStates(
       return {
         status: "concurrent_write",
         message:
-          "Les données ont été modifiées en même temps par quelqu’un d’autre. Réessaie l’action.",
+          "Les données ont été modifiées en même temps par quelqu'un d'autre. Réessaie l'action.",
       };
     }
 
@@ -383,7 +399,7 @@ export async function deleteEnchereWithStates(
     console.error("deleteEnchereWithStates error:", e);
     return {
       status: "error",
-      message: "Erreur inattendue lors de la suppression de l’enchère.",
+      message: "Erreur inattendue lors de la suppression de l'enchère.",
     };
   }
 }

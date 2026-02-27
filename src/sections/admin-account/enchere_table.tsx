@@ -264,7 +264,7 @@ export default function EncheresTable({
             }}
             variant="contained"
           >
-            Coming soon !
+            Supprimer
           </LoadingButton>
         ),
       }
