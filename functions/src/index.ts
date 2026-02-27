@@ -915,83 +915,38 @@ exports.addcomitard = onCall(async (request) => {
  */
 
 exports.resetpassworduser = onCall(async (request) => {
-  const context_auth = request.auth;
+  const auth = request.auth;
   const data = request.data;
-  //const auth = getAuth();
-  // Check if the request is made by an admin
-  if (!context_auth || !(await getAdminUid(context_auth.uid))) {
+
+  // AuthZ: only admins
+  if (!auth || !(await getAdminUid(auth.uid))) {
     throw new HttpsError("permission-denied", "Unauthorized request!");
   }
 
-  if (data.uid === undefined || data.uid.length == 0) {
+  // Validate uid
+  if (!data || typeof data.uid !== "string" || data.uid.trim().length === 0) {
     throw new HttpsError("invalid-argument", "User id is invalid");
   }
 
-  // Generate a random password
-  if (!data.password || data.password.length == 0) {
+  // Validate password
+  if (typeof data.password !== "string" || data.password.trim().length === 0) {
     throw new HttpsError("invalid-argument", "Password is invalid");
   }
-  const newPassword = data.password;
+  if (data.password.length < 6) {
+    throw new HttpsError("invalid-argument", "Password must be at least 6 characters");
+  }
 
-  // Reset password for each user
   try {
-    await admin.auth().updateUser(data.uid, { password: newPassword });
-    //console.log("Password reset for user: ", uid, newPassword); //FOR DEBUG
-  } catch (error: any) {
-    console.log("Error resetting password for user: ", data.uid, "error: ", error);
-    throw new HttpsError(
-      "internal",
-      "Failed to reset password for user: " + error.message
-    );
+    await admin.auth().updateUser(data.uid, { password: data.password });
+    console.log("Password reset for user:", data.uid, "and password", data.password); //FOR DEBUG
+    const user = await admin.auth().getUser(data.uid);
+    console.log("User email: ", user);
+    return { success: true, message: "Password reset for user." };
+  } catch (err) {
+    console.log("Error resetting password for user:", data.uid, err);
+    throw new HttpsError("internal", "Failed to reset password for user.");
   }
-
-  return { message: "Password reseted for user." };
 });
-
-/**
- * Reset password for a specific user.
- * This function can only be called by an admin.
- *
- * @param {Object} data - The data passed to the function.
- * @param {Object} context - The context object containing information about the authenticated user.
- * @returns {Promise<Object>} - A promise that resolves to an object with a success message.
- * @throws {functions.https.HttpsError} - Throws an error if the request is unauthorized or if there is an internal error.
- */
-
-exports.resetpassworduser = onCall(async (request) => {
-  const context_auth = request.auth;
-  const data = request.data;
-  //const auth = getAuth();
-  // Check if the request is made by an admin
-  if (!context_auth || !(await getAdminUid(context_auth.uid))) {
-    throw new HttpsError("permission-denied", "Unauthorized request!");
-  }
-
-  if (data.uid === undefined || data.uid.length == 0) {
-    throw new HttpsError("invalid-argument", "User id is invalid");
-  }
-
-  // Generate a random password
-  if (!data.password || data.password.length == 0) {
-    throw new HttpsError("invalid-argument", "Password is invalid");
-  }
-  const newPassword = data.password;
-
-  // Reset password for each user
-  try {
-    await admin.auth().updateUser(data.uid, { password: newPassword });
-    //console.log("Password reset for user: ", uid, newPassword); //FOR DEBUG
-  } catch (error: any) {
-    console.log("Error resetting password for user: ", data.uid, "error: ", error);
-    throw new HttpsError(
-      "internal",
-      "Failed to reset password for user: " + error.message
-    );
-  }
-
-  return { message: "Password reseted for user." };
-});
-
 /**
  * Reset all passwords for users in the cercle and send reset password emails.
  * This function can only be called by an admin.
