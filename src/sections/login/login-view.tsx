@@ -19,14 +19,11 @@ import { useRouter } from "../../routes/hooks/use-router";
 import Logo from "../../components/logo/logo";
 import Iconify from "../../components/iconify/iconify";
 import { auth } from "../../firebase_config";
-import LogoFull from '../../assets/gcl_full.svg';
-
+import LogoFull from "../../assets/gcl_full.svg";
 
 // ----------------------------------------------------------------------
 
 export default function LoginView() {
-  
-
   const router = useRouter();
 
   const [showPassword, setShowPassword] = useState(false);
@@ -56,10 +53,12 @@ export default function LoginView() {
       setLoading(true);
       await sendPasswordResetEmail(auth, email);
       setLoading(false);
-      setError("Un email vous a été envoyé. N'oublie pas de vérifier tes spams !");
+      setError(
+        "Un email vous a été envoyé. N'oublie pas de vérifier tes spams !",
+      );
     } catch (error: any) {
       console.log("Error: ", error?.code);
-        setError("Erreur de connection");
+      setError("Erreur de connection");
       setLoading(false);
     }
   };
@@ -78,7 +77,7 @@ export default function LoginView() {
       setLoading(false);
       router.push("/");
     } catch (error: any) {
-        setError("Erreur de connection");
+      setError("Erreur de connection");
       setLoading(false);
     }
   };
@@ -188,29 +187,23 @@ export default function LoginView() {
       sx={{
         "&::before": {
           content: "''",
-          position: 'absolute',
+          position: "absolute",
           top: 0,
           left: 0,
-          width: '100%',
-          height: '100%',
+          width: "100%",
+          height: "100%",
           mask: `url(${LogoFull})`,
-          maskRepeat: 'no-repeat',
-          maskPosition: 'center',
-          maskSize: 'contain',
+          maskRepeat: "no-repeat",
+          maskPosition: "center",
+          maskSize: "contain",
           backgroundColor: (theme) => theme.palette.primary.main,
           opacity: (theme) => theme.palette.action.hoverOpacity,
           zIndex: -1,
-      },
+        },
         height: 1,
       }}
     >
-      <Logo
-        sx={{
-          position: "fixed",
-          top: { xs: 16, md: 24 },
-          left: { xs: 16, md: 24 },
-        }}
-      />
+      <Logo />
 
       <Stack alignItems="center" justifyContent="center" sx={{ height: 1 }}>
         <Card
