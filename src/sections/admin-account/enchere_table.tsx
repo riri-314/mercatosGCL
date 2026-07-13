@@ -48,7 +48,7 @@ export default function EncheresTable({
   }
   if (admin) {
     Object.entries(data.data().cercles).forEach((cercle: any) => {
-      Object.entries(cercle[1].comitards).forEach((comitard: any) => {
+      Object.entries(cercle[1].comitards ?? {}).forEach((comitard: any) => {
         //
         //comitard[0] is the comitard id
         if (comitard[1].encheres != undefined) {
@@ -78,7 +78,7 @@ export default function EncheresTable({
     });
   } else {
     Object.entries(data.data().cercles).forEach((cercle: any) => {
-      Object.entries(cercle[1].comitards).forEach((comitard: any) => {
+      Object.entries(cercle[1].comitards ?? {}).forEach((comitard: any) => {
         //
         //comitard[0] is the comitard id
 

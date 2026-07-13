@@ -133,8 +133,8 @@ export default function NewEdition({
       return;
     } else if (
       remboursementVendeur < 0 ||
-      remboursementVendeur < 0 ||
-      remboursementVendeur < 0
+      remboursementPerdant < 0 ||
+      remboursementGagnant < 0
     ) {
       setError("Les remboursements doivent être supérieur à 0");
       setLoading(false);

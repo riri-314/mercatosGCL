@@ -1,17 +1,30 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      // This rule allows anyone with your database reference to view, edit,
-      // and delete all data in your database. It is useful for getting
-      // started, but it is configured to expire after 30 days because it
-      // leaves your app open to attackers. At that time, all client
-      // requests to your database will be denied.
-      //
-      // Make sure to write security rules for your app before that time, or
-      // else all client requests to your database will be denied until you
-      // update your rules.
-      allow read, write: if true;
+
+    // An admin is a user whose email maps to their own uid in admin/admin.
+    function isAdmin(uidE, email) {
+      return uidE != null
+        && email != null
+        && get(/databases/$(database)/documents/admin/admin).data.admins[email].trim() == uidE.trim();
     }
+
+    // Editions are publicly readable (the results/comitard pages work logged-out).
+    // All legitimate user writes (votes) go through Cloud Functions using the
+    // Admin SDK, which bypasses these rules; direct client writes are admin-only.
+    match /editions/{edition} {
+      allow read: if true;
+      allow write: if isAdmin(request.auth.uid, request.auth.token.email);
+    }
+
+    // Admin mapping: readable (clients need it to know who is admin), but only
+    // writable from the Firebase console / Admin SDK.
+    match /admin/{doc} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Everything else denied by default.
   }
 }
