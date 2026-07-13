@@ -35,6 +35,109 @@ async function getAdminUid(uid: string): Promise<boolean> {
   return containsValue;
 }
 
+/**
+ * Ensure the caller is an authenticated admin, throw otherwise.
+ * @param {any} request - The onCall request object.
+ */
+async function assertAdmin(request: any): Promise<void> {
+  const contextAuth = request.auth;
+  if (!contextAuth) {
+    throw new HttpsError("unauthenticated", "Unauthorized request!");
+  }
+  const isAdmin = await getAdminUid(contextAuth.uid);
+  if (!isAdmin) {
+    throw new HttpsError("permission-denied", "Unauthorized request!");
+  }
+}
+
+/**
+ * Revoke the public download tokens of every file under an edition prefix.
+ * The current token is stashed in `lockedToken` custom metadata so the exact
+ * same public URL can be restored later (see unlockEditionFiles). Idempotent:
+ * files already locked (no live token) are skipped so the stash is never lost.
+ * @param {string} editionId - Firestore doc id used as the storage prefix.
+ * @returns {Promise<number>} - Number of files locked.
+ */
+async function lockEditionFiles(editionId: string): Promise<number> {
+  const bucket = admin.storage().bucket();
+  const [files] = await bucket.getFiles({ prefix: `${editionId}/` });
+  let locked = 0;
+  for (const file of files) {
+    const [meta] = await file.getMetadata();
+    const custom = (meta.metadata || {}) as Record<string, any>;
+    const current = custom.firebaseStorageDownloadTokens;
+    if (current) {
+      await file.setMetadata({
+        metadata: { firebaseStorageDownloadTokens: "", lockedToken: current },
+      });
+      locked++;
+    }
+  }
+  return locked;
+}
+
+/**
+ * Restore the previously stashed download token of every file under an edition
+ * prefix, re-enabling the original public URLs. Idempotent.
+ * @param {string} editionId - Firestore doc id used as the storage prefix.
+ * @returns {Promise<number>} - Number of files unlocked.
+ */
+async function unlockEditionFiles(editionId: string): Promise<number> {
+  const bucket = admin.storage().bucket();
+  const [files] = await bucket.getFiles({ prefix: `${editionId}/` });
+  let unlocked = 0;
+  for (const file of files) {
+    const [meta] = await file.getMetadata();
+    const custom = (meta.metadata || {}) as Record<string, any>;
+    const saved = custom.lockedToken;
+    if (saved) {
+      await file.setMetadata({
+        metadata: { firebaseStorageDownloadTokens: saved, lockedToken: null },
+      });
+      unlocked++;
+    }
+  }
+  return unlocked;
+}
+
+// Revoke the public picture URLs of a past edition (admin only).
+exports.lockeditionpictures = onCall(async (request) => {
+  await assertAdmin(request);
+  const editionId = request.data?.editionId;
+  if (!editionId || typeof editionId !== "string") {
+    throw new HttpsError("invalid-argument", "Missing editionId!");
+  }
+  const locked = await lockEditionFiles(editionId);
+  return { editionId, locked };
+});
+
+// Restore the public picture URLs of an edition being re-activated (admin only).
+exports.unlockeditionpictures = onCall(async (request) => {
+  await assertAdmin(request);
+  const editionId = request.data?.editionId;
+  if (!editionId || typeof editionId !== "string") {
+    throw new HttpsError("invalid-argument", "Missing editionId!");
+  }
+  const unlocked = await unlockEditionFiles(editionId);
+  return { editionId, unlocked };
+});
+
+// One-time migration: lock every currently inactive edition (admin only).
+exports.lockallpasteditions = onCall(async (request) => {
+  await assertAdmin(request);
+  const editionsSnap = await admin
+    .firestore()
+    .collection("editions")
+    .where("active", "==", false)
+    .get();
+  const results = [];
+  for (const ed of editionsSnap.docs) {
+    const locked = await lockEditionFiles(ed.id);
+    results.push({ editionId: ed.id, edition: ed.data().edition, locked });
+  }
+  return { editions: results };
+});
+
 // disable user sign up
 export const beforecreated = beforeUserCreated((_event) => {
   throw new HttpsError("permission-denied", "Unauthorized request!");
@@ -249,192 +352,6 @@ exports.vote = onCall(async (request) => {
   return { message: "Nouvelle enchère ajoutée" };
 });
 
-//START DEBUG
-exports.votebis = onCall(async (request) => {
-  const now = test.Timestamp.now();
-  const timeDelay = 2500;
-  const context_auth = request.auth;
-  const data = request.data;
-  let isAdmin = false;
-  console.log(
-    "Time server: ",
-    now.toDate().toISOString(),
-    " Time client: ",
-    data.clientTime
-  );
-
-  const serverTimestamp = now.toMillis();
-  const clientTimestamp = Date.parse(data.clientTime);
-
-  console.log(`Server timestamp: ${serverTimestamp}`);
-  console.log(`Client timestamp: ${clientTimestamp}`);
-
-  const timeDifference = serverTimestamp - clientTimestamp;
-
-  console.log(`Time difference: ${timeDifference} milliseconds`);
-
-  console.log("edition id:", data.editionId);
-  if (data.editionId === undefined || data.editionId == null) {
-    throw new HttpsError("invalid-argument", "Edition id is invalid");
-  }
-
-  const activeEdition = await getEditionBis(data.editionId);
-  const activeEditionData = await activeEdition.get();
-  const activeEditionCercle = activeEditionData.data()?.cercles || {};
-
-  if (Object.keys(activeEditionCercle).length === 0) {
-    // No editions found
-    throw new HttpsError("unavailable", "No cercles found in edition!");
-  }
-
-  // Check if the request is made by an isAdmin
-  if (!context_auth) {
-    throw new HttpsError("permission-denied", "Unauthorized request!"); // return error if not connected
-  } else {
-    isAdmin = await getAdminUid(context_auth.uid);
-    if (!activeEditionCercle[context_auth.uid] && !isAdmin) {
-      throw new HttpsError("permission-denied", "Unauthorized request!"); // return error if not isAdmin or not a active cercle
-    }
-  }
-
-  // check date
-  //console.log("before now:", admin.firestore.Timestamp);
-  //console.log("before now:", test);
-  //console.log("before now:", test.Timestamp);
-  //const now = admin.firestore.Timestamp.fromDate(new Date());
-
-  const start = activeEditionData.data()?.start;
-  const stop = activeEditionData.data()?.stop;
-  console.log("start: ", start);
-  // compare start and clientTime
-  console.log("start.toMillis(): ", start.toMillis());
-  console.log("clientTimestamp: ", clientTimestamp);
-  console.log(
-    "start.toMillis() - clientTimestamp: ",
-    start.toMillis() - clientTimestamp
-  );
-  //console.log("stop: ", stop);
-  //console.log("now: ", now);
-  //console.log("now < start: ", now < start);
-  if (start && stop) {
-    if (now < start || now > stop) {
-      throw new HttpsError(
-        "permission-denied",
-        "Vote time frame for the event is over!"
-      );
-    }
-  } else {
-    throw new HttpsError("unavailable", "No vote time frame found!");
-  }
-
-  let senderId = context_auth.uid;
-
-  // Check if the request contains the required data
-
-  //GroscestlaPuissance
-
-  const enchereMin = activeEditionData.data()?.enchereMin;
-  const enchereMax = activeEditionData.data()?.enchereMax;
-  if (!enchereMin || !enchereMax) {
-    throw new HttpsError("unavailable", "No min max enchere found!");
-  }
-
-  let nbFut = 0;
-  if (isAdmin) {
-    nbFut = Infinity;
-  } else {
-    nbFut = activeEditionCercle[senderId].nbFut;
-  }
-  if (!nbFut) {
-    throw new HttpsError("unavailable", "No nbFut found!");
-  }
-
-  // check vote number > 0, > votemin, < votemax, <= nbFut
-  console.log("data.vote: ", data.vote);
-  if (
-    data.vote === undefined ||
-    data.vote < 0 ||
-    data.vote == Infinity ||
-    data.vote > enchereMax ||
-    data.vote < enchereMin ||
-    data.vote > nbFut
-  ) {
-    throw new HttpsError("invalid-argument", "Vote number is invalide");
-  }
-  // comitard id exist and not same cercle
-  const cercleId = getCercleId(data.comitardId, activeEditionCercle);
-
-  if (!cercleId) {
-    throw new HttpsError("invalid-argument", "Comitard id is invalid");
-  } else {
-    if (cercleId === senderId) {
-      throw new HttpsError(
-        "invalid-argument",
-        "Cannot vote for yourself, comitard id is invalid"
-      );
-    }
-  }
-  const enchereStart =
-    activeEditionCercle[cercleId].comitards[data.comitardId].enchereStart;
-  const enchereStop =
-    activeEditionCercle[cercleId].comitards[data.comitardId].enchereStop;
-
-  const duration = activeEditionData.data()?.duration;
-
-  if (!duration) {
-    throw new HttpsError("unavailable", "No duration found!");
-  }
-
-  if (!enchereStart || !enchereStop) {
-    return {
-      message: "added new enchere to a comitard that has a no enchere",
-    };
-  } else {
-    // need to check here if the vote is bigger than last bigest vote
-    const encheres =
-      activeEditionCercle[cercleId].comitards[data.comitardId].encheres;
-    if (encheres) {
-      const tmp = Object.values(encheres)
-        .filter((enchere) => enchere !== null)
-        .map((enchere) => (enchere as { vote: number }).vote);
-      if (tmp.length > 0) {
-        //console.log("data.vote: ", data.vote, "Math.max(...tmp)+1", Math.max(...tmp)+1, "enchereMin", enchereMin);
-        //console.log("Math.max(Math.max(...tmp)+1, enchereMin) < data.vote",Math.max(Math.max(...tmp)+1, enchereMin) > data.vote);
-        if (Math.max(Math.max(...tmp) + 1, enchereMin) > data.vote) {
-          throw new HttpsError(
-            "invalid-argument",
-            "Vote number has to be bigger than the last bigest vote!"
-          );
-        }
-      }
-    } else {
-      throw new HttpsError("unavailable", "No encheres found!");
-    }
-    if (now >= enchereStart && now <= enchereStop) {
-      console.log("added new enchere to a comitard that has a enchere");
-      return {
-        message: "added new enchere to a comitard that has a enchere",
-      };
-    } else if (
-      now <= enchereStop + timeDelay &&
-      data.clientTime <= enchereStop
-    ) {
-      //techncally allow the user to cheat (just a bit), hard to implement a cheat in real life.
-      console.log(
-        "added new enchere to a comitard that has a enchere, but a little late"
-      );
-      return {
-        message:
-          "added new enchere to a comitard that has a enchere, but a little late",
-      };
-    } else {
-      console.log("Error: not in timeframe");
-      return { message: "Error: not in timeframe" };
-    }
-  }
-});
-//END DEBUG
-
 async function remboursement() {
   // Consistent timestamp
 
@@ -459,9 +376,9 @@ async function remboursement() {
     ) {
       throw new HttpsError("unavailable", "No remboursement found!");
     }
-    Object.keys(activeEditionCercle).forEach(function (cercleId) {
+    for (const cercleId of Object.keys(activeEditionCercle)) {
       const cercle = activeEditionCercle[cercleId];
-      Object.keys(cercle.comitards).forEach(async function (comitardId) {
+      for (const comitardId of Object.keys(cercle.comitards ?? {})) {
         const comitard = cercle.comitards[comitardId];
         // check if comitard has an enchere to process
         if (comitard.enchereProcessed === false) {
@@ -491,8 +408,11 @@ async function remboursement() {
               }
             });
 
-            // Iterate over the sorted encheres array
-            encheresArray.forEach(async (enchere: any, index) => {
+            // Iterate over the sorted encheres array. Must await sequentially:
+            // enchereProcessed / jobs below must only be flipped once every
+            // reimbursement has actually settled.
+            for (let index = 0; index < encheresArray.length; index++) {
+              const enchere: any = encheresArray[index];
               if (index === 0) {
                 await rembourseUser(
                   activeEdition,
@@ -512,7 +432,7 @@ async function remboursement() {
                 );
               }
               console.log("enchere sorted: ", enchere, "index: ", index);
-            });
+            }
 
             // Set the comitard's enchereProcessed field to true
             const s = `cercles.${cercleId}.comitards.${comitardId}`;
@@ -543,8 +463,8 @@ async function remboursement() {
             comitard.name
           );
         }
-      });
-    });
+      }
+    }
   } else {
     console.log("no jobs to process");
   }
@@ -559,7 +479,7 @@ async function rembourseUser(edition: any, userId: string, amount: number) {
   //console.log("fieldValue: ", test.FieldValue.increment);
   //console.log("fieldValue: ", test.FieldValue.increment(4));
 
-  edition
+  await edition
     .update({
       [e]: test.FieldValue.increment(Math.ceil(amount)),
       //     jobs: test.FieldValue.increment(1),
@@ -915,83 +835,38 @@ exports.addcomitard = onCall(async (request) => {
  */
 
 exports.resetpassworduser = onCall(async (request) => {
-  const context_auth = request.auth;
+  const auth = request.auth;
   const data = request.data;
-  //const auth = getAuth();
-  // Check if the request is made by an admin
-  if (!context_auth || !(await getAdminUid(context_auth.uid))) {
+
+  // AuthZ: only admins
+  if (!auth || !(await getAdminUid(auth.uid))) {
     throw new HttpsError("permission-denied", "Unauthorized request!");
   }
 
-  if (data.uid === undefined || data.uid.length == 0) {
+  // Validate uid
+  if (!data || typeof data.uid !== "string" || data.uid.trim().length === 0) {
     throw new HttpsError("invalid-argument", "User id is invalid");
   }
 
-  // Generate a random password
-  if (!data.password || data.password.length == 0) {
+  // Validate password
+  if (typeof data.password !== "string" || data.password.trim().length === 0) {
     throw new HttpsError("invalid-argument", "Password is invalid");
   }
-  const newPassword = data.password;
+  if (data.password.length < 6) {
+    throw new HttpsError("invalid-argument", "Password must be at least 6 characters");
+  }
 
-  // Reset password for each user
   try {
-    await admin.auth().updateUser(data.uid, { password: newPassword });
-    //console.log("Password reset for user: ", uid, newPassword); //FOR DEBUG
-  } catch (error: any) {
-    console.log("Error resetting password for user: ", data.uid, "error: ", error);
-    throw new HttpsError(
-      "internal",
-      "Failed to reset password for user: " + error.message
-    );
+    await admin.auth().updateUser(data.uid, { password: data.password });
+    console.log("Password reset for user:", data.uid, "and password", data.password); //FOR DEBUG
+    const user = await admin.auth().getUser(data.uid);
+    console.log("User email: ", user);
+    return { success: true, message: "Password reset for user." };
+  } catch (err) {
+    console.log("Error resetting password for user:", data.uid, err);
+    throw new HttpsError("internal", "Failed to reset password for user.");
   }
-
-  return { message: "Password reseted for user." };
 });
-
-/**
- * Reset password for a specific user.
- * This function can only be called by an admin.
- *
- * @param {Object} data - The data passed to the function.
- * @param {Object} context - The context object containing information about the authenticated user.
- * @returns {Promise<Object>} - A promise that resolves to an object with a success message.
- * @throws {functions.https.HttpsError} - Throws an error if the request is unauthorized or if there is an internal error.
- */
-
-exports.resetpassworduser = onCall(async (request) => {
-  const context_auth = request.auth;
-  const data = request.data;
-  //const auth = getAuth();
-  // Check if the request is made by an admin
-  if (!context_auth || !(await getAdminUid(context_auth.uid))) {
-    throw new HttpsError("permission-denied", "Unauthorized request!");
-  }
-
-  if (data.uid === undefined || data.uid.length == 0) {
-    throw new HttpsError("invalid-argument", "User id is invalid");
-  }
-
-  // Generate a random password
-  if (!data.password || data.password.length == 0) {
-    throw new HttpsError("invalid-argument", "Password is invalid");
-  }
-  const newPassword = data.password;
-
-  // Reset password for each user
-  try {
-    await admin.auth().updateUser(data.uid, { password: newPassword });
-    //console.log("Password reset for user: ", uid, newPassword); //FOR DEBUG
-  } catch (error: any) {
-    console.log("Error resetting password for user: ", data.uid, "error: ", error);
-    throw new HttpsError(
-      "internal",
-      "Failed to reset password for user: " + error.message
-    );
-  }
-
-  return { message: "Password reseted for user." };
-});
-
 /**
  * Reset all passwords for users in the cercle and send reset password emails.
  * This function can only be called by an admin.
@@ -1112,7 +987,7 @@ exports.disableuser = onCall(async (request) => {
   }
 
   try {
-    admin.auth().updateUser(uid, {
+    await admin.auth().updateUser(uid, {
       disabled: true,
     });
     return { message: "User disabled" };
@@ -1138,14 +1013,14 @@ exports.enableuser = onCall(async (request) => {
   }
 
   try {
-    admin.auth().updateUser(uid, {
+    await admin.auth().updateUser(uid, {
       disabled: false,
     });
-    return { message: "User disabled" };
+    return { message: "User enabled" };
   } catch (error: any) {
     throw new HttpsError(
       "internal",
-      "Failed to disable user: " + error.message
+      "Failed to enable user: " + error.message
     );
   }
 });

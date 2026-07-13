@@ -81,13 +81,13 @@ export default function EditCerle({
     } else {
       try {
         const docRef = doc(db, "editions", editionId);
+        // Update only the edited fields. Rewriting the whole cercle object with
+        // the snapshot's `comitards` would wipe any bids placed since the modal
+        // was opened.
         await updateDoc(docRef, {
-          [`cercles.${data.id}`]: {
-            name: cercleName,
-            description: cercleDescription,
-            nbFut: nbFut,
-            comitards: data.comitards,
-          },
+          [`cercles.${data.id}.name`]: cercleName,
+          [`cercles.${data.id}.description`]: cercleDescription,
+          [`cercles.${data.id}.nbFut`]: nbFut,
         });
         refetchData();
         setCercleErrorSeverity("success");

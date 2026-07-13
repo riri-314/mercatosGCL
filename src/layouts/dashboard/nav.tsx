@@ -147,7 +147,7 @@ export default function Nav({ openNav, onCloseNav }: any) {
         },
       }}
     >
-      <Logo sx={{ mt: 3, ml: 4, mb: 2 }} />
+      <Logo />
 
       {renderMenu}
     </Scrollbar>

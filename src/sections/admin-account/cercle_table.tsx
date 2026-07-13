@@ -20,6 +20,7 @@ interface CercleTableProps {
   data: DocumentData;
   refetchData: () => void;
   handleOpenModalCercle: (id: number) => void;
+  handleOpenModalMDP: (id: number) => void;
 }
 
 // faire charger boutton "désactiver"
@@ -33,6 +34,7 @@ export default function CercleTable({
   data,
   refetchData,
   handleOpenModalCercle,
+  handleOpenModalMDP,
 }: CercleTableProps) {
   const [loading, setLoading] = useState<boolean>(false);
   const [openModal, setOpenModal] = useState<boolean>(false);
@@ -87,7 +89,7 @@ export default function CercleTable({
   }
 
   const cercleDataArray = Object.keys(data.data().cercles).map(
-    (id: string) => ({ id, ...data.data().cercles[id] })
+    (id: string) => ({ id, ...data.data().cercles[id] }),
   );
 
   function handleClick(uid: string, functionName: string) {
@@ -166,7 +168,9 @@ export default function CercleTable({
             setModalData([
               params.row.id,
               isDisabled(params.row.id) ? "enableuser" : "disableuser",
-               isDisabled(params.row.id) ? "Êtes-vous sûr de vouloir résactiver ce cercle? Le cercle devra changer son mot de passe pour pouvoir continuer à utiliser son compte" : "Êtes-vous sûr de vouloir désactiver ce cercle? Cela va uniquement désactiver le cercle, pas les données associées. Le cercle ne pourra plus se connecter. Cette action est réversible",
+              isDisabled(params.row.id)
+                ? "Êtes-vous sûr de vouloir résactiver ce cercle? Le cercle devra changer son mot de passe pour pouvoir continuer à utiliser son compte"
+                : "Êtes-vous sûr de vouloir désactiver ce cercle? Cela va uniquement désactiver le cercle, pas les données associées. Le cercle ne pourra plus se connecter. Cette action est réversible",
             ]);
           }}
           variant="contained"
@@ -174,8 +178,8 @@ export default function CercleTable({
           {loadingStatus
             ? "Chargement"
             : isDisabled(params.row.id)
-            ? "Activer"
-            : "Désactiver"}
+              ? "Activer"
+              : "Désactiver"}
         </LoadingButton>
       ),
     },
@@ -201,6 +205,25 @@ export default function CercleTable({
           Supprimer
         </LoadingButton>
       ),
+    },
+    {
+      field: "mdp",
+      type: "actions",
+      headerName: "Changer mdp",
+      minWidth: 150,
+      cellClassName: "actions",
+      getActions: (params: GridRowParams) => {
+        const rowData = params.row;
+        return [
+          <GridActionsCellItem
+            icon={<Iconify icon="ic:baseline-password" />}
+            label="Edit"
+            className="textPrimary"
+            onClick={() => handleOpenModalMDP(rowData)}
+            color="inherit"
+          />,
+        ];
+      },
     },
   ];
 
