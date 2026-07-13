@@ -29,6 +29,7 @@ import Iconify from "../../components/iconify/iconify.tsx";
 import EncheresTable from "./enchere_table.tsx";
 import EditEnchere from "./edit_enchere.tsx";
 import EditMDP from "./edit_mdp.tsx";
+import { lockAllPastEditions } from "../../utils/admin-tools";
 
 interface AdminAccountProps {
   data: DocumentData[];
@@ -43,6 +44,8 @@ export default function AdminAccount({
 }: AdminAccountProps) {
   const { user } = useAuth();
   const [errorEditionEdit, setErrorEditionEdit] = useState("");
+  const [lockingPast, setLockingPast] = useState(false);
+  const [lockPastResult, setLockPastResult] = useState("");
   const [openModalEdition, setOpenModalEdition] = useState(false);
   const handleOpenModalEdition = () => setOpenModalEdition(true);
   const handleCloseModalEdition = () => setOpenModalEdition(false);
@@ -115,6 +118,33 @@ export default function AdminAccount({
           {errorEditionEdit && (
             <Alert sx={{ mt: 3 }} severity={"error"}>
               {errorEditionEdit}
+            </Alert>
+          )}
+          <LoadingButton
+            sx={{ mt: 2 }}
+            variant="outlined"
+            color="warning"
+            loading={lockingPast}
+            onClick={async () => {
+              setLockingPast(true);
+              setLockPastResult("");
+              const ret = await lockAllPastEditions();
+              setLockPastResult(
+                ret
+                  ? "Photos des anciennes éditions sécurisées."
+                  : "Erreur lors de la sécurisation des anciennes éditions."
+              );
+              setLockingPast(false);
+            }}
+          >
+            Sécuriser les photos des anciennes éditions
+          </LoadingButton>
+          {lockPastResult && (
+            <Alert
+              sx={{ mt: 2 }}
+              severity={lockPastResult.startsWith("Erreur") ? "error" : "success"}
+            >
+              {lockPastResult}
             </Alert>
           )}
         </CardContent>
