@@ -40,6 +40,7 @@ export default function EditEnchere({
       const ret = await editEnchereAmount(valueToReembourse, data, enchereData.id, value);
       if (ret !== 0) {
         setError("Error updating enchere.");
+        return;
       }
       setFinished(true);
       refetchData();

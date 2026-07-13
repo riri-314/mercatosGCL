@@ -8,7 +8,7 @@ import {
   GridToolbar,
 } from "@mui/x-data-grid";
 import Iconify from "../../components/iconify/iconify";
-import { doc, DocumentData, updateDoc } from "@firebase/firestore";
+import { deleteField, doc, DocumentData, updateDoc } from "@firebase/firestore";
 import { LoadingButton } from "@mui/lab";
 import { useState } from "react";
 import { db } from "../../firebase_config";
@@ -71,11 +71,12 @@ export default function ComitardTable({
     try {
       const docRef = doc(db, "editions", data.id);
 
-      const cercles = data.data()?.cercles;
-      if (cercles && cercles[cercleUid]) {
-        delete cercles[cercleUid].comitards[comitardUid];
-        await updateDoc(docRef, { cercles });
-      }
+      // Targeted delete of just this comitard. Writing back the whole `cercles`
+      // map from the (possibly stale) page snapshot would clobber concurrent
+      // bids / nbFut changes made since the page loaded.
+      await updateDoc(docRef, {
+        [`cercles.${cercleUid}.comitards.${comitardUid}`]: deleteField(),
+      });
       setLoading(false);
       refetchData();
       setDone(true);

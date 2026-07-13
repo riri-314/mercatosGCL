@@ -249,192 +249,6 @@ exports.vote = onCall(async (request) => {
   return { message: "Nouvelle enchère ajoutée" };
 });
 
-//START DEBUG
-exports.votebis = onCall(async (request) => {
-  const now = test.Timestamp.now();
-  const timeDelay = 2500;
-  const context_auth = request.auth;
-  const data = request.data;
-  let isAdmin = false;
-  console.log(
-    "Time server: ",
-    now.toDate().toISOString(),
-    " Time client: ",
-    data.clientTime
-  );
-
-  const serverTimestamp = now.toMillis();
-  const clientTimestamp = Date.parse(data.clientTime);
-
-  console.log(`Server timestamp: ${serverTimestamp}`);
-  console.log(`Client timestamp: ${clientTimestamp}`);
-
-  const timeDifference = serverTimestamp - clientTimestamp;
-
-  console.log(`Time difference: ${timeDifference} milliseconds`);
-
-  console.log("edition id:", data.editionId);
-  if (data.editionId === undefined || data.editionId == null) {
-    throw new HttpsError("invalid-argument", "Edition id is invalid");
-  }
-
-  const activeEdition = await getEditionBis(data.editionId);
-  const activeEditionData = await activeEdition.get();
-  const activeEditionCercle = activeEditionData.data()?.cercles || {};
-
-  if (Object.keys(activeEditionCercle).length === 0) {
-    // No editions found
-    throw new HttpsError("unavailable", "No cercles found in edition!");
-  }
-
-  // Check if the request is made by an isAdmin
-  if (!context_auth) {
-    throw new HttpsError("permission-denied", "Unauthorized request!"); // return error if not connected
-  } else {
-    isAdmin = await getAdminUid(context_auth.uid);
-    if (!activeEditionCercle[context_auth.uid] && !isAdmin) {
-      throw new HttpsError("permission-denied", "Unauthorized request!"); // return error if not isAdmin or not a active cercle
-    }
-  }
-
-  // check date
-  //console.log("before now:", admin.firestore.Timestamp);
-  //console.log("before now:", test);
-  //console.log("before now:", test.Timestamp);
-  //const now = admin.firestore.Timestamp.fromDate(new Date());
-
-  const start = activeEditionData.data()?.start;
-  const stop = activeEditionData.data()?.stop;
-  console.log("start: ", start);
-  // compare start and clientTime
-  console.log("start.toMillis(): ", start.toMillis());
-  console.log("clientTimestamp: ", clientTimestamp);
-  console.log(
-    "start.toMillis() - clientTimestamp: ",
-    start.toMillis() - clientTimestamp
-  );
-  //console.log("stop: ", stop);
-  //console.log("now: ", now);
-  //console.log("now < start: ", now < start);
-  if (start && stop) {
-    if (now < start || now > stop) {
-      throw new HttpsError(
-        "permission-denied",
-        "Vote time frame for the event is over!"
-      );
-    }
-  } else {
-    throw new HttpsError("unavailable", "No vote time frame found!");
-  }
-
-  let senderId = context_auth.uid;
-
-  // Check if the request contains the required data
-
-  //GroscestlaPuissance
-
-  const enchereMin = activeEditionData.data()?.enchereMin;
-  const enchereMax = activeEditionData.data()?.enchereMax;
-  if (!enchereMin || !enchereMax) {
-    throw new HttpsError("unavailable", "No min max enchere found!");
-  }
-
-  let nbFut = 0;
-  if (isAdmin) {
-    nbFut = Infinity;
-  } else {
-    nbFut = activeEditionCercle[senderId].nbFut;
-  }
-  if (!nbFut) {
-    throw new HttpsError("unavailable", "No nbFut found!");
-  }
-
-  // check vote number > 0, > votemin, < votemax, <= nbFut
-  console.log("data.vote: ", data.vote);
-  if (
-    data.vote === undefined ||
-    data.vote < 0 ||
-    data.vote == Infinity ||
-    data.vote > enchereMax ||
-    data.vote < enchereMin ||
-    data.vote > nbFut
-  ) {
-    throw new HttpsError("invalid-argument", "Vote number is invalide");
-  }
-  // comitard id exist and not same cercle
-  const cercleId = getCercleId(data.comitardId, activeEditionCercle);
-
-  if (!cercleId) {
-    throw new HttpsError("invalid-argument", "Comitard id is invalid");
-  } else {
-    if (cercleId === senderId) {
-      throw new HttpsError(
-        "invalid-argument",
-        "Cannot vote for yourself, comitard id is invalid"
-      );
-    }
-  }
-  const enchereStart =
-    activeEditionCercle[cercleId].comitards[data.comitardId].enchereStart;
-  const enchereStop =
-    activeEditionCercle[cercleId].comitards[data.comitardId].enchereStop;
-
-  const duration = activeEditionData.data()?.duration;
-
-  if (!duration) {
-    throw new HttpsError("unavailable", "No duration found!");
-  }
-
-  if (!enchereStart || !enchereStop) {
-    return {
-      message: "added new enchere to a comitard that has a no enchere",
-    };
-  } else {
-    // need to check here if the vote is bigger than last bigest vote
-    const encheres =
-      activeEditionCercle[cercleId].comitards[data.comitardId].encheres;
-    if (encheres) {
-      const tmp = Object.values(encheres)
-        .filter((enchere) => enchere !== null)
-        .map((enchere) => (enchere as { vote: number }).vote);
-      if (tmp.length > 0) {
-        //console.log("data.vote: ", data.vote, "Math.max(...tmp)+1", Math.max(...tmp)+1, "enchereMin", enchereMin);
-        //console.log("Math.max(Math.max(...tmp)+1, enchereMin) < data.vote",Math.max(Math.max(...tmp)+1, enchereMin) > data.vote);
-        if (Math.max(Math.max(...tmp) + 1, enchereMin) > data.vote) {
-          throw new HttpsError(
-            "invalid-argument",
-            "Vote number has to be bigger than the last bigest vote!"
-          );
-        }
-      }
-    } else {
-      throw new HttpsError("unavailable", "No encheres found!");
-    }
-    if (now >= enchereStart && now <= enchereStop) {
-      console.log("added new enchere to a comitard that has a enchere");
-      return {
-        message: "added new enchere to a comitard that has a enchere",
-      };
-    } else if (
-      now <= enchereStop + timeDelay &&
-      data.clientTime <= enchereStop
-    ) {
-      //techncally allow the user to cheat (just a bit), hard to implement a cheat in real life.
-      console.log(
-        "added new enchere to a comitard that has a enchere, but a little late"
-      );
-      return {
-        message:
-          "added new enchere to a comitard that has a enchere, but a little late",
-      };
-    } else {
-      console.log("Error: not in timeframe");
-      return { message: "Error: not in timeframe" };
-    }
-  }
-});
-//END DEBUG
-
 async function remboursement() {
   // Consistent timestamp
 
@@ -459,9 +273,9 @@ async function remboursement() {
     ) {
       throw new HttpsError("unavailable", "No remboursement found!");
     }
-    Object.keys(activeEditionCercle).forEach(function (cercleId) {
+    for (const cercleId of Object.keys(activeEditionCercle)) {
       const cercle = activeEditionCercle[cercleId];
-      Object.keys(cercle.comitards).forEach(async function (comitardId) {
+      for (const comitardId of Object.keys(cercle.comitards ?? {})) {
         const comitard = cercle.comitards[comitardId];
         // check if comitard has an enchere to process
         if (comitard.enchereProcessed === false) {
@@ -491,8 +305,11 @@ async function remboursement() {
               }
             });
 
-            // Iterate over the sorted encheres array
-            encheresArray.forEach(async (enchere: any, index) => {
+            // Iterate over the sorted encheres array. Must await sequentially:
+            // enchereProcessed / jobs below must only be flipped once every
+            // reimbursement has actually settled.
+            for (let index = 0; index < encheresArray.length; index++) {
+              const enchere: any = encheresArray[index];
               if (index === 0) {
                 await rembourseUser(
                   activeEdition,
@@ -512,7 +329,7 @@ async function remboursement() {
                 );
               }
               console.log("enchere sorted: ", enchere, "index: ", index);
-            });
+            }
 
             // Set the comitard's enchereProcessed field to true
             const s = `cercles.${cercleId}.comitards.${comitardId}`;
@@ -543,8 +360,8 @@ async function remboursement() {
             comitard.name
           );
         }
-      });
-    });
+      }
+    }
   } else {
     console.log("no jobs to process");
   }
@@ -559,7 +376,7 @@ async function rembourseUser(edition: any, userId: string, amount: number) {
   //console.log("fieldValue: ", test.FieldValue.increment);
   //console.log("fieldValue: ", test.FieldValue.increment(4));
 
-  edition
+  await edition
     .update({
       [e]: test.FieldValue.increment(Math.ceil(amount)),
       //     jobs: test.FieldValue.increment(1),
@@ -1067,7 +884,7 @@ exports.disableuser = onCall(async (request) => {
   }
 
   try {
-    admin.auth().updateUser(uid, {
+    await admin.auth().updateUser(uid, {
       disabled: true,
     });
     return { message: "User disabled" };
@@ -1093,14 +910,14 @@ exports.enableuser = onCall(async (request) => {
   }
 
   try {
-    admin.auth().updateUser(uid, {
+    await admin.auth().updateUser(uid, {
       disabled: false,
     });
-    return { message: "User disabled" };
+    return { message: "User enabled" };
   } catch (error: any) {
     throw new HttpsError(
       "internal",
-      "Failed to disable user: " + error.message
+      "Failed to enable user: " + error.message
     );
   }
 });
