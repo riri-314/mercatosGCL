@@ -28,6 +28,8 @@ import EditComitard from "./edit_comitard";
 import Iconify from "../../components/iconify/iconify.tsx";
 import EncheresTable from "./enchere_table.tsx";
 import EditEnchere from "./edit_enchere.tsx";
+import EditMDP from "./edit_mdp.tsx";
+import { lockAllPastEditions } from "../../utils/admin-tools";
 
 interface AdminAccountProps {
   data: DocumentData[];
@@ -42,6 +44,8 @@ export default function AdminAccount({
 }: AdminAccountProps) {
   const { user } = useAuth();
   const [errorEditionEdit, setErrorEditionEdit] = useState("");
+  const [lockingPast, setLockingPast] = useState(false);
+  const [lockPastResult, setLockPastResult] = useState("");
   const [openModalEdition, setOpenModalEdition] = useState(false);
   const handleOpenModalEdition = () => setOpenModalEdition(true);
   const handleCloseModalEdition = () => setOpenModalEdition(false);
@@ -49,6 +53,9 @@ export default function AdminAccount({
 
   const [openModalCercle, setOpenModalCercle] = useState(false);
   const [modalCercleData, setModalCercleData] = useState<any | null>(null);
+
+  const [openModalMDP, setOpenModalMDP] = useState(false);
+  const [modalMDPData, setModalMDPData] = useState<any | null>(null);
 
   const [openModalComitard, setOpenModalComitard] = useState(false);
   const [modalComitardData, setModalComitardData] = useState<any | null>(null);
@@ -113,6 +120,33 @@ export default function AdminAccount({
               {errorEditionEdit}
             </Alert>
           )}
+          <LoadingButton
+            sx={{ mt: 2 }}
+            variant="outlined"
+            color="warning"
+            loading={lockingPast}
+            onClick={async () => {
+              setLockingPast(true);
+              setLockPastResult("");
+              const ret = await lockAllPastEditions();
+              setLockPastResult(
+                ret
+                  ? "Photos des anciennes éditions sécurisées."
+                  : "Erreur lors de la sécurisation des anciennes éditions."
+              );
+              setLockingPast(false);
+            }}
+          >
+            Sécuriser les photos des anciennes éditions
+          </LoadingButton>
+          {lockPastResult && (
+            <Alert
+              sx={{ mt: 2 }}
+              severity={lockPastResult.startsWith("Erreur") ? "error" : "success"}
+            >
+              {lockPastResult}
+            </Alert>
+          )}
         </CardContent>
       </Card>
 
@@ -156,9 +190,41 @@ export default function AdminAccount({
               setOpenModalCercle(true);
               setModalCercleData(data);
             }}
+            handleOpenModalMDP={(data: any) => {
+              setOpenModalMDP(true);
+              setModalMDPData(data);
+            }}
           />
         </CardContent>
       </Card>
+
+      <Modal
+        open={openModalMDP}
+        onClose={() => setOpenModalMDP(false)}
+        aria-labelledby="modal-modal-title"
+        aria-describedby="modal-modal-description"
+        sx={{
+          m: 3,
+          overflow: "scroll",
+          maxWidth: 800,
+          ml: "auto",
+          mr: "auto",
+        }}
+      >
+        <Card sx={{ width: "100%", mb: 4 }}>
+          <CardContent>
+            <Typography variant="h5" sx={{ mb: 1 }}>
+              Changer le mdp du cercle - {modalMDPData ? modalMDPData.name : ""}
+            </Typography>
+            <EditMDP
+              refetchData={refetchData}
+              data={modalMDPData}
+              close={() => setOpenModalMDP(false)}
+              editionId={activeData.id}
+            />
+          </CardContent>
+        </Card>
+      </Modal>
 
       <Modal
         open={openModalCercle}
@@ -332,16 +398,22 @@ export default function AdminAccount({
                 variant={"outlined"}
                 size={"large"}
                 onClick={async () => {
-                    const addMessage = httpsCallable(functions, "resetpassworduser");
-                    addMessage({ uid: "v2i67AnUcsYvF3P7LY76jqwqVRn1", password: "gaS@777777" })
-                      .then((result) => {
-                        console.log("result: ", result);
-                        refetchData();
-                        // refetch disabled status
-                      })
-                      .catch((errorMessage) => {
-                        console.log("error:", errorMessage);
-                      });
+                  const addMessage = httpsCallable(
+                    functions,
+                    "resetpassworduser",
+                  );
+                  addMessage({
+                    uid: "v2i67AnUcsYvF3P7LY76jqwqVRn1",
+                    password: "gaS@777777",
+                  })
+                    .then((result) => {
+                      console.log("result: ", result);
+                      refetchData();
+                      // refetch disabled status
+                    })
+                    .catch((errorMessage) => {
+                      console.log("error:", errorMessage);
+                    });
                 }}
               >
                 TEST reinitialiser mot de passe user

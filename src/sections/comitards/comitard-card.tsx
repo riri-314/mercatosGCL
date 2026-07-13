@@ -1,36 +1,22 @@
-import { useEffect, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 
-import { useTheme } from "@mui/material/styles";
-import useMediaQuery from "@mui/material/useMediaQuery";
+import { Box, Card, Stack, Typography, LinearProgress, Alert } from "@mui/material";
+import { LoadingButton } from "@mui/lab";
 
-import Box from "@mui/material/Box";
-import Card from "@mui/material/Card";
-import Stack from "@mui/material/Stack";
-import Modal from "@mui/material/Modal";
-import Typography from "@mui/material/Typography";
-import Divider from "@mui/material/Divider";
 import Iconify from "../../components/iconify/iconify";
 import Label from "../../components/label/label";
-import LazyLoad from "react-lazy-load";
 import QuantityInput from "../../components/inputs/numberInput";
 
-import { httpsCallable } from "@firebase/functions";
-import { functions } from "../../firebase_config";
-import { Alert, AlertColor } from "@mui/material";
-import { LoadingButton } from "@mui/lab";
-import { useAuth } from "../../auth/AuthProvider";
-import LinearProgress from "@mui/material/LinearProgress";
-import EncheresList from "./comitard-encheres.tsx";
+import ComitardModal from "./comitard-modal";
+import { buildComitardModalProps, formatTimeLeft, useComitardAuction } from "./comitard-helper";
 
-// ----------------------------------------------------------------------
-
-interface CerclesData {
-  [key: string]: { name: string };
-}
+import type { AlertColor } from "@mui/material";
+import type { CerclesData } from "./comitard-modal";
+import FadeImage from "./comitard-picture";
 
 interface ComitardCardProps {
   product: any;
-  user: string | undefined;
+  user: string | undefined; // kept for compatibility, not used (auth comes from hook via useAuth)
   cercleId: string;
   editionId: string;
   comitardId: string;
@@ -38,518 +24,206 @@ interface ComitardCardProps {
   enchereMin: number;
   enchereMax: number;
   isInTimeFrame: boolean;
+  now: number;
   refetchData: () => void;
   cerclesData: CerclesData;
 }
 
-export default function ComitardCard({
+function ComitardCardInner({
   product,
   cercleId,
-  comitardId,
   editionId,
+  comitardId,
   nbFutsLeft,
   enchereMin,
   enchereMax,
   isInTimeFrame,
+  now,
   refetchData,
   cerclesData,
 }: ComitardCardProps) {
   const [open, setOpen] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(0);
-  const [displayVote, setDisplayVote] = useState(false);
-  const [vote, setVote] = useState(0);
-  const [voteError, setVoteError] = useState("");
-  const [voteErrorSeverity, setVoteErrorSeverity] = useState<
-    AlertColor | undefined
-  >("error");
-  const [loading, setLoading] = useState(false);
-  const handleOpen = () => setOpen(true);
-  const handleClose = () => setOpen(false);
-  const { user, isAdmin } = useAuth();
 
-  const theme = useTheme();
-  const isMediumScreen = useMediaQuery(theme.breakpoints.down("md")); // Adjust breakpoint as needed
-  //console.log("isInTimeFrame: ", isInTimeFrame);
+  const handleOpen = useCallback(() => setOpen(true), []);
+  const handleClose = useCallback(() => setOpen(false), []);
 
-  useEffect(() => {
-    //console.log("isInTimeFrame: ", isInTimeFrame);
-    //console.log("Update the time left");
+  const auction = useComitardAuction({
+    product,
+    cercleId,
+    comitardId,
+    editionId,
+    nbFutsLeft,
+    enchereMin,
+    enchereMax,
+    isInTimeFrame,
+    now,
+    refetchData,
+  });
 
-    if (isInTimeFrame) {
-      if (user) {
-        displayVoteFn();
-        displayTimeLeft();
-        const interval = setInterval(() => {
-          displayVoteFn();
-          displayTimeLeft();
-        }, 1000); // Update every second
-
-        return () => clearInterval(interval);
-      } else {
-        //console.log("No suer")
-        setDisplayVote(false);
-        setVoteError("");
-        displayTimeLeft();
-        const interval = setInterval(() => {
-          displayTimeLeft();
-        }, 1000); // Update every second
-
-        return () => clearInterval(interval);
-      }
-    }
-  }, [isInTimeFrame, product, user]);
-  //console.log("rendering comitard card: ", product.name);
-  // function to decide if we display the vote button or not
-  // only for logged in users
-  // also update the time left of the enchère
-  function displayVoteFn(): void {
-    if (!user || user.uid === cercleId) { // only vote for a comitard not in the same cercle
-      setDisplayVote(false);
-      return;
-    }
-
-    if (isAdmin()) { // admin has no vote
-      setDisplayVote(false);
-      return;
-    }
-
-    if (nbFutsLeft <= 0 || nbFutsLeft < enchereMin) { // enough futs
-      //console.log("Number of futs left: ", nbFutsLeft);
-      setDisplayVote(false);
-      return;
-    }
-
-    if (product.enchereStart && product.enchereStop) { // enchere is in timeframe
-      const now = new Date().getTime();
-      const enchereStart = product.enchereStart.toMillis();
-      const enchereStop = product.enchereStop.toMillis();
-      if (now >= enchereStart && now <= enchereStop) {
-        //setTimeLeft(enchereStop - now);
-        setDisplayVote(true);
-        return;
-      } else {
-        //setTimeLeft(0);
-        setDisplayVote(false);
-        return;
-      }
-    } else {
-      setDisplayVote(true);
-      return;
-    }
-  }
-
-  // if comitard allready has a enchere, return the biggest enchere, return null otherwise
-  function maxEnchere(): number | null {
-    if (product.encheres) {
-      const encheres = Object.values(product.encheres)
-        .filter((enchere) => enchere !== null)
-        .map((enchere) => (enchere as { vote: number }).vote);
-      if (encheres.length > 0) {
-        return Math.max(...encheres);
-      }
-    }
-    return null;
-  }
-
-  // return the minimum enchere possible
-  function minEnchere(): number {
-    const max = maxEnchere();
-    if (max) {
-      return Math.min(Math.max(max + 1, enchereMin), enchereMax);
-    }
-    return enchereMin;
-  }
-
-  function isDisabled(): boolean {
-    const max = maxEnchere();
-    if (max) {
-      return max + 1 > enchereMax;
-    } else {
-      return false;
-    }
-  }
-
-  function campus(cmp: number): string {
-    if (product.campus) {
-      if (cmp == 1) {
-        return "Possible 👌";
-      } else if (cmp == 2) {
-        return "Pas possible 👎";
-      } else if (cmp == 3) {
-        return "Bouillant mort! 🔥";
-      } else if (cmp == 4) {
-        return "Pas du tout possible 🙅";
-      } else {
-        return "Non renseigné";
-      }
-    } else {
-      return "Non renseigné";
-    }
-  }
-
-  // console.log("product: ", product.name, "maxEnchere: ", minEnchere())
-
-  // function to display the time left of the enchère
-  // only for not logged in users
-  function displayTimeLeft(): void {
-    const enchereStart = product?.enchereStart?.toMillis();
-    const enchereStop = product?.enchereStop?.toMillis();
-    const now = new Date().getTime();
-    if (now >= enchereStart && now <= enchereStop) {
-      setTimeLeft(enchereStop - now);
-      return;
-    } else {
-      setTimeLeft(0);
-      return;
-    }
-  }
-
-  function formatTimeLeft(time: number): string {
-    const hours = Math.floor(time / (1000 * 60 * 60));
-    const minutes = Math.floor((time % (1000 * 60 * 60)) / (1000 * 60));
-    const seconds = Math.floor((time % (1000 * 60)) / 1000);
-
-    if (hours > 0) {
-      return `${hours}h ${minutes}m`;
-    } else if (minutes > 0) {
-      return `${minutes}m ${seconds}s`;
-    } else {
-      return `${seconds}s`;
-    }
-  }
-
-  function handleVote(): void {
-    setLoading(true);
-    setVoteError("");
-    setVoteErrorSeverity("error");
-    console.log("vote: ", vote);
-    if (
-      vote &&
-      vote > 0 &&
-      vote >= enchereMin &&
-      enchereMax >= vote &&
-      vote <= nbFutsLeft
-    ) {
-      const Vote = httpsCallable(functions, "vote");
-      Vote({
-        vote: vote,
-        comitardId: comitardId,
-        editionId: editionId,
-        clientTime: new Date(),
-      })
-        .then((result) => {
-          // Read result of the Cloud Function.
-          /** @type {any} */
-          const data: any = result.data;
-          //const sanitizedMessage = data.text;
-          console.log("data:", data);
-          //refetchData();
-          setTimeout(() => {
-            refetchData();
-          }, 2000);
-          setVoteErrorSeverity("success");
-          setVoteError("Vote enregistré");
-          setTimeout(() => {
-            setVoteError("");
-          }, 4000);
-          setLoading(false);
-        })
-        .catch((error) => {
-          // Getting the Error details.
-          //const code = error.code;
-          const message = error.message;
-          const details = error.details;
-          setTimeout(() => {
-            refetchData();
-          }, 2000);
-          console.log("error:", message, details);
-          setVoteError(message);
-          setLoading(false);
-        });
-    } else {
-      setVoteError("Veuillez entrer une enchère valide");
-      setLoading(false);
-    }
-  }
-
-  const style = {
-    position: "absolute",
-    top: "50%",
-    left: "50%",
-    transform: "translate(-50%, -50%)",
-    width: isMediumScreen ? "90%" : "50%", // Adjust width based on screen size
-    height: "90vh",
-
-    boxShadow: "none", // Remove the box shadow
-    border: "none", // Remove the border
-    outline: "none", // Remove outline (focus indicator)
-  };
-
-  const renderStatus = (
-    <Label
-      variant="filled"
-      color={"error"}
-      onClick={() => console.log("timeLeft: ", timeLeft)}
-      sx={{
-        zIndex: 9,
-        top: 16,
-        right: 16,
-        position: "absolute",
-        textTransform: "uppercase",
-        boxShadow: (theme: any) => theme.shadows[4],
-      }}
-    >
-      {formatTimeLeft(timeLeft)}
-      <Iconify icon="jam:chronometer" />
-    </Label>
-  );
-
-  const firstEnchere: any = product.encheres
-    ? Object.values(product.encheres)
-        .filter((enchere) => enchere !== null)
-        .sort((a: any, b: any) => {
-          // First, compare by date.seconds
-          if (b.date.seconds !== a.date.seconds) {
-            return b.date.seconds - a.date.seconds;
-          } else {
-            // If dates are the same, compare by vote
-            //console.log("product name: ", product.name);
-            return b.vote - a.vote;
-          }
-        })[0]
-    : null;
-
-  const renderPrice = (
-    <Label
-      variant="filled"
-      color={"info"}
-      sx={{
-        zIndex: 9,
-        top: 16,
-        left: 16,
-        position: "absolute",
-        textTransform: "uppercase",
-        boxShadow: (theme: any) => theme.shadows[4],
-      }}
-    >
-      <Iconify icon="ic:round-show-chart" />
-      {!(timeLeft > 0) && product.encheres !== null && <span>win</span>}
-      {firstEnchere
-        ? `${(firstEnchere as { vote: number }).vote} fûts`
-        : "No data"}
-    </Label>
-  );
-
-  const renderImg = (
-    <LazyLoad>
-      <Box
-        component="img"
-        alt={product.name}
-        src={product.picture}
+  const renderStatus = useMemo(
+    () => (
+      <Label
+        variant="filled"
+        color="error"
         sx={{
-          top: 0,
-          width: 1,
-          height: 1,
-          objectFit: "cover",
+          zIndex: 9,
+          top: 16,
+          right: 16,
           position: "absolute",
+          textTransform: "uppercase",
+          boxShadow: (t: any) => t.shadows[4],
         }}
-        loading="lazy"
-      />
-    </LazyLoad>
+      >
+        {formatTimeLeft(auction.timeLeft)} <Iconify icon="jam:chronometer" />
+      </Label>
+    ),
+    [auction.timeLeft]
   );
 
-  const renderWinner = (
-    <Label
-      variant="filled"
-      color={"success"}
-      sx={{
-        zIndex: 9,
-        top: 16,
-        left: 16,
-        position: "absolute",
-        textTransform: "uppercase",
-        boxShadow: (theme: any) => theme.shadows[4],
-      }}
-    >
-      <Iconify icon="solar:cup-bold" />
-      {firstEnchere
-        ? `${
-            (cerclesData[firstEnchere.sender as string] as { name: string })
-              .name
-          }`
-        : "No data"}
-    </Label>
+  const renderPrice = useMemo(() => {
+    const current = auction.firstEnchere ? `${auction.firstEnchere.vote} fûts` : "No data";
+
+    return (
+      <Label
+        variant="filled"
+        color="info"
+        sx={{
+          zIndex: 9,
+          top: 16,
+          left: 16,
+          position: "absolute",
+          textTransform: "uppercase",
+          boxShadow: (t: any) => t.shadows[4],
+        }}
+      >
+        <Iconify icon="ic:round-show-chart" />
+        {current}
+      </Label>
+    );
+  }, [auction.firstEnchere]);
+
+  const renderWinner = useMemo(() => {
+    const senderId = auction.firstEnchere?.sender as string | undefined;
+    const senderName = senderId ? cerclesData?.[senderId]?.name : undefined;
+
+    return (
+      <Label
+        variant="filled"
+        color="success"
+        sx={{
+          zIndex: 9,
+          top: 16,
+          left: 16,
+          position: "absolute",
+          textTransform: "uppercase",
+          boxShadow: (t: any) => t.shadows[4],
+        }}
+      >
+        <Iconify icon="solar:cup-bold" />
+        {senderName ?? "No data"}
+      </Label>
+    );
+  }, [auction.firstEnchere, cerclesData]);
+
+  const modalProps = useMemo(
+    () =>
+      buildComitardModalProps({
+        open,
+        onClose: handleClose,
+        product,
+        cercleId,
+        cerclesData,
+        auction,
+        renderStatus,
+        renderPrice,
+        renderWinner,
+      }),
+    [open, handleClose, product, cercleId, cerclesData, auction, renderStatus, renderPrice, renderWinner]
   );
+
+  // for the small card inline alert, keep compatibility with MUI AlertColor
+  const voteErrorSeverity = auction.voteErrorSeverity as AlertColor;
 
   return (
     <>
       <Card>
         <Box onClick={handleOpen} sx={{ pt: "100%", position: "relative" }}>
-          {timeLeft > 0 && renderStatus}
-          {timeLeft > 0 && renderPrice}
-          {timeLeft <= 0 && product.encheres && renderWinner}
-          {renderImg}
+          <FadeImage src={product?.picture} alt={product?.name ?? ""} absolute />
+
+          {auction.timeLeft > 0 && renderStatus}
+          {auction.timeLeft > 0 && renderPrice}
+          {auction.timeLeft <= 0 && product?.encheres && renderWinner}
         </Box>
-        {timeLeft > 0 && <LinearProgress color={"error"} />}
+
+        {auction.timeLeft > 0 && <LinearProgress color="error" />}
+
         <Stack spacing={2} sx={{ p: 3 }}>
           <Typography variant="h6" noWrap>
-            {product.firstname} "{product.nickname}" {product.name}
+            {product?.firstname} "{product?.nickname}" {product?.name}
           </Typography>
 
-          {displayVote && isInTimeFrame && (
+          {auction.displayVote && (
             <>
               <QuantityInput
                 title="Enchère"
-                min={minEnchere()}
-                max={Math.min(nbFutsLeft, enchereMax)}
+                min={auction.minEnchereComputed}
+                max={auction.voteMax}
                 error={false}
-                helpText={""}
-                change={(_event: any, val: any) => {
-                  console.log(val);
-                  setVote(val);
-                }}
+                helpText=""
+                change={(_event: any, val: any) => auction.setVote(val)}
               />
+
               <LoadingButton
-                onClick={() => handleVote()}
-                loading={loading}
-                disabled={isDisabled()}
+                onClick={auction.handleVote}
+                loading={auction.loading}
+                disabled={auction.isDisabled}
                 variant="contained"
                 size="large"
                 color="inherit"
                 startIcon={<Iconify icon="solar:user-hand-up-bold-duotone" />}
               >
-                {isDisabled() ? "Enchére max atteinte" : "Enchérir"}
+                {auction.isDisabled ? "Enchére max atteinte" : "Enchérir"}
               </LoadingButton>
             </>
           )}
-          {voteError && (
+
+          {auction.voteError && (
             <Alert sx={{ mt: 3 }} severity={voteErrorSeverity}>
-              {voteError}
+              {auction.voteError}
             </Alert>
           )}
         </Stack>
       </Card>
 
-      <Modal
-        open={open}
-        onClose={handleClose}
-        aria-labelledby="modal-modal-title"
-        aria-describedby="modal-modal-description"
-      >
-        <Card sx={style}>
-          <Box sx={{ pt: "40vh", position: "relative" }}>
-            {timeLeft > 0 && renderStatus}
-            {timeLeft > 0 && renderPrice}
-            {timeLeft <= 0 && product.encheres && renderWinner}
-            {renderImg}
-          </Box>
-          {timeLeft > 0 && <LinearProgress color={"error"} />}
-          <Box
-            sx={{
-              p: (theme) => `${theme.spacing(3)}`,
-              maxHeight: "50vh",
-              overflowY: "auto",
-            }}
-          >
-            <Typography variant="h3">
-              {product.firstname} "{product.nickname}" {product.name}
-            </Typography>
-            <Divider
-              variant="fullWidth"
-              sx={{ my: (theme) => `${theme.spacing(1)}` }}
-            />
-            <Box>
-              <Stack>
-                <Typography>
-                  <strong>Poste</strong> : {product.post}
-                  <br />
-                  <strong>Maison d'appartenance </strong>:{" "}
-                  {cerclesData[cercleId].name}
-                  <br />
-                  <strong>Teneur en taule</strong> : {" "}
-                  {Array.from({ length: product.teneurTaule }, (_, i) => (
-                    <span key={i}>🍺</span>
-                  ))}
-                  {Array.from({ length: 10-product.teneurTaule }, (_, i) => (
-                    <span key={i} style={{ filter: "grayscale(100%)" }}>🍺</span>
-                  ))}
-                  <br />
-                  <strong>État civil</strong> : {product.etatCivil}
-                  <br />
-                  <strong>Age</strong> : {product.age}
-                  <br />
-                  <strong>Nombre d'étoiles</strong> :{" "}
-                  {Array.from({ length: product.nbEtoiles }, (_, i) => (
-                    <span key={i}>⭐</span>
-                  ))}
-                  <br />
-                  <strong>Point fort</strong> : {product.pointFort}
-                  <br />
-                  <strong>Point faible </strong>: {product.pointFaible}
-                  <br />
-                  <strong>Est le seul</strong> : {product.estLeSeul}
-                  <br />
-                  <strong>Chaud changer campus</strong> :{" "}
-                  {campus(product.campus)}
-                </Typography>
-                {displayVote && isInTimeFrame && (
-                  <Stack
-                    spacing={1}
-                    sx={{ my: (theme) => `${theme.spacing(1)}` }}
-                  >
-                    <QuantityInput
-                      title="Enchère"
-                      min={minEnchere()}
-                      max={Math.min(nbFutsLeft, enchereMax)}
-                      error={false}
-                      helpText={""}
-                      change={(_event: any, val: any) => {
-                        console.log(val);
-                        setVote(val);
-                      }}
-                    />
-                    <LoadingButton
-                      onClick={() => handleVote()}
-                      loading={loading}
-                      disabled={isDisabled()}
-                      variant="contained"
-                      size="large"
-                      fullWidth
-                      color="inherit"
-                      startIcon={
-                        <Iconify icon="solar:user-hand-up-bold-duotone" />
-                      }
-                    >
-                      {isDisabled() ? "Enchére max atteinte" : "Enchérir"}
-                    </LoadingButton>
-                    {voteError && (
-                      <Alert sx={{ mt: 3 }} severity={voteErrorSeverity}>
-                        {voteError}
-                      </Alert>
-                    )}
-                  </Stack>
-                )}
-
-                <EncheresList
-                  encheres={product.encheres}
-                  cerclesData={cerclesData}
-                  won={timeLeft <= 0 && product.encheres}
-                />
-
-                <LoadingButton
-                  onClick={handleClose}
-                  variant="contained"
-                  size="large"
-                  fullWidth
-                  color="error"
-                >
-                  Fermer
-                </LoadingButton>
-              </Stack>
-            </Box>
-          </Box>
-        </Card>
-      </Modal>
+      {/* Only mount modal when open (lighter) */}
+      {open && <ComitardModal {...modalProps} />}
     </>
   );
 }
+
+export default React.memo(
+  ComitardCardInner,
+  (prev, next) => {
+    // rerender if server data changed (reference changed)
+    if (prev.product !== next.product) return false;
+
+    // rerender if constraints changed
+    if (prev.nbFutsLeft !== next.nbFutsLeft) return false;
+    if (prev.enchereMin !== next.enchereMin) return false;
+    if (prev.enchereMax !== next.enchereMax) return false;
+    if (prev.isInTimeFrame !== next.isInTimeFrame) return false;
+    if (prev.cerclesData !== next.cerclesData) return false;
+    if (prev.user !== next.user) return false;
+
+    // Ignore now unless auction is active (so only “live” cards tick)
+    const ps = prev.product?.enchereStart?.toMillis?.() ?? null;
+    const pe = prev.product?.enchereStop?.toMillis?.() ?? null;
+    if (ps && pe) {
+      const prevActive = prev.now >= ps && prev.now <= pe;
+      const nextActive = next.now >= ps && next.now <= pe;
+      if (prevActive || nextActive) return false;
+    }
+
+    return true;
+  }
+);

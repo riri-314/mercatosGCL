@@ -1,13 +1,7 @@
+import { useEffect, useMemo, useState } from "react";
 import Container from "@mui/material/Container";
 import Grid from "@mui/material/Grid";
 import Typography from "@mui/material/Typography";
-
-import { useAuth } from "../../auth/AuthProvider";
-import { useData } from "../../data/DataProvider";
-import Loading from "../loading/loading";
-import ComitardCard from "./comitard-card.tsx";
-
-import { useEffect, useState } from "react";
 import {
   Accordion,
   AccordionDetails,
@@ -15,103 +9,129 @@ import {
   Box,
   Theme,
 } from "@mui/material";
-import Iconify from "../../components/iconify/iconify";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import { useTheme } from "@mui/material/styles";
+
+import { useAuth } from "../../auth/AuthProvider";
+import { useData } from "../../data/DataProvider";
+import Loading from "../loading/loading";
+import ComitardCard from "./comitard-card.tsx";
+import Iconify from "../../components/iconify/iconify";
 import DataRefresh from "../../components/data-refresh/data-refresh.tsx";
 
-// ----------------------------------------------------------------------
+type CerclesData = Record<string, { name: string }>;
+
 export default function ComitardsView() {
   const { user } = useAuth();
   const { data, refetchData } = useData();
-  const [isInTimeFrame, setIsInTimeFrame] = useState(false);
-
-  useEffect(() => {
-    isInTimeFrameFN();
-    // new function that only execute when data change, check if is admin, number of futs left and if enchere is in progress
-    const interval = setInterval(() => {
-      isInTimeFrameFN();
-    }, 1000); // Update every second
-    return () => clearInterval(interval);
-  }, [data]);
 
   const theme: Theme = useTheme();
   const isSmallScreen = useMediaQuery(theme.breakpoints.down("sm"));
 
-  function nbFutsLeft(): number {
-    if (user) {
-      const nbFuts = data?.data().cercles[user?.uid]?.nbFut;
-      if (nbFuts) {
-        return nbFuts;
-      } else {
-        return 0;
-      }
-    } else {
-      return 0;
+  // Single global clock tick (instead of intervals in every card)
+  const [now, setNow] = useState<number>(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const raw = data?.data();
+
+  const cerclesData: CerclesData = useMemo(() => {
+    const cercles = raw?.cercles;
+    if (!cercles) return {};
+    const out: CerclesData = {};
+    for (const cercleId of Object.keys(cercles)) {
+      out[cercleId] = { name: cercles[cercleId].name };
     }
-  }
+    return out;
+  }, [raw?.cercles]);
 
-  function enchereMinMax(): number[] {
-    if (user) {
-      const enchereMin = data?.data().enchereMin;
-      const enchereMax = data?.data().enchereMax;
-      if (enchereMin && enchereMax) {
-        return [enchereMin, enchereMax];
-      } else {
-        return [0, 0];
-      }
-    } else {
-      return [0, 0];
-    }
-  }
+  const nbFutsLeft = useMemo(() => {
+    if (!user || !raw?.cercles?.[user.uid]) return 0;
+    return raw.cercles[user.uid]?.nbFut ?? 0;
+  }, [raw?.cercles, user]);
 
-  function isInTimeFrameFN(): void {
-    //console.log("isInTimeFrameFN");
-    const date = new Date();
-    const start = data?.data().start;
-    const stop = data?.data().stop;
-    if (start && stop) {
-      if (
-        date.getTime() > start.toMillis() &&
-        date.getTime() < stop.toMillis()
-      ) {
-        //console.log("It is really in time frame", date.getTime() - stop.toMillis());
-        setIsInTimeFrame(true);
-      } else {
-        //console.log("It is really NOT in time frame");
+  const enchereMin = useMemo(() => raw?.enchereMin ?? 0, [raw?.enchereMin]);
+  const enchereMax = useMemo(() => raw?.enchereMax ?? 0, [raw?.enchereMax]);
 
-        setIsInTimeFrame(false);
-      }
-    } else {
-      //console.log("It is really NOT in time frame START OR STOP IS NULL");
+  const isInTimeFrame = useMemo(() => {
+    const start = raw?.start;
+    const stop = raw?.stop;
+    if (!start || !stop) return false;
+    const t = now;
+    return t > start.toMillis() && t < stop.toMillis();
+  }, [raw?.start, raw?.stop, now]);
 
-      setIsInTimeFrame(false);
-    }
-  }
+  // Precompute sorted structure once per data change
+  const sortedCercles = useMemo(() => {
+    const cercles = raw?.cercles;
+    if (!cercles) return [];
 
-  function getCerclesDataWithNames(cerclesData: any): any {
-    const cerclesWithNames: any = {};
+    return Object.keys(cercles)
+      .sort((a, b) => cercles[a].name.localeCompare(cercles[b].name))
+      .map((cercleId) => {
+        const comitardsObj = cercles[cercleId].comitards ?? null;
+        const comitardIds = comitardsObj
+          ? Object.keys(comitardsObj).sort((a, b) =>
+              comitardsObj[a].name.localeCompare(comitardsObj[b].name)
+            )
+          : [];
 
-    Object.keys(cerclesData).forEach((cercleId) => {
-      cerclesWithNames[cercleId] = { name: cerclesData[cercleId].name };
-    });
-
-    return cerclesWithNames;
-  }
+        return {
+          cercleId,
+          cercleName: cercles[cercleId].name,
+          comitardsObj,
+          comitardIds,
+        };
+      });
+  }, [raw?.cercles]);
 
   return (
     <Container>
       <DataRefresh />
-      {data ? (
-        Object.keys(data.data().cercles)
-          .sort((a, b) =>
-            data
-              .data()
-              .cercles[a].name.localeCompare(data.data().cercles[b].name)
-          )
-          .map((cercleId) => (
+
+      {!data ? (
+        <Loading />
+      ) : (
+        sortedCercles.map(({ cercleId, cercleName, comitardsObj, comitardIds }) => {
+          const hasNone = !comitardsObj || comitardIds.length === 0;
+
+          const emptyText = isInTimeFrame
+            ? "Aucun comitard n'a pu participer, snif 😥"
+            : `Aucun comitard ${cercleName} pour le moment ⌛`;
+
+          const content = (
+            <>
+              {hasNone && <Box sx={{ mb: 4, mt: -4, ml: 3 }}>{emptyText}</Box>}
+
+              <Grid container spacing={3}>
+                {comitardsObj &&
+                  comitardIds.map((comitardID) => (
+                    <Grid key={comitardID} item xs={12} sm={6} md={3}>
+                      <ComitardCard
+                        product={comitardsObj[comitardID]}
+                        user={user?.uid}
+                        cercleId={cercleId}
+                        comitardId={comitardID}
+                        editionId={data.id}
+                        nbFutsLeft={nbFutsLeft}
+                        enchereMin={enchereMin}
+                        enchereMax={enchereMax}
+                        isInTimeFrame={isInTimeFrame}
+                        now={now}
+                        refetchData={refetchData}
+                        cerclesData={cerclesData}
+                      />
+                    </Grid>
+                  ))}
+              </Grid>
+            </>
+          );
+
+          return (
             <div key={cercleId} style={{ marginBottom: "20px" }}>
-              {isSmallScreen && (
+              {isSmallScreen ? (
                 <Accordion>
                   <AccordionSummary
                     expandIcon={
@@ -119,129 +139,29 @@ export default function ComitardsView() {
                         width={40}
                         icon="solar:double-alt-arrow-down-bold-duotone"
                         sx={{
-                          color: (theme: Theme) =>
-                            `${theme.palette.primary.main}`,
+                          color: (theme: Theme) => `${theme.palette.primary.main}`,
                         }}
                         fallback={<span>↓</span>}
                       />
                     }
                   >
                     <Typography sx={{ m: 3 }} variant="h3">
-                      {data.data().cercles[cercleId].name}
+                      {cercleName}
                     </Typography>
                   </AccordionSummary>
-                  <AccordionDetails>
-                    {(!data.data().cercles[cercleId].comitards ||
-                      Object.keys(data.data().cercles[cercleId].comitards)
-                        .length == 0) &&
-                      (isInTimeFrame ? (
-                        <Box sx={{ mb: 4, mt: -4, ml: 3 }}>
-                          Aucun comitard n'a pu participer, snif 😥
-                        </Box>
-                      ) : (
-                        <Box sx={{ mb: 4, mt: -4, ml: 3 }}>
-                          Aucun comitard {data.data().cercles[cercleId].name}{" "}
-                          pour le moment ⌛
-                        </Box>
-                      ))}
-                    <Grid container spacing={3}>
-                      {data.data().cercles[cercleId].comitards &&
-                        Object.keys(data.data().cercles[cercleId].comitards)
-                          .sort((a, b) =>
-                            data
-                              .data()
-                              .cercles[cercleId].comitards[
-                                a
-                              ].name.localeCompare(
-                                data.data().cercles[cercleId].comitards[b].name
-                              )
-                          )
-                          .map((comitardID: any) => (
-                            <Grid key={comitardID} item xs={12} sm={6} md={3}>
-                              <ComitardCard
-                                product={
-                                  data.data().cercles[cercleId].comitards[
-                                    comitardID
-                                  ]
-                                }
-                                user={user?.uid}
-                                cercleId={cercleId}
-                                comitardId={comitardID}
-                                editionId={data.id}
-                                nbFutsLeft={nbFutsLeft()}
-                                enchereMax={enchereMinMax()[1]}
-                                enchereMin={enchereMinMax()[0]}
-                                isInTimeFrame={isInTimeFrame}
-                                refetchData={refetchData}
-                                cerclesData={getCerclesDataWithNames(
-                                  data.data().cercles
-                                )}
-                              />
-                            </Grid>
-                          ))}
-                    </Grid>
-                  </AccordionDetails>
+                  <AccordionDetails>{content}</AccordionDetails>
                 </Accordion>
-              )}
-
-              {!isSmallScreen && (
+              ) : (
                 <>
                   <Typography sx={{ m: 3 }} variant="h3">
-                    {data.data().cercles[cercleId].name}
+                    {cercleName}
                   </Typography>
-                  {(!data.data().cercles[cercleId].comitards ||
-                    Object.keys(data.data().cercles[cercleId].comitards)
-                      .length == 0) &&
-                    (isInTimeFrame ? (
-                      <Box sx={{ mb: 4, mt: -4, ml: 3 }}>
-                        Aucun comitard n'a pu participer, snif 😥
-                      </Box>
-                    ) : (
-                      <Box sx={{ mb: 4, mt: -4, ml: 3 }}>
-                        Aucun comitard {data.data().cercles[cercleId].name} pour
-                        le moment ⌛
-                      </Box>
-                    ))}
-                  <Grid container spacing={3}>
-                    {data.data().cercles[cercleId].comitards &&
-                      Object.keys(data.data().cercles[cercleId].comitards)
-                        .sort((a, b) =>
-                          data
-                            .data()
-                            .cercles[cercleId].comitards[a].name.localeCompare(
-                              data.data().cercles[cercleId].comitards[b].name
-                            )
-                        )
-                        .map((comitardID: any) => (
-                          <Grid key={comitardID} item xs={12} sm={6} md={3}>
-                            <ComitardCard
-                              product={
-                                data.data().cercles[cercleId].comitards[
-                                  comitardID
-                                ]
-                              }
-                              user={user?.uid}
-                              cercleId={cercleId}
-                              comitardId={comitardID}
-                              editionId={data.id}
-                              nbFutsLeft={nbFutsLeft()}
-                              enchereMax={enchereMinMax()[1]}
-                              enchereMin={enchereMinMax()[0]}
-                              isInTimeFrame={isInTimeFrame}
-                              refetchData={refetchData}
-                              cerclesData={getCerclesDataWithNames(
-                                data.data().cercles
-                              )}
-                            />
-                          </Grid>
-                        ))}
-                  </Grid>
+                  {content}
                 </>
               )}
             </div>
-          ))
-      ) : (
-        <Loading />
+          );
+        })
       )}
     </Container>
   );

@@ -8,7 +8,7 @@ import WipPage from "../pages/work-in-progress.tsx";
 export const AccountPage = lazy(() => import('../pages/account'));
 export const AdminAccountPage = lazy(() => import('../pages/admin-account'));
 export const RulesPage = lazy(() => import('../pages/rules'));
-export const ResultPage = lazy(() => import('../pages/results'));
+export const ResultsPage = lazy(() => import('../pages/results'));
 export const LoginPage = lazy(() => import('../pages/login'));
 export const ComitardsPage = lazy(() => import('../pages/comitards-page.tsx'));
 export const Page404 = lazy(() => import('../pages/page-not-found'));
@@ -30,7 +30,7 @@ export default function Router() {
       ),
       children: [
         // { element: <WipPage />, index: true },
-        { element: <ResultPage />, index: true },
+        { element: <ResultsPage />, index: true },
         { path: 'comitards', element: <ComitardsPage /> },
         (user? (isAdmin() ? { path: 'account', element: <AdminAccountPage /> } : { path: 'account', element: <AccountPage /> }):{ path: 'account', element: <LoginPage /> }),
         { path: 'rules', element: <RulesPage /> },
