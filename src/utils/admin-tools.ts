@@ -128,10 +128,20 @@ export async function newEdition(
       // Commit the batched write operation
       return batch.commit();
     })
-    .then(() => {
+    .then(async () => {
       console.log(
         "All active fields set to false, and a new document added successfully."
       );
+      // Revoke the public picture URLs of the edition that just closed.
+      if (oldEditionId) {
+        try {
+          const lockFn = httpsCallable(functions, "lockeditionpictures");
+          const res = await lockFn({ editionId: oldEditionId });
+          console.log("Locked old edition pictures:", res.data);
+        } catch (e) {
+          console.log("Error locking old edition pictures:", e);
+        }
+      }
       errorCode = 1;
     })
     .catch((error) => {
@@ -163,6 +173,20 @@ export async function editEdition(data: Dict) {
   }
 }
 
+// One-time migration: revoke the public picture URLs of every past (inactive)
+// edition. Safe to run multiple times (locking is idempotent server-side).
+export async function lockAllPastEditions(): Promise<number> {
+  try {
+    const fn = httpsCallable(functions, "lockallpasteditions");
+    const res: any = await fn({});
+    console.log("Locked past editions:", res.data);
+    return 1;
+  } catch (e) {
+    console.log("Error locking past editions:", e);
+    return 0;
+  }
+}
+
 //deleting edition is forbiden, can only be done from the web firebase console.
 
 export async function setActiveEdition(edition: number) {
@@ -170,6 +194,8 @@ export async function setActiveEdition(edition: number) {
   const editionsSnapshot = await getDocs(editionsQuery);
 
   let foundEdition = false;
+  let targetId = "";
+  const toLock: string[] = [];
 
   const batch = writeBatch(db);
 
@@ -177,7 +203,12 @@ export async function setActiveEdition(edition: number) {
     if (doc.data().edition === edition) {
       batch.update(doc.ref, { active: true });
       foundEdition = true;
+      targetId = doc.id;
     } else {
+      // Only editions transitioning active -> inactive need locking.
+      if (doc.data().active === true) {
+        toLock.push(doc.id);
+      }
       batch.update(doc.ref, { active: false });
     }
   });
@@ -188,6 +219,20 @@ export async function setActiveEdition(edition: number) {
   }
 
   await batch.commit();
+
+  // Restore the newly active edition's public picture URLs, and revoke the
+  // ones that were just deactivated.
+  try {
+    const unlockFn = httpsCallable(functions, "unlockeditionpictures");
+    await unlockFn({ editionId: targetId });
+    const lockFn = httpsCallable(functions, "lockeditionpictures");
+    for (const id of toLock) {
+      await lockFn({ editionId: id });
+    }
+  } catch (e) {
+    console.log("Error toggling edition picture locks:", e);
+  }
+
   return 1;
 }
 

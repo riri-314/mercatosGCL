@@ -35,6 +35,109 @@ async function getAdminUid(uid: string): Promise<boolean> {
   return containsValue;
 }
 
+/**
+ * Ensure the caller is an authenticated admin, throw otherwise.
+ * @param {any} request - The onCall request object.
+ */
+async function assertAdmin(request: any): Promise<void> {
+  const contextAuth = request.auth;
+  if (!contextAuth) {
+    throw new HttpsError("unauthenticated", "Unauthorized request!");
+  }
+  const isAdmin = await getAdminUid(contextAuth.uid);
+  if (!isAdmin) {
+    throw new HttpsError("permission-denied", "Unauthorized request!");
+  }
+}
+
+/**
+ * Revoke the public download tokens of every file under an edition prefix.
+ * The current token is stashed in `lockedToken` custom metadata so the exact
+ * same public URL can be restored later (see unlockEditionFiles). Idempotent:
+ * files already locked (no live token) are skipped so the stash is never lost.
+ * @param {string} editionId - Firestore doc id used as the storage prefix.
+ * @returns {Promise<number>} - Number of files locked.
+ */
+async function lockEditionFiles(editionId: string): Promise<number> {
+  const bucket = admin.storage().bucket();
+  const [files] = await bucket.getFiles({ prefix: `${editionId}/` });
+  let locked = 0;
+  for (const file of files) {
+    const [meta] = await file.getMetadata();
+    const custom = (meta.metadata || {}) as Record<string, any>;
+    const current = custom.firebaseStorageDownloadTokens;
+    if (current) {
+      await file.setMetadata({
+        metadata: { firebaseStorageDownloadTokens: "", lockedToken: current },
+      });
+      locked++;
+    }
+  }
+  return locked;
+}
+
+/**
+ * Restore the previously stashed download token of every file under an edition
+ * prefix, re-enabling the original public URLs. Idempotent.
+ * @param {string} editionId - Firestore doc id used as the storage prefix.
+ * @returns {Promise<number>} - Number of files unlocked.
+ */
+async function unlockEditionFiles(editionId: string): Promise<number> {
+  const bucket = admin.storage().bucket();
+  const [files] = await bucket.getFiles({ prefix: `${editionId}/` });
+  let unlocked = 0;
+  for (const file of files) {
+    const [meta] = await file.getMetadata();
+    const custom = (meta.metadata || {}) as Record<string, any>;
+    const saved = custom.lockedToken;
+    if (saved) {
+      await file.setMetadata({
+        metadata: { firebaseStorageDownloadTokens: saved, lockedToken: null },
+      });
+      unlocked++;
+    }
+  }
+  return unlocked;
+}
+
+// Revoke the public picture URLs of a past edition (admin only).
+exports.lockeditionpictures = onCall(async (request) => {
+  await assertAdmin(request);
+  const editionId = request.data?.editionId;
+  if (!editionId || typeof editionId !== "string") {
+    throw new HttpsError("invalid-argument", "Missing editionId!");
+  }
+  const locked = await lockEditionFiles(editionId);
+  return { editionId, locked };
+});
+
+// Restore the public picture URLs of an edition being re-activated (admin only).
+exports.unlockeditionpictures = onCall(async (request) => {
+  await assertAdmin(request);
+  const editionId = request.data?.editionId;
+  if (!editionId || typeof editionId !== "string") {
+    throw new HttpsError("invalid-argument", "Missing editionId!");
+  }
+  const unlocked = await unlockEditionFiles(editionId);
+  return { editionId, unlocked };
+});
+
+// One-time migration: lock every currently inactive edition (admin only).
+exports.lockallpasteditions = onCall(async (request) => {
+  await assertAdmin(request);
+  const editionsSnap = await admin
+    .firestore()
+    .collection("editions")
+    .where("active", "==", false)
+    .get();
+  const results = [];
+  for (const ed of editionsSnap.docs) {
+    const locked = await lockEditionFiles(ed.id);
+    results.push({ editionId: ed.id, edition: ed.data().edition, locked });
+  }
+  return { editions: results };
+});
+
 // disable user sign up
 export const beforecreated = beforeUserCreated((_event) => {
   throw new HttpsError("permission-denied", "Unauthorized request!");
