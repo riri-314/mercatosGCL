@@ -2,9 +2,6 @@
 
 import { initializeApp } from "firebase/app";
 
-import { getAnalytics } from "firebase/analytics";
-
-//import { getAnalytics } from "firebase/analytics";
 import { connectFirestoreEmulator, getFirestore } from "firebase/firestore";
 import { connectAuthEmulator, getAuth } from "firebase/auth";
 import { connectStorageEmulator, getStorage } from "firebase/storage";
@@ -42,9 +39,17 @@ export const storage = getStorage(app); //ok
 
 export const functions = getFunctions(app, "europe-west1"); //ok
 
-export const analytics = getAnalytics(app);
-
 const debug = false;
+
+// Analytics is not needed for first paint, so it is loaded lazily and off the
+// critical path. It also keeps the ~50 KB analytics SDK out of the main bundle.
+if (!debug && typeof window !== "undefined") {
+  void import("firebase/analytics").then(({ getAnalytics, isSupported }) =>
+    isSupported().then((supported) => {
+      if (supported) getAnalytics(app);
+    })
+  );
+}
 
 if (debug) {
   // Point to the Storage emulator running on localhost.

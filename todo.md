@@ -41,3 +41,25 @@ service firebase.storage {
 3.On the result page. When clicking a commitard picture profile. It show the full profile of the commitard. Like in the comitards page
 
 4. Optimize website. Loading is slow
+   DONE (round 1 - bundle/first-paint):
+   - vite.config.ts: manualChunks split firebase + react + recharts into
+     separate cacheable vendor chunks (MUI left to auto per-route splitting so
+     admin-only components don't load on the home page).
+   - firebase_config.ts: Analytics no longer initialized eagerly at the app root
+     (it was unused) - loaded lazily via dynamic import + isSupported() off the
+     critical path.
+   - results-card.tsx: recharts chart is now React.lazy + Suspense, so result
+     cards paint immediately and charts stream in after (~106 KB gz off the
+     first-paint path). Main index bundle: 949 KB -> 174 KB.
+   TODO (round 2, optional further wins):
+   - public/assets/mercatoScreen.png (932 KB) is referenced NOWHERE - dead
+     weight shipped on every deploy. Safe to delete.
+   - src/assets/gcl_full.svg is 235 KB - optimize/simplify the SVG.
+   - index.html loads 6 Google Font weights (400-900) render-blocking; drop
+     unused weights.
+   - _mock/results.ts (faker) and admin-account/test.tsx (x-data-grid-generator)
+     are unused - remove files + deps to slim node_modules/build.
+   - Consider lazy-initializing storage/functions in firebase_config (only
+     needed in admin/upload flows, not on the home page).
+
+5. Get small and big picture. Small picture is for small thumbnals. Big is for the comitards page
