@@ -29,6 +29,13 @@ source: https://stackoverflow.com/questions/57838764/how-to-import-data-from-clo
 ### Start the emulator
 firebase emulators:start --import ./2025-02-10T17:25:33_46845 --export-on-exit
 
+### Backend regression tests
+
+Run `npm ci --prefix functions`, then `npm test --prefix functions`.
+The tests build the backend and start an isolated Firestore emulator using the
+`demo-mercatos-security` project. Java is required. Tests refuse to run against
+production and do not import the repository's account or database exports.
+
 
 
 
