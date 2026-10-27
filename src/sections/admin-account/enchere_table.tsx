@@ -8,7 +8,7 @@ import {
   GridToolbar,
 } from "@mui/x-data-grid";
 import Iconify from "../../components/iconify/iconify";
-import { DocumentData } from "@firebase/firestore";
+import { DocumentData } from "firebase/firestore";
 import { LoadingButton } from "@mui/lab";
 import { useState } from "react";
 import WarningModal from "../../components/modal/warning_modal";

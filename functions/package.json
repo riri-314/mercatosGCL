@@ -9,27 +9,36 @@
     "build:watch": "tsc -w && cp src/*.json lib",
     "serve": "firebase serve --only functions",
     "start": "concurrently \"npm run build:watch\" \"npm run serve\"",
-    "test": "npm run build && firebase emulators:exec --only firestore,auth --project demo-mercatos-security --config test/firebase.json \"node --test --test-concurrency=1 test/*.test.cjs\""
+    "test": "npm run build && firebase emulators:exec --only firestore,auth --project demo-mercatos-security --config ../firebase.test.json \"node --test --test-concurrency=1 test/*.test.cjs\""
   },
   "engines": {
-    "node": "20"
+    "node": "24"
   },
   "main": "lib/index.js",
   "dependencies": {
-    "firebase-admin": "^13.1.0",
-    "firebase-functions": "^6.6.0",
-    "firebase-tools": "^13.0.3",
-    "uuid": "^9.0.1"
+    "firebase-admin": "^14.5.0",
+    "firebase-functions": "^7.4.0"
   },
   "devDependencies": {
-    "@firebase/rules-unit-testing": "^5.0.2",
-    "@typescript-eslint/eslint-plugin": "^5.12.0",
-    "@typescript-eslint/parser": "^5.12.0",
-    "eslint": "^8.9.0",
+    "@firebase/rules-unit-testing": "^6.0.0",
+    "@types/node": "^24.19.2",
+    "@typescript-eslint/eslint-plugin": "^8.72.1",
+    "@typescript-eslint/parser": "^8.72.1",
+    "concurrently": "^10.0.6",
+    "eslint": "^8.57.1",
     "eslint-config-google": "^0.14.0",
-    "eslint-plugin-import": "^2.25.4",
-    "firebase-functions-test": "^3.1.0",
-    "typescript": "^5.3.3"
+    "eslint-plugin-import": "^2.32.0",
+    "firebase": "^13.1.0",
+    "firebase-tools": "^15.34.1",
+    "typescript": "^5.9.3"
+  },
+  "overrides": {
+    "@firebase/firestore": {
+      "@grpc/grpc-js": "^1.14.6"
+    },
+    "gaxios@6": {
+      "uuid": "^11.1.1"
+    }
   },
   "private": true
 }

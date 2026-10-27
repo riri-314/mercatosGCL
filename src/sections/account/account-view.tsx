@@ -5,16 +5,16 @@ import Card from "@mui/material/Card";
 import { CardContent, Modal, Alert } from "@mui/material";
 import { useAuth } from "../../auth/AuthProvider";
 
-import { DocumentData } from "@firebase/firestore";
+import { DocumentData } from "firebase/firestore";
 import NewComitard from "../admin-account/new_comitard";
 import ComitardTable from "../admin-account/comitard_table.tsx";
-import { getAuth, sendPasswordResetEmail } from "@firebase/auth";
+import { getAuth, sendPasswordResetEmail } from "firebase/auth";
 import { LoadingButton } from "@mui/lab";
 import Box from "@mui/material/Box";
 
 import { useState } from "react";
 import EditComitard from "../admin-account/edit_comitard";
-import { httpsCallable } from "@firebase/functions";
+import { httpsCallable } from "firebase/functions";
 import { functions } from "../../firebase_config.ts";
 import EncheresTable from "../admin-account/enchere_table.tsx";
 

@@ -8,7 +8,7 @@ import {
   GridToolbar,
 } from "@mui/x-data-grid";
 import Iconify from "../../components/iconify/iconify";
-import { deleteField, doc, DocumentData, updateDoc } from "@firebase/firestore";
+import { deleteField, doc, DocumentData, updateDoc } from "firebase/firestore";
 import { LoadingButton } from "@mui/lab";
 import { useState } from "react";
 import { db } from "../../firebase_config";

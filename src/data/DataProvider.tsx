@@ -9,7 +9,7 @@ import {
   orderBy,
   query,
   where,
-} from "@firebase/firestore";
+} from "firebase/firestore";
 import { useAuth } from "../auth/AuthProvider";
 
 interface DataProviderProps {

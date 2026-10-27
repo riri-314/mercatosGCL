@@ -1,4 +1,4 @@
-import { Timestamp } from "@firebase/firestore";
+import { Timestamp } from "firebase/firestore";
 import TableContainer from "@mui/material/TableContainer";
 import Table from "@mui/material/Table";
 import TableCell from "@mui/material/TableCell";

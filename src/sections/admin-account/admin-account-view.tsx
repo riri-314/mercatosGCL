@@ -12,13 +12,13 @@ import {
 } from "@mui/material";
 import { useAuth } from "../../auth/AuthProvider";
 import { LoadingButton } from "@mui/lab";
-import { getAuth, sendPasswordResetEmail } from "@firebase/auth";
-import { httpsCallable } from "@firebase/functions";
+import { getAuth, sendPasswordResetEmail } from "firebase/auth";
+import { httpsCallable } from "firebase/functions";
 import NewCerle from "./new_cercle";
 import { functions } from "../../firebase_config";
 import NewEdition from "./new_edition";
 import NewComitard from "./new_comitard";
-import { DocumentData } from "@firebase/firestore";
+import { DocumentData } from "firebase/firestore";
 import { useState } from "react";
 import QuickFilteringGrid from "./edition_table";
 import CercleTable from "./cercle_table";

@@ -8,23 +8,18 @@ export default defineConfig({
   preview: { host: '127.0.0.1' },
   build: {
     chunkSizeWarningLimit: 700,
-    rollupOptions: {
+    rolldownOptions: {
       output: {
         // Only group libraries that are either needed on every page (react,
         // firebase) or already lazy-loaded (recharts). MUI is intentionally
-        // left to Rollup's automatic splitting so admin-only components stay
+        // left to automatic splitting so admin-only components stay
         // in the admin route chunk instead of loading on the home page.
-        manualChunks(id) {
-          if (!id.includes('node_modules')) return
-          if (id.includes('/firebase/') || id.includes('/@firebase/')) return 'firebase'
-          if (id.includes('/recharts/') || id.includes('/d3-') || id.includes('/victory-vendor/')) return 'charts'
-          if (
-            id.includes('/react-dom/') ||
-            id.includes('/react-router') ||
-            id.includes('/react/') ||
-            id.includes('/scheduler/')
-          )
-            return 'react-vendor'
+        codeSplitting: {
+          groups: [
+            { name: 'firebase', test: /node_modules\/(?:@firebase|firebase)\// },
+            { name: 'charts', test: /node_modules\/(?:recharts|d3-[^/]+|victory-vendor)\// },
+            { name: 'react-vendor', test: /node_modules\/(?:react|react-dom|react-router[^/]*|scheduler)\// },
+          ],
         },
       },
     },

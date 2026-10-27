@@ -14,7 +14,7 @@ import Alert from "@mui/material/Alert";
 import {
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
-} from "@firebase/auth";
+} from "firebase/auth";
 import { useRouter } from "../../routes/hooks/use-router";
 import Logo from "../../components/logo/logo";
 import Iconify from "../../components/iconify/iconify";

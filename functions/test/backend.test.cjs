@@ -434,3 +434,165 @@ test("account creation rejects unauthorized callers and invalid edition balances
   await assert.rejects(signup(), { code: "failed-precondition" });
   assert.equal((await getAuth().listUsers()).users.length, 0);
 });
+
+test("anonymous bids and missing editions or profiles never spend funds", async () => {
+  await seedUnstartedAuctions();
+  const before = (await editionRef.get()).data();
+  await assert.rejects(handlers.vote.run({ data: {} }), { code: "unauthenticated" });
+  await assert.rejects(bid("buyer", 10, "unknown"), { code: "not-found" });
+  await assert.rejects(handlers.vote.run({ auth: { uid: "buyer" }, data: {
+    editionId: "unknown", comitardId: "target", vote: 10,
+    clientTime: new Date(now).toISOString(),
+  } }), { code: "not-found" });
+  assert.deepEqual((await editionRef.get()).data(), before);
+});
+
+for (const [label, updates, vote, code] of [
+  ["before the edition starts", { start: Timestamp.fromMillis(now + 1) }, 10, "failed-precondition"],
+  ["after the edition ends", { stop: Timestamp.fromMillis(now - 1) }, 10, "failed-precondition"],
+  ["below the minimum", { enchereMin: 11 }, 10, "invalid-argument"],
+  ["above the maximum", { enchereMax: 9 }, 10, "invalid-argument"],
+  ["above the balance", { "cercles.buyer.nbFut": 9 }, 10, "invalid-argument"],
+  ["with an empty balance", { "cercles.buyer.nbFut": 0 }, 10, "failed-precondition"],
+  ["with a fractional balance", { "cercles.buyer.nbFut": 10.5 }, 10, "failed-precondition"],
+  ["with invalid limits", { enchereMin: 11, enchereMax: 10 }, 10, "failed-precondition"],
+  ["with a zero duration", { duration: 0 }, 10, "failed-precondition"],
+  ["with an excessive duration", { duration: 24 * 365 + 1 }, 10, "failed-precondition"],
+]) {
+  test(`bids ${label} leave the edition unchanged`, async () => {
+    await seedUnstartedAuctions();
+    await editionRef.update(updates);
+    const before = (await editionRef.get()).data();
+    await assert.rejects(bid("buyer", vote), { code });
+    assert.deepEqual((await editionRef.get()).data(), before);
+  });
+}
+
+test("the first bid sets the auction duration and accepts an exact-balance bid", async () => {
+  await seedUnstartedAuctions();
+  await bid("buyer", 100);
+  const current = (await editionRef.get()).data();
+  const target = current.cercles.seller.comitards.target;
+  assert.equal(current.cercles.buyer.nbFut, 0);
+  assert.equal(current.jobs, 1);
+  assert.equal(target.enchereStart.toMillis(), now);
+  assert.equal(target.enchereStop.toMillis(), now + 3600000);
+  assert.equal(target.enchereProcessed, false);
+  const votes = Object.values(target.encheres);
+  assert.equal(votes.length, 1);
+  assert.equal(votes[0].sender, "buyer");
+  assert.equal(votes[0].date.toMillis(), now);
+});
+
+for (const [label, delay, clientOffset, accepted] of [
+  ["delivered at the grace deadline", 2500, 0, true],
+  ["sent at the earliest permitted client time", 2500, -5000, true],
+  ["delivered after the grace deadline", 2501, 0, false],
+  ["sent after the auction stopped", 1000, 1, false],
+  ["sent before the client tolerance window", 1000, -5001, false],
+]) {
+  test(`counterbids ${label} are ${accepted ? "accepted" : "rejected"}`, async () => {
+    const stop = now - delay;
+    const edition = await seed();
+    edition.cercles.seller.comitards.target.enchereStop = Timestamp.fromMillis(stop);
+    await editionRef.set(edition);
+    const before = (await editionRef.get()).data();
+    const request = { auth: { uid: "buyer" }, data: {
+      editionId: editionRef.id, comitardId: "target", vote: 11,
+      clientTime: new Date(stop + clientOffset).toISOString(),
+    } };
+    if (accepted) {
+      assert.equal((await handlers.vote.run(request)).success, true);
+      const current = (await editionRef.get()).data();
+      assert.equal(current.cercles.buyer.nbFut, 89);
+      assert.equal(Object.keys(current.cercles.seller.comitards.target.encheres).length, 3);
+      assert.equal(current.jobs, 1);
+    } else {
+      await assert.rejects(handlers.vote.run(request), { code: "failed-precondition" });
+      assert.deepEqual((await editionRef.get()).data(), before);
+    }
+  });
+}
+
+test("profile creation requires authentication and membership even with a selected circle", async () => {
+  await seedUnstartedAuctions();
+  const before = (await editionRef.get()).data();
+  await assert.rejects(handlers.addcomitard.run({ data: profileData() }), { code: "unauthenticated" });
+  await assert.rejects(handlers.editcomitard.run({ data: {} }), { code: "unauthenticated" });
+  await assert.rejects(handlers.addcomitard.run({ auth: { uid: "outsider" },
+    data: profileData({ cercle: "seller" }),
+  }), { code: "permission-denied" });
+  assert.deepEqual((await editionRef.get()).data(), before);
+  await handlers.addcomitard.run({ auth: { uid: "buyer" }, data: profileData({ cercle: "seller" }) });
+  const current = (await editionRef.get()).data();
+  assert.equal(Object.keys(current.cercles.buyer.comitards).length, 1);
+  assert.deepEqual(current.cercles.seller, before.cercles.seller);
+});
+
+test("only administrators can add profiles after the edition ends", async () => {
+  await seed({ stop: Timestamp.fromMillis(now - 1) });
+  const before = (await editionRef.get()).data();
+  await assert.rejects(handlers.addcomitard.run({ auth: { uid: "buyer" }, data: profileData() }),
+    { code: "failed-precondition" });
+  assert.deepEqual((await editionRef.get()).data(), before);
+  assert.equal((await handlers.addcomitard.run({ auth: { uid: "admin" },
+    data: profileData({ cercle: "buyer" }),
+  })).success, true);
+});
+
+async function seedCircleUsers() {
+  await seed();
+  for (const uid of ["buyer", "loser", "seller"]) {
+    await getAuth().createUser({ uid, email: `${uid}@example.test`, password: "test-password" });
+  }
+}
+
+for (const operation of ["disableuser", "enableuser", "deleteuser", "resetpassworduser",
+  "resetpasswords", "getdisabledstatus"]) {
+  test(`${operation} rejects anonymous and ordinary callers without changing accounts`, async () => {
+    await seedCircleUsers();
+    const data = { uid: "buyer", editionId: editionRef.id, password: "new-test-password" };
+    const before = (await editionRef.get()).data();
+    await assert.rejects(handlers[operation].run({ data }), { code: "permission-denied" });
+    await assert.rejects(handlers[operation].run({ auth: { uid: "loser" }, data }),
+      { code: "permission-denied" });
+    assert.equal((await getAuth().getUser("buyer")).disabled, false);
+    assert.equal((await getAuth().listUsers()).users.length, 3);
+    assert.deepEqual((await editionRef.get()).data(), before);
+  });
+}
+
+test("admins can disable and re-enable accounts and read their status", async () => {
+  await seedCircleUsers();
+  const request = { auth: { uid: "admin" }, data: { uid: "buyer" } };
+  await handlers.disableuser.run(request);
+  assert.equal((await getAuth().getUser("buyer")).disabled, true);
+  const status = await handlers.getdisabledstatus.run({ auth: { uid: "admin" },
+    data: { editionId: editionRef.id } });
+  assert.deepEqual(status.status, { buyer: true, loser: false, seller: false });
+  await handlers.enableuser.run(request);
+  assert.equal((await getAuth().getUser("buyer")).disabled, false);
+});
+
+test("admin deletion removes the selected circle and authentication account only", async () => {
+  await seedCircleUsers();
+  const before = (await editionRef.get()).data();
+  await handlers.deleteuser.run({ auth: { uid: "admin" },
+    data: { uid: "buyer", editionId: editionRef.id } });
+  await assert.rejects(getAuth().getUser("buyer"), { code: "auth/user-not-found" });
+  const current = (await editionRef.get()).data();
+  assert.equal(Object.hasOwn(current.cercles, "buyer"), false);
+  assert.deepEqual(current.cercles.loser, before.cercles.loser);
+  assert.deepEqual(current.cercles.seller, before.cercles.seller);
+  assert.equal((await getAuth().listUsers()).users.length, 2);
+});
+
+test("password reset validates the UID and password before contacting Authentication", async () => {
+  for (const data of [null, {}, { uid: "" }, { uid: " " }, { uid: 1 },
+    { uid: "buyer", password: "" }, { uid: "buyer", password: "     " },
+    { uid: "buyer", password: "short" }, { uid: "buyer", password: 123456 }]) {
+    await assert.rejects(handlers.resetpassworduser.run({ auth: { uid: "admin" }, data }),
+      { code: "invalid-argument" });
+  }
+  assert.equal((await getAuth().listUsers()).users.length, 0);
+});

@@ -10,7 +10,7 @@ import { useState } from "react";
 import { LoadingButton } from "@mui/lab";
 import { db } from "../../firebase_config";
 import QuantityInput from "../../components/inputs/numberInput.tsx";
-import { doc, updateDoc } from "@firebase/firestore";
+import { doc, updateDoc } from "firebase/firestore";
 
 /**
  * Props for the NewCerle component.
