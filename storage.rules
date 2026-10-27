@@ -1,28 +1,34 @@
 rules_version = '2';
 
-// Craft rules based on data in your Firestore database
-// allow write: if firestore.get(
-//    /databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin;
-
 service firebase.storage {
   match /b/{bucket}/o {
-    //allow write: if firestore.get(/databases/(default)/documents/admin/admin).data.addmins[request.auth.token.email] == request.auth.uid;
+    function isAdmin() {
+      return request.auth != null
+        && firestore.get(/databases/(default)/documents/admin/admin)
+          .data.admins.get(request.auth.token.get('email', ''), null) == request.auth.uid;
+    }
+
+    function isActiveEdition(editionID) {
+      return firestore.get(/databases/(default)/documents/editions/$(editionID))
+        .data.get('active', false) == true;
+    }
+
     match /{editionID}/{userID}/{fileName} {
-      // Active-edition pictures are served through public tokenized download
-      // URLs, which bypass these rules. Non-token (SDK getBlob) reads — the path
-      // admins use to view past editions whose tokens were revoked — are limited
-      // to admins here.
-      allow get: if firestore.get(/databases/(default)/documents/admin/admin).data.admins[request.auth.token.email] == request.auth.uid
-      || firestore.get(/databases/(default)/documents/editions/$(editionID)).data.active == true;
+      // Tokenized download URLs bypass rules. SDK reads of archived pictures
+      // require an admin; edition-lock functions revoke their public tokens.
+      allow get: if isAdmin() || isActiveEdition(editionID);
       allow list: if false;
-      allow update: if firestore.get(/databases/(default)/documents/admin/admin).data.admins[request.auth.token.email] == request.auth.uid;
-      allow delete: if firestore.get(/databases/(default)/documents/admin/admin).data.admins[request.auth.token.email] == request.auth.uid;
-    	allow create: if (request.resource.size < 5 * 1024 * 1024 // limit file size to 5.5mb
-                   && request.resource.contentType.matches('image/.*') // limit upload to images types files
-                   && request.auth.uid != null // user has to be logged in
-                   && firestore.get(/databases/(default)/documents/editions/$(editionID)).data.active == true // user has to upload in a active edition folder
-                   && request.auth.uid == userID) // user has to upload in his folder
-                   || (firestore.get(/databases/(default)/documents/admin/admin).data.admins[request.auth.token.email] == request.auth.uid) // or if the user is admin
+      allow update, delete: if isAdmin();
+
+      // Members can add new images, but cannot overwrite an existing object.
+      allow create: if isAdmin() || (
+        request.auth != null
+        && request.auth.uid == userID
+        && resource == null
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*')
+        && isActiveEdition(editionID)
+      );
     }
   }
 }

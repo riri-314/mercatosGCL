@@ -13,7 +13,7 @@ import { getFirestore } from "firebase-admin/firestore";
 import { getAuth } from "firebase-admin/auth";
 import { getStorage } from "firebase-admin/storage";
 import { beforeUserCreated } from "firebase-functions/v2/identity";
-import { randomUUID as uuidv4 } from "node:crypto";
+import { randomInt, randomUUID as uuidv4 } from "node:crypto";
 import { onSchedule } from "firebase-functions/scheduler";
 import { setGlobalOptions } from "firebase-functions/options";
 import { identifier, parseProfile, parseVote } from "./validation";
@@ -414,9 +414,7 @@ exports.resetpassworduser = onCall(async (request) => {
 
   try {
     await getAuth().updateUser(data.uid, { password: data.password });
-    console.log("Password reset for user:", data.uid, "and password", data.password); //FOR DEBUG
-    const user = await getAuth().getUser(data.uid);
-    console.log("User email: ", user);
+    console.log("Password reset completed", { uid: data.uid });
     return { success: true, message: "Password reset for user." };
   } catch (err) {
     console.log("Error resetting password for user:", data.uid, err);
@@ -510,20 +508,20 @@ function generateRandomPassword(): string {
   let newPassword = "";
 
   for (let i = 0; i < 10; i++) {
-    newPassword += chars.charAt(Math.floor(Math.random() * chars.length));
+    newPassword += chars.charAt(randomInt(chars.length));
   }
 
   // add a special character
   const specialChars = "!@#$%^&*()_+[]{}|;:,.<>?";
-  newPassword += specialChars.charAt(Math.floor(Math.random() * specialChars.length));
+  newPassword += specialChars.charAt(randomInt(specialChars.length));
 
   // add a uppercase letter
   const upperChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-  newPassword += upperChars.charAt(Math.floor(Math.random() * upperChars.length));
+  newPassword += upperChars.charAt(randomInt(upperChars.length));
 
   // add a number
   const numberChars = "0123456789";
-  newPassword += numberChars.charAt(Math.floor(Math.random() * numberChars.length));
+  newPassword += numberChars.charAt(randomInt(numberChars.length));
 
   return newPassword+"1!Ab"; // Ensure the password meets complexity requirements
   //return "123456";
