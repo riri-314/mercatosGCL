@@ -8,7 +8,8 @@
     "logs": "firebase functions:log",
     "build:watch": "tsc -w && cp src/*.json lib",
     "serve": "firebase serve --only functions",
-    "start": "concurrently \"npm run build:watch\" \"npm run serve\""
+    "start": "concurrently \"npm run build:watch\" \"npm run serve\"",
+    "test": "npm run build && firebase emulators:exec --only firestore --project demo-mercatos-security --config test/firebase.json \"node --test test/*.test.cjs\""
   },
   "engines": {
     "node": "20"

@@ -11,7 +11,7 @@ import * as admin from "firebase-admin";
 import * as test from "firebase-admin/firestore";
 import { getAuth } from "firebase-admin/auth";
 import { beforeUserCreated } from "firebase-functions/v2/identity";
-import { v4 as uuidv4 } from "uuid";
+import { randomUUID as uuidv4 } from "node:crypto";
 import { onSchedule } from "firebase-functions/scheduler";
 import { setGlobalOptions } from "firebase-functions/options";
 //import { Timestamp, increment } from "@firebase/firestore";
@@ -352,148 +352,81 @@ exports.vote = onCall(async (request) => {
   return { message: "Nouvelle enchère ajoutée" };
 });
 
-async function remboursement() {
-  // Consistent timestamp
+async function remboursement(): Promise<void> {
+  const editionRef = await getActiveEdition();
 
-  //const now = admin.firestore.Timestamp.now();
-  console.log("running");
+  // Credit every due auction and mark it processed in the same transaction.
+  // Concurrent manual/scheduled calls retry against the committed state, and a
+  // failed transaction cannot leave a partially paid auction behind.
+  await admin.firestore().runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(editionRef);
+    const edition = snapshot.data();
+    if (!edition || !edition.active) return;
 
-  const activeEdition = await getActiveEdition();
-  const activeEditionData = await activeEdition.get();
-  const activeEditionCercle = activeEditionData.data()?.cercles || {};
+    const now = test.Timestamp.now().toMillis();
+    const cercles = edition.cercles || {};
+    const updates: Record<string, any> = {};
+    const credits = new Map<string, number>();
+    let pendingJobs = 0;
 
-  const job = activeEditionData.data()?.jobs;
+    const credit = (uid: string, amount: number) => {
+      if (!Object.prototype.hasOwnProperty.call(cercles, uid) ||
+          !Number.isFinite(amount) || amount < 0) {
+        throw new HttpsError("failed-precondition", "Invalid reimbursement recipient or amount");
+      }
+      // Preserve rounding per bid, even when a user receives multiple credits.
+      credits.set(uid, (credits.get(uid) || 0) + Math.ceil(amount));
+    };
 
-  // check if there is a job to process
-  if (job && job > 0) {
-    const remboursementGagnant = activeEditionData.data()?.remboursementGagnant;
-    const remboursementPerdant = activeEditionData.data()?.remboursementPerdant;
-    const remboursementVendeur = activeEditionData.data()?.remboursementVendeur;
-    if (
-      remboursementGagnant === undefined ||
-      remboursementPerdant === undefined ||
-      remboursementVendeur === undefined
-    ) {
-      throw new HttpsError("unavailable", "No remboursement found!");
-    }
-    for (const cercleId of Object.keys(activeEditionCercle)) {
-      const cercle = activeEditionCercle[cercleId];
-      for (const comitardId of Object.keys(cercle.comitards ?? {})) {
-        const comitard = cercle.comitards[comitardId];
-        // check if comitard has an enchere to process
-        if (comitard.enchereProcessed === false) {
-          console.log("comitard not processed: ", comitard.name);
-          const now = test.Timestamp.now();
-          const enchereStop = comitard.enchereStop;
-          if (enchereStop < now) {
-            // process enchere
-            console.log(
-              "processing comitard: ",
-              comitard.name,
-              "cercle id:",
-              cercleId
-            );
-            const encheres = comitard.encheres;
+    for (const [cercleId, cercle] of Object.entries(cercles) as [string, any][]) {
+      for (const [comitardId, comitard] of Object.entries(cercle.comitards || {}) as [string, any][]) {
+        if (comitard.enchereProcessed !== false) continue;
+        pendingJobs++;
 
-            const encheresArray = Object.values(encheres);
+        // Voting permits a 2.5 second delivery grace period. Do not settle
+        // before that period finishes.
+        if (!(comitard.enchereStop instanceof test.Timestamp) ||
+            now <= comitard.enchereStop.toMillis() + 2500) continue;
 
-            // Sorting the encheres by votes and then by date if votes are equal
-            encheresArray.sort((a: any, b: any) => {
-              // Compare by votes first
-              if (a.vote !== b.vote) {
-                return b.vote - a.vote; // Sort by descending vote count
-              } else {
-                // If votes are equal, compare by date
-                return b.date.toMillis() - a.date.toMillis(); // Sort by descending date
-              }
-            });
-
-            // Iterate over the sorted encheres array. Must await sequentially:
-            // enchereProcessed / jobs below must only be flipped once every
-            // reimbursement has actually settled.
-            for (let index = 0; index < encheresArray.length; index++) {
-              const enchere: any = encheresArray[index];
-              if (index === 0) {
-                await rembourseUser(
-                  activeEdition,
-                  enchere.sender,
-                  remboursementGagnant * enchere.vote
-                );
-                await rembourseUser(
-                  activeEdition,
-                  cercleId,
-                  remboursementVendeur * enchere.vote
-                );
-              } else {
-                await rembourseUser(
-                  activeEdition,
-                  enchere.sender,
-                  remboursementPerdant * enchere.vote
-                );
-              }
-              console.log("enchere sorted: ", enchere, "index: ", index);
-            }
-
-            // Set the comitard's enchereProcessed field to true
-            const s = `cercles.${cercleId}.comitards.${comitardId}`;
-            await activeEdition
-              .update({
-                [`${s}.enchereProcessed`]: true,
-                jobs: test.FieldValue.increment(-1),
-              })
-              .catch((error: any) => {
-                console.log("Error updating comitard:", error);
-                throw new HttpsError("unavailable", "Error updating comitard!");
-              })
-              .then(() => {
-                return { message: "Comitard updated in edition map" };
-              });
-
-            // Call the winner function with the winning enchere (first in potentialWinners after sorting)
-            //winner(potentialWinners[0]);
-
-            // Call the loser function with each losing enchere
-            //loserEncheres.forEach(loser);
-          } else {
-            console.log("not time yet to process comitard: ", comitard.name);
-          }
-        } else {
-          console.log(
-            "comitard allready processed or has no encheres: ",
-            comitard.name
-          );
+        const rates = [edition.remboursementGagnant, edition.remboursementPerdant,
+          edition.remboursementVendeur];
+        if (rates.some((rate) => typeof rate !== "number" || !Number.isFinite(rate) || rate < 0)) {
+          throw new HttpsError("failed-precondition", "Invalid reimbursement rates");
         }
+
+        const bids = Object.values(comitard.encheres || {}) as any[];
+        if (!bids.length || bids.some((bid) => !bid || !Number.isSafeInteger(bid.vote) ||
+            bid.vote <= 0 || typeof bid.sender !== "string" ||
+            !(bid.date instanceof test.Timestamp))) {
+          throw new HttpsError("failed-precondition", "Invalid auction bids");
+        }
+        bids.sort((a, b) => b.vote - a.vote || b.date.toMillis() - a.date.toMillis());
+
+        bids.forEach((bid, index) => {
+          credit(bid.sender, bid.vote * (index === 0 ? rates[0] : rates[1]));
+          if (index === 0) credit(cercleId, bid.vote * rates[2]);
+        });
+        updates[`cercles.${cercleId}.comitards.${comitardId}.enchereProcessed`] = true;
+        pendingJobs--;
       }
     }
-  } else {
-    console.log("no jobs to process");
-  }
+
+    for (const [uid, amount] of credits) {
+      if (!Number.isSafeInteger(amount) || !Number.isSafeInteger(cercles[uid].nbFut) ||
+          !Number.isSafeInteger(cercles[uid].nbFut + amount)) {
+        throw new HttpsError("failed-precondition", "Invalid reimbursement balance");
+      }
+      updates[`cercles.${uid}.nbFut`] = test.FieldValue.increment(amount);
+    }
+    // Recompute the counter from the same snapshot so it cannot become negative.
+    if (Object.keys(updates).length || edition.jobs !== pendingJobs) {
+      transaction.update(editionRef, { ...updates, jobs: pendingJobs });
+    }
+  });
 }
 
-async function rembourseUser(edition: any, userId: string, amount: number) {
-  //const d = `cercles.${cercleId}.comitards.${
-  //  data.comitardId
-  //}.encheres.${uuidv4()}`;
-  const e = `cercles.${userId}.nbFut`;
-  //console.log("fieldValue: ", test.FieldValue);
-  //console.log("fieldValue: ", test.FieldValue.increment);
-  //console.log("fieldValue: ", test.FieldValue.increment(4));
-
-  await edition
-    .update({
-      [e]: test.FieldValue.increment(Math.ceil(amount)),
-      //     jobs: test.FieldValue.increment(1),
-    })
-    .catch((error: any) => {
-      console.log("Error adding new enchere:", error);
-      throw new HttpsError("unavailable", "Error remboursing user!");
-    })
-    .then(() => {
-      return { message: "Success rembousring user" };
-    });
-}
-
-exports.rembour = onCall(async (_request) => {
+exports.rembour = onCall(async (request) => {
+  await assertAdmin(request);
   await remboursement();
   return { message: "Remboursement done" };
 });
