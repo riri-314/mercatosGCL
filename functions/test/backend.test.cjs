@@ -213,3 +213,94 @@ test("failed bid commits do not spend funds, start an auction, or report success
   await assert.rejects(bid("buyer", 10), /simulated bid commit failure/);
   assert.deepEqual((await editionRef.get()).data(), before);
 });
+
+test("invalid bid types, unsafe amounts and identifiers never change auction state", async () => {
+  await seedUnstartedAuctions();
+  const before = (await editionRef.get()).data();
+  for (const value of ["not-a-number", "10", null, {}, [], true, NaN, Infinity,
+    -Infinity, 0, -1, 1.5, Number.MAX_SAFE_INTEGER + 1]) {
+    await assert.rejects(bid("buyer", value), { code: "invalid-argument" });
+  }
+  for (const comitardId of ["target.encheres.injected", "__proto__", "constructor", "", null]) {
+    await assert.rejects(bid("buyer", 10, comitardId), { code: "invalid-argument" });
+  }
+  for (const data of [null, [], "bad", {}, {
+    editionId: editionRef.id, comitardId: "target", vote: 10, clientTime: "invalid-date",
+  }, {
+    editionId: editionRef.id, comitardId: "target", vote: 10,
+    clientTime: new Date(now).toISOString(), sender: "seller",
+  }]) {
+    await assert.rejects(handlers.vote.run({ auth: { uid: "buyer" }, data }),
+      { code: "invalid-argument" });
+  }
+  assert.deepEqual((await editionRef.get()).data(), before);
+});
+
+function profileData(overrides = {}) {
+  return {
+    editionId: editionRef.id,
+    name: "Test", firstname: "Person", nickname: "Tester", post: "Member",
+    teneurTaule: 1, age: 20, nbEtoiles: 1, campus: 1,
+    etatCivil: "Example", pointFort: "Example", pointFaible: "Example", estLeSeul: "Example",
+    picture: "https://example.test/profile.png", cercle: null,
+    ...overrides,
+  };
+}
+
+test("profile creation and editing reject malformed fields without storing them", async () => {
+  await seedUnstartedAuctions();
+  await editionRef.update({ "cercles.buyer.comitards.own": { name: "Own" } });
+  const before = (await editionRef.get()).data();
+  const invalidFields = [
+    { name: { broken: true } }, { firstname: [] }, { nickname: true }, { post: 2 },
+    { name: "a".repeat(31) }, { name: "   " }, { pointFort: "a".repeat(151) },
+    { age: -1000 }, { age: 100 }, { age: "20" }, { age: null }, { age: 1.5 },
+    { teneurTaule: -1 }, { teneurTaule: 11 }, { nbEtoiles: 16 }, { nbEtoiles: NaN },
+    { campus: 0 }, { campus: 5 }, { campus: "1" },
+    { picture: {} }, { picture: "javascript:alert(1)" }, { picture: "x".repeat(2049) },
+    { nbFut: 999 }, { encheres: {} },
+  ];
+  for (const fields of invalidFields) {
+    await assert.rejects(handlers.addcomitard.run({
+      auth: { uid: "buyer" }, data: profileData(fields),
+    }), { code: "invalid-argument" });
+    await assert.rejects(handlers.editcomitard.run({
+      auth: { uid: "buyer" }, data: { ...profileData(fields), comitardId: "own" },
+    }), { code: "invalid-argument" });
+  }
+  assert.deepEqual((await editionRef.get()).data(), before);
+});
+
+test("valid profiles persist and partial edits can save numeric zero", async () => {
+  await seedUnstartedAuctions();
+  const result = await handlers.addcomitard.run({
+    auth: { uid: "buyer" }, data: profileData(),
+  });
+  assert.equal(result.success, true);
+  const profiles = (await editionRef.get()).data().cercles.buyer.comitards;
+  const id = Object.keys(profiles)[0];
+  assert.equal(profiles[id].name, "Test");
+  await handlers.editcomitard.run({ auth: { uid: "buyer" }, data: {
+    editionId: editionRef.id, comitardId: id, age: 0, teneurTaule: 0, nbEtoiles: 0,
+  } });
+  const updated = (await editionRef.get()).data().cercles.buyer.comitards[id];
+  assert.equal(updated.age, 0);
+  assert.equal(updated.teneurTaule, 0);
+  assert.equal(updated.nbEtoiles, 0);
+  assert.equal(updated.name, "Test");
+});
+
+test("profile validation preserves server-side ownership and admin selection", async () => {
+  await seedUnstartedAuctions();
+  await assert.rejects(handlers.editcomitard.run({ auth: { uid: "buyer" }, data: {
+    editionId: editionRef.id, comitardId: "target", cercleId: "seller", name: "Stolen",
+  } }), { code: "permission-denied" });
+  await handlers.editcomitard.run({ auth: { uid: "admin" }, data: {
+    editionId: editionRef.id, comitardId: "target", cercleId: "seller", name: "Updated",
+    cercle: "Seller display name",
+  } });
+  assert.equal((await editionRef.get()).data().cercles.seller.comitards.target.name, "Updated");
+  await handlers.addcomitard.run({ auth: { uid: "admin" },
+    data: profileData({ cercle: "seller" }) });
+  assert.equal(Object.keys((await editionRef.get()).data().cercles.seller.comitards).length, 3);
+});
