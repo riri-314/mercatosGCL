@@ -18,6 +18,7 @@ import Iconify from "../../components/iconify/iconify";
 import QuantityInput from "../../components/inputs/numberInput";
 import EncheresList from "./comitard-encheres";
 import FadeImage from "./comitard-picture";
+import { campusLabel } from "./comitard-helper";
 
 export interface CerclesData {
   [key: string]: { name: string };
@@ -149,7 +150,7 @@ export default function ComitardModal({
               <br />
               <strong>Est le seul</strong> : {product?.estLeSeul}
               <br />
-              <strong>Chaud changer campus</strong> : {product?.campus}
+              <strong>Chaud changer de campus</strong> : {campusLabel(product?.campus)}
             </Typography>
 
             {displayVote && (
