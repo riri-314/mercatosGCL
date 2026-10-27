@@ -324,12 +324,13 @@ for (const operation of ["addcomitard", "editcomitard"]) {
     await editionRef.update({ "cercles.buyer.comitards.own": { name: "Own" } });
     const started = defer();
     const release = defer();
-    const update = DocumentReference.prototype.update;
-    mock.method(DocumentReference.prototype, "update", async function (...args) {
+    const run = db.runTransaction.bind(db);
+    mock.method(db, "runTransaction", callback => run(async tx => {
+      const result = await callback(tx);
       started.resolve();
       await release.promise;
-      return update.apply(this, args);
-    });
+      return result;
+    }));
     let finished = false;
     const pending = handlers[operation].run({ auth: { uid: "buyer" },
       data: operation === "addcomitard" ? profileData() : {
@@ -349,9 +350,11 @@ for (const operation of ["addcomitard", "editcomitard"]) {
     await seedUnstartedAuctions();
     await editionRef.update({ "cercles.buyer.comitards.own": { name: "Own" } });
     const before = (await editionRef.get()).data();
-    mock.method(DocumentReference.prototype, "update", async () => {
+    const run = db.runTransaction.bind(db);
+    mock.method(db, "runTransaction", callback => run(async tx => {
+      await callback(tx);
       throw new Error("simulated profile write failure");
-    });
+    }));
     await assert.rejects(handlers[operation].run({ auth: { uid: "buyer" },
       data: operation === "addcomitard" ? profileData() : {
         editionId: editionRef.id, comitardId: "own", name: "Updated",
@@ -710,4 +713,40 @@ test("account deletion refuses unsettled auction participants", async () => {
   }
   assert.deepEqual((await editionRef.get()).data(), before);
   assert.equal((await getAuth().listUsers()).users.length, 3);
+});
+
+test("parallel profile creation cannot exceed the per-circle limit", async () => {
+  await seed({ nbComitard: 1 });
+  const results = await Promise.allSettled([
+    handlers.addcomitard.run({ auth: { uid: "buyer" }, data: profileData() }),
+    handlers.addcomitard.run({ auth: { uid: "buyer" }, data: profileData() }),
+  ]);
+  assert.equal(results.filter(result => result.status === "fulfilled").length, 1);
+  assert.equal(Object.keys((await editionRef.get()).data().cercles.buyer.comitards).length, 1);
+});
+
+for (const overrides of [{ active: false }, { stop: Timestamp.fromMillis(now - 1) }, { transitioning: true }]) {
+  test(`members cannot create or edit profiles in a closed edition: ${Object.keys(overrides)[0]}`, async () => {
+    await seed(overrides);
+    await editionRef.update({ "cercles.buyer.comitards.own": { name: "Original" } });
+    const before = (await editionRef.get()).data();
+    await assert.rejects(handlers.addcomitard.run({ auth: { uid: "buyer" }, data: profileData() }), { code: "failed-precondition" });
+    await assert.rejects(handlers.editcomitard.run({ auth: { uid: "buyer" }, data: {
+      editionId: editionRef.id, comitardId: "own", name: "Changed archive",
+    } }), { code: "failed-precondition" });
+    assert.deepEqual((await editionRef.get()).data(), before);
+  });
+}
+
+test("administrators can maintain archived profiles and override member limits", async () => {
+  await seed({ active: false, nbComitard: 1, stop: Timestamp.fromMillis(now - 1) });
+  for (let i = 0; i < 2; i++) {
+    await handlers.addcomitard.run({ ...adminRequest, data: profileData({ cercle: "buyer" }) });
+  }
+  const ids = Object.keys((await editionRef.get()).data().cercles.buyer.comitards);
+  assert.equal(ids.length, 2);
+  await handlers.editcomitard.run({ ...adminRequest, data: {
+    editionId: editionRef.id, cercleId: "buyer", comitardId: ids[0], name: "Archive correction",
+  } });
+  assert.equal((await editionRef.get()).data().cercles.buyer.comitards[ids[0]].name, "Archive correction");
 });

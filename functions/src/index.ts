@@ -337,24 +337,35 @@ function getCercleId(comitardId: string, cercles: any): string | null {
   return null;
 }
 
+function assertMemberEdition(edition: FirebaseFirestore.DocumentData, isAdmin: boolean) {
+  if (edition.transitioning === true) {
+    throw new HttpsError("failed-precondition", "Edition transition in progress");
+  }
+  if (!isAdmin && (!edition.active || !(edition.stop instanceof test.Timestamp) ||
+      test.Timestamp.now() > edition.stop)) {
+    throw new HttpsError("failed-precondition", "This edition is closed");
+  }
+}
+
 exports.editcomitard = onCall(async (request) => {
   if (!request.auth) throw new HttpsError("unauthenticated", "Unauthorized request!");
   const data = parseProfile(request.data, true);
   const isAdmin = await getAdminUid(request.auth.uid);
   const cercleId = isAdmin ? data.cercleId : request.auth.uid;
   if (!cercleId) throw new HttpsError("invalid-argument", "Missing cercleId");
-
   const editionRef = await getEdition(data.editionId);
-  const edition = (await editionRef.get()).data();
-  const profiles = edition?.cercles?.[cercleId]?.comitards;
-  if (!profiles || !Object.prototype.hasOwnProperty.call(profiles, data.comitardId!)) {
-    throw new HttpsError("permission-denied", "Unauthorized profile update");
-  }
-
-  const path = `cercles.${cercleId}.comitards.${data.comitardId}`;
-  const updates = Object.fromEntries(Object.entries(data.profile)
-    .map(([field, value]) => [`${path}.${field}`, value]));
-  await editionRef.update(updates);
+  await getFirestore().runTransaction(async (tx) => {
+    const edition = (await tx.get(editionRef)).data();
+    if (!edition) throw new HttpsError("not-found", "Edition not found");
+    const profiles = edition.cercles?.[cercleId]?.comitards;
+    if (!profiles || !Object.prototype.hasOwnProperty.call(profiles, data.comitardId!)) {
+      throw new HttpsError("permission-denied", "Unauthorized profile update");
+    }
+    assertMemberEdition(edition, isAdmin);
+    const path = `cercles.${cercleId}.comitards.${data.comitardId}`;
+    tx.update(editionRef, Object.fromEntries(Object.entries(data.profile)
+      .map(([field, value]) => [`${path}.${field}`, value])));
+  });
   return { success: true, message: "Comitard updated in edition map" };
 });
 
@@ -364,18 +375,19 @@ exports.addcomitard = onCall(async (request) => {
   const isAdmin = await getAdminUid(request.auth.uid);
   const cercleId = isAdmin ? data.cercleId : request.auth.uid;
   if (!cercleId) throw new HttpsError("invalid-argument", "Missing cercle");
-
   const editionRef = await getEdition(data.editionId);
-  const edition = (await editionRef.get()).data();
-  if (!edition?.cercles || !Object.prototype.hasOwnProperty.call(edition.cercles, cercleId)) {
-    throw new HttpsError("permission-denied", "Unauthorized profile creation");
-  }
-  if (edition.stop && test.Timestamp.now() > edition.stop && !isAdmin) {
-    throw new HttpsError("failed-precondition", "Edition is finished");
-  }
-
-  await editionRef.update({
-    [`cercles.${cercleId}.comitards.${uuidv4()}`]: data.profile,
+  const profileId = uuidv4();
+  await getFirestore().runTransaction(async (tx) => {
+    const edition = (await tx.get(editionRef)).data();
+    if (!edition?.cercles || !Object.prototype.hasOwnProperty.call(edition.cercles, cercleId)) {
+      throw new HttpsError("permission-denied", "Unauthorized profile creation");
+    }
+    assertMemberEdition(edition, isAdmin);
+    if (!isAdmin && (!Number.isSafeInteger(edition.nbComitard) || edition.nbComitard <= 0 ||
+        Object.keys(edition.cercles[cercleId].comitards || {}).length >= edition.nbComitard)) {
+      throw new HttpsError("failed-precondition", "Maximum number of profiles reached");
+    }
+    tx.update(editionRef, { [`cercles.${cercleId}.comitards.${profileId}`]: data.profile });
   });
   return { success: true, message: "Comitard added to edition map" };
 });
