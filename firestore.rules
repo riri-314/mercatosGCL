@@ -10,12 +10,14 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/admin/admin).data.admins[email].trim() == uidE.trim();
     }
 
-    // Editions are publicly readable (the results/comitard pages work logged-out).
+    // Active editions are public; archived editions are readable only by admins.
     // All legitimate user writes (votes) go through Cloud Functions using the
     // Admin SDK, which bypasses these rules; direct client writes are admin-only.
     match /editions/{edition} {
-      allow read: if true;
-      allow write: if isAdmin(request.auth.uid, request.auth.token.email);
+      allow read: if resource.data.active == true
+        || (request.auth != null && isAdmin(request.auth.uid, request.auth.token.email));
+      allow write: if request.auth != null
+        && isAdmin(request.auth.uid, request.auth.token.email);
     }
 
     // Admin mapping: readable (clients need it to know who is admin), but only

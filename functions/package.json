@@ -9,7 +9,7 @@
     "build:watch": "tsc -w && cp src/*.json lib",
     "serve": "firebase serve --only functions",
     "start": "concurrently \"npm run build:watch\" \"npm run serve\"",
-    "test": "npm run build && firebase emulators:exec --only firestore,auth --project demo-mercatos-security --config test/firebase.json \"node --test test/*.test.cjs\""
+    "test": "npm run build && firebase emulators:exec --only firestore,auth --project demo-mercatos-security --config test/firebase.json \"node --test --test-concurrency=1 test/*.test.cjs\""
   },
   "engines": {
     "node": "20"
@@ -22,6 +22,7 @@
     "uuid": "^9.0.1"
   },
   "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.2",
     "@typescript-eslint/eslint-plugin": "^5.12.0",
     "@typescript-eslint/parser": "^5.12.0",
     "eslint": "^8.9.0",
