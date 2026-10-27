@@ -10,6 +10,7 @@ mercatosgcl-add99b826bf6.json
 node_modules
 dist
 dist-ssr
+coverage/
 *.local
 .firebase
 

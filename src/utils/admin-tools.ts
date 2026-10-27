@@ -10,11 +10,11 @@ import {
   DocumentData,
   increment,
   runTransaction,
-} from "@firebase/firestore";
+} from "firebase/firestore";
 import { auth, db, functions } from "../firebase_config";
 import { Dayjs } from "dayjs";
-import { httpsCallable } from "@firebase/functions";
-import { sendPasswordResetEmail } from "@firebase/auth";
+import { httpsCallable } from "firebase/functions";
+import { sendPasswordResetEmail } from "firebase/auth";
 
 type Dict = {
   [key: string]: any;

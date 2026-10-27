@@ -14,7 +14,7 @@ import Card from "@mui/material/Card";
 import Typography from "@mui/material/Typography";
 import {useState} from "react";
 import {LoadingButton} from "@mui/lab";
-import {httpsCallable} from "@firebase/functions";
+import {httpsCallable} from "firebase/functions";
 import {functions} from "../../firebase_config";
 import Iconify from "../../components/iconify/iconify.tsx";
 import { requireMutationSuccess } from "../../utils/callable-result";

@@ -17,11 +17,11 @@ import { useState } from "react";
 import PictureInput from "../../components/inputs/pictureInput";
 import { ImageListType } from "react-images-uploading";
 import { functions, storage } from "../../firebase_config";
-import { getDownloadURL, ref, uploadBytesResumable } from "@firebase/storage";
+import { getDownloadURL, ref, uploadBytesResumable } from "firebase/storage";
 import { v4 as uuidv4 } from "uuid";
-import { DocumentData } from "@firebase/firestore";
+import { DocumentData } from "firebase/firestore";
 import { useAuth } from "../../auth/AuthProvider";
-import { httpsCallable } from "@firebase/functions";
+import { httpsCallable } from "firebase/functions";
 import { requireMutationSuccess } from "../../utils/callable-result";
 
 interface EditComitardProps {

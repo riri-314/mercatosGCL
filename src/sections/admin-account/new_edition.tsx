@@ -1,5 +1,5 @@
 import { Alert, AlertColor, Grid } from "@mui/material";
-import { DocumentData } from "@firebase/firestore";
+import { DocumentData } from "firebase/firestore";
 import dayjs, { Dayjs } from "dayjs";
 import React, { useState } from "react";
 import { editEdition, newEdition } from "../../utils/admin-tools";

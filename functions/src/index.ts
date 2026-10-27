@@ -7,9 +7,11 @@
  * See a full list of supported triggers at https://firebase.google.com/docs/functions
  */
 import { HttpsError, onCall } from "firebase-functions/v2/https";
-import * as admin from "firebase-admin";
+import { initializeApp } from "firebase-admin/app";
 import * as test from "firebase-admin/firestore";
+import { getFirestore } from "firebase-admin/firestore";
 import { getAuth } from "firebase-admin/auth";
+import { getStorage } from "firebase-admin/storage";
 import { beforeUserCreated } from "firebase-functions/v2/identity";
 import { randomUUID as uuidv4 } from "node:crypto";
 import { onSchedule } from "firebase-functions/scheduler";
@@ -17,7 +19,7 @@ import { setGlobalOptions } from "firebase-functions/options";
 import { identifier, parseProfile, parseVote } from "./validation";
 //import { Timestamp, increment } from "@firebase/firestore";
 
-admin.initializeApp();
+initializeApp();
 
 setGlobalOptions({ region: "europe-west1" });
 
@@ -27,7 +29,7 @@ setGlobalOptions({ region: "europe-west1" });
  * TODO: get the admin(s) uid from a doc in a collection
  */
 async function getAdminUid(uid: string): Promise<boolean> {
-  const adminsDocRef = admin.firestore().collection("admin").doc("admin"); // Assuming `admin.admin` is the document reference to the admin document
+  const adminsDocRef = getFirestore().collection("admin").doc("admin"); // Assuming `admin.admin` is the document reference to the admin document
   const adminsDoc = await adminsDocRef.get();
   const adminsMap = adminsDoc.data()?.admins || {};
   //console.log("map: ", Object.values(adminsMap));
@@ -60,7 +62,7 @@ async function assertAdmin(request: any): Promise<void> {
  * @returns {Promise<number>} - Number of files locked.
  */
 async function lockEditionFiles(editionId: string): Promise<number> {
-  const bucket = admin.storage().bucket();
+  const bucket = getStorage().bucket();
   const [files] = await bucket.getFiles({ prefix: `${editionId}/` });
   let locked = 0;
   for (const file of files) {
@@ -84,7 +86,7 @@ async function lockEditionFiles(editionId: string): Promise<number> {
  * @returns {Promise<number>} - Number of files unlocked.
  */
 async function unlockEditionFiles(editionId: string): Promise<number> {
-  const bucket = admin.storage().bucket();
+  const bucket = getStorage().bucket();
   const [files] = await bucket.getFiles({ prefix: `${editionId}/` });
   let unlocked = 0;
   for (const file of files) {
@@ -126,8 +128,7 @@ exports.unlockeditionpictures = onCall(async (request) => {
 // One-time migration: lock every currently inactive edition (admin only).
 exports.lockallpasteditions = onCall(async (request) => {
   await assertAdmin(request);
-  const editionsSnap = await admin
-    .firestore()
+  const editionsSnap = await getFirestore()
     .collection("editions")
     .where("active", "==", false)
     .get();
@@ -153,7 +154,7 @@ exports.vote = onCall(async (request) => {
   const data = parseVote(request.data);
   const editionRef = await getEdition(data.editionId);
 
-  return admin.firestore().runTransaction(async (transaction) => {
+  return getFirestore().runTransaction(async (transaction) => {
     // Every decision and mutation uses the same transaction snapshot. A
     // competing bid or settlement forces a retry before any balance is spent.
     const snapshot = await transaction.get(editionRef);
@@ -239,7 +240,7 @@ async function remboursement(): Promise<void> {
   // Credit every due auction and mark it processed in the same transaction.
   // Concurrent manual/scheduled calls retry against the committed state, and a
   // failed transaction cannot leave a partially paid auction behind.
-  await admin.firestore().runTransaction(async (transaction) => {
+  await getFirestore().runTransaction(async (transaction) => {
     const snapshot = await transaction.get(editionRef);
     const edition = snapshot.data();
     if (!edition || !edition.active) return;
@@ -412,9 +413,9 @@ exports.resetpassworduser = onCall(async (request) => {
   }
 
   try {
-    await admin.auth().updateUser(data.uid, { password: data.password });
+    await getAuth().updateUser(data.uid, { password: data.password });
     console.log("Password reset for user:", data.uid, "and password", data.password); //FOR DEBUG
-    const user = await admin.auth().getUser(data.uid);
+    const user = await getAuth().getUser(data.uid);
     console.log("User email: ", user);
     return { success: true, message: "Password reset for user." };
   } catch (err) {
@@ -471,13 +472,13 @@ exports.resetpasswords = onCall(async (request) => {
 
     // Reset password for each user
     try {
-      await admin.auth().updateUser(uid, { password: newPassword });
+      await getAuth().updateUser(uid, { password: newPassword });
       //console.log("Password reset for user: ", uid, newPassword); //FOR DEBUG
     } catch (error: any) {
       console.log("Error resetting password for user: ", uid);
     }
 
-    const user = await admin.auth().getUser(uid);
+    const user = await getAuth().getUser(uid);
     const email = user.email;
 
     // Send reset password email
@@ -542,7 +543,7 @@ exports.disableuser = onCall(async (request) => {
   }
 
   try {
-    await admin.auth().updateUser(uid, {
+    await getAuth().updateUser(uid, {
       disabled: true,
     });
     return { message: "User disabled" };
@@ -568,7 +569,7 @@ exports.enableuser = onCall(async (request) => {
   }
 
   try {
-    await admin.auth().updateUser(uid, {
+    await getAuth().updateUser(uid, {
       disabled: false,
     });
     return { message: "User enabled" };
@@ -614,7 +615,7 @@ exports.deleteuser = onCall(async (request) => {
     }
   });
 
-  const editionRef = admin.firestore().collection("editions").doc(editionId);
+  const editionRef = getFirestore().collection("editions").doc(editionId);
 
   await editionRef.update({ cercles: activeEditionCercle });
 
@@ -713,7 +714,7 @@ exports.getdisabledstatus = onCall(async (request) => {
   try {
     const userUIDs = Object.keys(activeEditionCercle);
     for (const uid of userUIDs) {
-      const user = await admin.auth().getUser(uid);
+      const user = await getAuth().getUser(uid);
       statusDict[uid] = user.disabled;
     }
   } catch (error: any) {
@@ -724,7 +725,7 @@ exports.getdisabledstatus = onCall(async (request) => {
 });
 
 async function deleteUserAuth(uid: string): Promise<void> {
-  const admin_auth = admin.auth();
+  const admin_auth = getAuth();
   // Delete the user
   try {
     await admin_auth.deleteUser(uid);
@@ -743,8 +744,7 @@ async function deleteUserAuth(uid: string): Promise<void> {
 async function getEdition(
   editionId: string
 ): Promise<FirebaseFirestore.DocumentReference> {
-  const editionCollection = admin
-    .firestore()
+  const editionCollection = getFirestore()
     .collection("editions")
     .doc(editionId);
   return editionCollection;

@@ -19,16 +19,15 @@ import {
   GridRowModel,
   GridRowEditStopReasons,
 } from '@mui/x-data-grid';
-import {
-  randomCreatedDate,
-  randomTraderName,
-  randomId,
-  randomArrayItem,
-} from '@mui/x-data-grid-generator';
+import { faker } from '@faker-js/faker';
+
+const randomCreatedDate = () => faker.date.recent();
+const randomTraderName = () => faker.person.fullName();
+const randomId = () => faker.string.uuid();
 
 const roles = ['Market', 'Finance', 'Development'];
 const randomRole = () => {
-  return randomArrayItem(roles);
+  return faker.helpers.arrayElement(roles);
 };
 
 const initialRows: GridRowsProp = [

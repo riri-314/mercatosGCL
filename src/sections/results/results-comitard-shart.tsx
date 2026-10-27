@@ -81,7 +81,7 @@ export function ComitardBidChart({ comitard, isClosed }: Props) {
                     dy={4}
                     fontSize={10}
                     fill="#666"
-                    textAnchor="inside"
+                    textAnchor="start"
                     transform={`rotate(90, ${x}, ${y})`}
                   >
                     {value}

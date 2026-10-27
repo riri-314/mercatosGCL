@@ -8,7 +8,7 @@ import {
     GridToolbar,
 } from "@mui/x-data-grid";
 import Iconify from "../../components/iconify/iconify";
-import {DocumentData} from "@firebase/firestore";
+import {DocumentData} from "firebase/firestore";
 import {setActiveEdition} from "../../utils/admin-tools";
 import {LoadingButton} from "@mui/lab";
 import {useState} from "react";

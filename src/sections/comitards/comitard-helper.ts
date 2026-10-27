@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { httpsCallable } from "@firebase/functions";
+import { httpsCallable } from "firebase/functions";
 
 import { functions } from "../../firebase_config";
 import { useAuth } from "../../auth/AuthProvider";

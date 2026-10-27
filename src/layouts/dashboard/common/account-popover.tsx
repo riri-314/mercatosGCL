@@ -6,7 +6,7 @@ import Divider from "@mui/material/Divider";
 import { alpha, styled } from "@mui/material/styles";
 import Typography from "@mui/material/Typography";
 import IconButton from "@mui/material/IconButton";
-import { signOut } from "@firebase/auth";
+import { signOut } from "firebase/auth";
 import LoadingButton from "@mui/lab/LoadingButton";
 import { auth } from "../../../firebase_config";
 import { useAuth } from "../../../auth/AuthProvider";
