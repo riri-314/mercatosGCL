@@ -22,16 +22,29 @@ server, run `npm run dev -- --host`. Run `npm run test:dev-security` to check lo
 file access restrictions and the default binding.
 
 ## Emulator
-First change debug to true in firebase_config.ts
 
-### Importing firestore data to local storage: 
+Use synthetic fixtures; never import production account or database exports into Git.
+Start the emulators with the installed CLI:
 
-gsutil -m cp -r gs://bucket_export_test/2025-02-10T17\:25\:33_46845 ~/git/mercatosGCL
+```sh
+functions/node_modules/.bin/firebase emulators:start --project demo-mercatos-local
+```
 
-source: https://stackoverflow.com/questions/57838764/how-to-import-data-from-cloud-firestore-to-the-local-emulator
+In another terminal, seed the running Authentication and Firestore emulators:
 
-### Start the emulator
-firebase emulators:start --import ./2025-02-10T17:25:33_46845 --export-on-exit
+```sh
+GCLOUD_PROJECT=demo-mercatos-local FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099 npm run seed:emulators --prefix functions
+```
+
+The fixture creates three accounts at `demo-{admin,buyer,seller}@example.test`,
+with the development-only password `EmulatorOnly123!`. Re-running it resets the
+synthetic edition. The seeder refuses non-demo projects and non-local hosts.
+For the frontend, enable the emulator configuration in `src/firebase_config.ts`.
+
+Previously tracked exports contained emulator passwords and personal data. They
+have been removed from this checkout and local Git history. Any credentials reused
+outside the emulator must be rotated by their owners. Existing clones and remote
+branches need the sanitized history; do not merge the old history back in.
 
 ## Tests
 
@@ -67,7 +80,7 @@ member uploads, and administrator access. The backend command builds the
 functions and starts isolated Firestore, Authentication, and Storage emulators with
 `firebase.test.json` and the `demo-mercatos-security` project. Java 21 or later is
 required; ports 8180, 9098, and 9198 must be available. Tests refuse to run against
-production and do not import the repository's account or database exports. Backend test files run
+production and use only synthetic test data. Backend test files run
 sequentially because they clear the same emulator database between tests.
 
 ## Dependency maintenance

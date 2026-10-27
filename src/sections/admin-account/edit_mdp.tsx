@@ -31,14 +31,13 @@ interface ChangeMDPProps {
 
 export default function EditMDP({
   data,
-  editionId,
   close,
   refetchData,
 }: ChangeMDPProps) {
   console.log("data:", data);
   const [loading, setLoading] = useState<boolean>(false);
 
-  const [newMDP, setNewMDP] = useState<string>(data.description);
+  const [newMDP, setNewMDP] = useState<string>("");
   const [newMDPError, setNewMDPError] = useState<boolean>(false);
 
   const [mdpError, setCercleError] = useState<string>("");
@@ -51,7 +50,6 @@ export default function EditMDP({
   async function handleNewMDP() {
     setCercleError("");
     setLoading(true);
-    console.log("handleNewMDP called with newMDP:", newMDP, editionId, data.id);
     // check if mdp is valid
     const mdpRegex =
       /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
