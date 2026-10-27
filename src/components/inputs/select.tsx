@@ -29,7 +29,7 @@ export default function UnstyledSelectIntroduction({
     <>
       <Select style={isError ? { color: "red", borderColor: "red" } : {}} defaultValue={defaultValue} placeholder="Choisir une proportion" onChange={change}>
         {Object.entries(option).map(([text, value]) => (
-          <Option value={value}>{text}</Option>
+          <Option key={value} value={value}>{text}</Option>
         ))}
       </Select>
       <FormHelperText>{helpText}</FormHelperText>
