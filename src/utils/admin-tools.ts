@@ -4,15 +4,13 @@ import {
   updateDoc,
   doc,
   deleteField,
-  writeBatch,
   query,
   where,
   DocumentData,
 } from "firebase/firestore";
-import { auth, db, functions } from "../firebase_config";
+import { db, functions } from "../firebase_config";
 import { Dayjs } from "dayjs";
 import { httpsCallable } from "firebase/functions";
-import { sendPasswordResetEmail } from "firebase/auth";
 import { requireMutationSuccess } from "./callable-result";
 
 type Dict = {
@@ -37,120 +35,52 @@ export async function updateMDP(uid: string, newMDP: string): Promise<number> {
   }
 }
 
-// This function is used to add a new edition to the database.
-// It takes a string (description), two dates (start and end) and a number (votes) as parameters.
-// The string represents the description of the edition, the first date is the start date and the second date is the end date.
-// The number represents the number of votes per cercle.
-// The function first gets the number of the last edition in the database.
-// Then it creates a new document in the 'editions' collection with the provided data.
-// The function does not return anything.
+const pendingEditionOperations = new Map<string, { id: string; signature: string }>();
+
+async function editionOperation(name: string, payload: Record<string, unknown>) {
+  const key = `mercatos:${name}`;
+  const signature = JSON.stringify(payload);
+  let saved = pendingEditionOperations.get(name);
+  try { saved = saved ?? JSON.parse(localStorage.getItem(key) || "null") ?? undefined; } catch { /* Storage may be unavailable. */ }
+  const operationId = saved?.signature === signature ? saved.id : crypto.randomUUID();
+  pendingEditionOperations.set(name, { id: operationId, signature });
+  try { localStorage.setItem(key, JSON.stringify({ id: operationId, signature })); } catch { /* Server state remains durable. */ }
+  const result = await httpsCallable(functions, name)({ ...payload, operationId });
+  const response = result.data as { success?: boolean; state?: string };
+  if (response.state === "pending") {
+    throw new Error("L'opération est en attente de reprise automatique. Consultez son état dans le compte administrateur.");
+  }
+  requireMutationSuccess(response);
+  if (pendingEditionOperations.get(name)?.id === operationId) pendingEditionOperations.delete(name);
+  try {
+    if (JSON.parse(localStorage.getItem(key) || "null")?.id === operationId) localStorage.removeItem(key);
+  } catch { /* No persisted client state. */ }
+  return 1;
+}
+
 export async function newEdition(
-  rules: String,
+  rules: string,
   start: Dayjs | null,
   end: Dayjs | null,
-  votes: Number,
-  enchere_duration: Number,
-  comitard_per_cercle: Number,
-  min_encheres: Number,
-  max_encheres: Number,
-  remboursementVendeur: Number,
-  remboursementPerdant: Number,
-  remboursementGagnant: Number
+  votes: number,
+  enchere_duration: number,
+  comitard_per_cercle: number,
+  min_encheres: number,
+  max_encheres: number,
+  remboursementVendeur: number,
+  remboursementPerdant: number,
+  remboursementGagnant: number
 ): Promise<number> {
-  let newEdition = 0;
-  let oldCercles: any = {};
-  let errorCode = 0;
-  let oldEditionId = "";
+  return editionOperation("createedition", {
+    rules, startMs: start?.valueOf(), stopMs: end?.valueOf(), nbFut: votes,
+    duration: enchere_duration, nbComitard: comitard_per_cercle,
+    enchereMin: min_encheres, enchereMax: max_encheres,
+    remboursementVendeur, remboursementPerdant, remboursementGagnant,
+  });
+}
 
-  // Retrieve all documents in the "editions" collection
-  await getDocs(editionsRef)
-    .then((snapshot) => {
-      const batch = writeBatch(db);
-      // Loop through each document in the collection and update the "active" field to false
-      snapshot.forEach((Doc) => {
-        const edition = Doc.data().edition;
-        if (edition > newEdition) {
-          oldEditionId = Doc.id;
-          newEdition = edition;
-          oldCercles = Doc.data().cercles;
-          Object.keys(oldCercles).forEach(function (cercleId) {
-            const cercle = oldCercles[cercleId];
-            if (cercle.hasOwnProperty("comitards")) {
-              oldCercles[cercleId].comitards = {};
-              oldCercles[cercleId].nbFut = votes;
-            }
-          });
-        }
-        const docRef = doc(editionsRef, Doc.id);
-        batch.update(docRef, { active: false });
-      });
-
-      const newEditionData = {
-        rules: rules,
-        edition: newEdition + 1,
-        stop: end?.toDate(),
-        start: start?.toDate(),
-        nbFut: votes,
-        cercles: oldCercles,
-        duration: enchere_duration,
-        nbComitard: comitard_per_cercle,
-        enchereMin: min_encheres,
-        enchereMax: max_encheres,
-        active: true,
-        remboursementVendeur: remboursementVendeur,
-        remboursementPerdant: remboursementPerdant,
-        remboursementGagnant: remboursementGagnant,
-      };
-
-      // Create a new document in the same collection
-      const newDocRef = doc(editionsRef); // Auto-generated document ID
-      batch.set(newDocRef, newEditionData); // Add new document data
-
-      console.log("created new doc, calling reset password function");
-      // reset all oldCercles passwords
-      const addMessage = httpsCallable(functions, "resetpasswords");
-      addMessage({ editionId: oldEditionId })
-        .then((result) => {
-          const data: any = result.data;
-          //console.log("data:", data);
-          const emailArray = data.emails;
-          //console.log("emailArray:", emailArray);
-          emailArray.forEach(async (email: string) => {
-            console.log("sending reset password email:", email);
-            await sendPasswordResetEmail(auth, email);
-          });
-        })
-        .catch((error) => {
-          console.log("error while reseting passwords:", error);
-        });
-
-      // Commit the batched write operation
-      return batch.commit();
-    })
-    .then(async () => {
-      console.log(
-        "All active fields set to false, and a new document added successfully."
-      );
-      // Revoke the public picture URLs of the edition that just closed.
-      if (oldEditionId) {
-        try {
-          const lockFn = httpsCallable(functions, "lockeditionpictures");
-          const res = await lockFn({ editionId: oldEditionId });
-          console.log("Locked old edition pictures:", res.data);
-        } catch (e) {
-          console.log("Error locking old edition pictures:", e);
-        }
-      }
-      errorCode = 1;
-    })
-    .catch((error) => {
-      console.error(
-        "Error updating active fields and adding a new document:",
-        error
-      );
-    });
-
-  return errorCode;
+export async function resetEditionPasswords(editionId: string) {
+  return editionOperation("resetpasswords", { editionId });
 }
 
 export async function editEdition(data: Dict) {
@@ -189,50 +119,7 @@ export async function lockAllPastEditions(): Promise<number> {
 //deleting edition is forbiden, can only be done from the web firebase console.
 
 export async function setActiveEdition(edition: number) {
-  const editionsQuery = query(editionsRef);
-  const editionsSnapshot = await getDocs(editionsQuery);
-
-  let foundEdition = false;
-  let targetId = "";
-  const toLock: string[] = [];
-
-  const batch = writeBatch(db);
-
-  editionsSnapshot.forEach((doc) => {
-    if (doc.data().edition === edition) {
-      batch.update(doc.ref, { active: true });
-      foundEdition = true;
-      targetId = doc.id;
-    } else {
-      // Only editions transitioning active -> inactive need locking.
-      if (doc.data().active === true) {
-        toLock.push(doc.id);
-      }
-      batch.update(doc.ref, { active: false });
-    }
-  });
-
-  if (!foundEdition) {
-    console.log(`No edition found with edition number ${edition}`);
-    return 0;
-  }
-
-  await batch.commit();
-
-  // Restore the newly active edition's public picture URLs, and revoke the
-  // ones that were just deactivated.
-  try {
-    const unlockFn = httpsCallable(functions, "unlockeditionpictures");
-    await unlockFn({ editionId: targetId });
-    const lockFn = httpsCallable(functions, "lockeditionpictures");
-    for (const id of toLock) {
-      await lockFn({ editionId: id });
-    }
-  } catch (e) {
-    console.log("Error toggling edition picture locks:", e);
-  }
-
-  return 1;
+  return editionOperation("activateedition", { edition });
 }
 
 // This function is used to remove a comitard from the database.

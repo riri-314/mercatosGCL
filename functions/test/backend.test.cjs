@@ -9,7 +9,7 @@ if (!emulatorHost || !/^(127\.0\.0\.1|localhost):\d+$/.test(emulatorHost) ||
 }
 
 const handlers = require("../lib/index.js");
-const { getFirestore, Timestamp, DocumentReference } = require("firebase-admin/firestore");
+const { getFirestore, Timestamp } = require("firebase-admin/firestore");
 const { getApp, deleteApp } = require("firebase-admin/app");
 const { getAuth } = require("firebase-admin/auth");
 const authHost = process.env.FIREBASE_AUTH_EMULATOR_HOST;
@@ -374,11 +374,11 @@ test("account creation waits until Authentication and Firestore both finish", as
   await seed();
   const started = defer();
   const release = defer();
-  const update = DocumentReference.prototype.update;
-  mock.method(DocumentReference.prototype, "update", async function (...args) {
+  const run = db.runTransaction.bind(db);
+  mock.method(db, "runTransaction", async callback => {
     started.resolve();
     await release.promise;
-    return update.apply(this, args);
+    return run(callback);
   });
   let finished = false;
   const pending = signup().then((result) => { finished = true; return result; });
@@ -400,7 +400,7 @@ test("account creation waits until Authentication and Firestore both finish", as
 test("failed account database writes roll back the new Authentication account", async () => {
   await seed();
   const before = (await editionRef.get()).data();
-  mock.method(DocumentReference.prototype, "update", async () => {
+  mock.method(db, "runTransaction", async () => {
     throw new Error("simulated account write failure");
   });
   await assert.rejects(signup(), { code: "unavailable" });
@@ -410,9 +410,9 @@ test("failed account database writes roll back the new Authentication account", 
 
 test("a lost database acknowledgement preserves an account that was linked", async () => {
   await seed();
-  const update = DocumentReference.prototype.update;
-  mock.method(DocumentReference.prototype, "update", async function (...args) {
-    await update.apply(this, args);
+  const run = db.runTransaction.bind(db);
+  mock.method(db, "runTransaction", async callback => {
+    await run(callback);
     throw new Error("simulated lost acknowledgement");
   });
   assert.equal((await signup()).success, true);
@@ -749,4 +749,12 @@ test("administrators can maintain archived profiles and override member limits",
     editionId: editionRef.id, cercleId: "buyer", comitardId: ids[0], name: "Archive correction",
   } });
   assert.equal((await editionRef.get()).data().cercles.buyer.comitards[ids[0]].name, "Archive correction");
+});
+
+test("transitions freeze account membership mutations", async () => {
+  await seedCircleUsers();
+  await editionRef.update({ transitioning: true });
+  await assert.rejects(signup(), { code: "failed-precondition" });
+  await assert.rejects(handlers.deleteuser.run({ ...adminRequest, data: { editionId: editionRef.id, uid: "buyer" } }), { code: "failed-precondition" });
+  assert.equal((await getAuth().listUsers()).users.length, 3);
 });

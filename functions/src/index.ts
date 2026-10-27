@@ -11,7 +11,8 @@ import { initializeApp } from "firebase-admin/app";
 import * as test from "firebase-admin/firestore";
 import { getFirestore } from "firebase-admin/firestore";
 import { getAuth } from "firebase-admin/auth";
-import { getStorage } from "firebase-admin/storage";
+import { lockEditionFiles, unlockEditionFiles } from "./edition-pictures";
+import { beginEditionOperation, resumeEditionOperation, retryEditionOperations } from "./edition-workflow";
 import { beforeUserCreated } from "firebase-functions/v2/identity";
 import { randomInt, randomUUID as uuidv4 } from "node:crypto";
 import { onSchedule } from "firebase-functions/scheduler";
@@ -51,56 +52,6 @@ async function assertAdmin(request: any): Promise<void> {
   if (!isAdmin) {
     throw new HttpsError("permission-denied", "Unauthorized request!");
   }
-}
-
-/**
- * Revoke the public download tokens of every file under an edition prefix.
- * The current token is stashed in `lockedToken` custom metadata so the exact
- * same public URL can be restored later (see unlockEditionFiles). Idempotent:
- * files already locked (no live token) are skipped so the stash is never lost.
- * @param {string} editionId - Firestore doc id used as the storage prefix.
- * @returns {Promise<number>} - Number of files locked.
- */
-async function lockEditionFiles(editionId: string): Promise<number> {
-  const bucket = getStorage().bucket();
-  const [files] = await bucket.getFiles({ prefix: `${editionId}/` });
-  let locked = 0;
-  for (const file of files) {
-    const [meta] = await file.getMetadata();
-    const custom = (meta.metadata || {}) as Record<string, any>;
-    const current = custom.firebaseStorageDownloadTokens;
-    if (current) {
-      await file.setMetadata({
-        metadata: { firebaseStorageDownloadTokens: "", lockedToken: current },
-      });
-      locked++;
-    }
-  }
-  return locked;
-}
-
-/**
- * Restore the previously stashed download token of every file under an edition
- * prefix, re-enabling the original public URLs. Idempotent.
- * @param {string} editionId - Firestore doc id used as the storage prefix.
- * @returns {Promise<number>} - Number of files unlocked.
- */
-async function unlockEditionFiles(editionId: string): Promise<number> {
-  const bucket = getStorage().bucket();
-  const [files] = await bucket.getFiles({ prefix: `${editionId}/` });
-  let unlocked = 0;
-  for (const file of files) {
-    const [meta] = await file.getMetadata();
-    const custom = (meta.metadata || {}) as Record<string, any>;
-    const saved = custom.lockedToken;
-    if (saved) {
-      await file.setMetadata({
-        metadata: { firebaseStorageDownloadTokens: saved, lockedToken: null },
-      });
-      unlocked++;
-    }
-  }
-  return unlocked;
 }
 
 // Revoke the public picture URLs of a past edition (admin only).
@@ -167,7 +118,7 @@ exports.vote = onCall(async (request) => {
     if (!Object.prototype.hasOwnProperty.call(cercles, senderId)) {
       throw new HttpsError("permission-denied", "Unauthorized request!");
     }
-    if (!edition.active || !(edition.start instanceof test.Timestamp) ||
+    if (!edition.active || edition.transitioning === true || !(edition.start instanceof test.Timestamp) ||
         !(edition.stop instanceof test.Timestamp) || now < edition.start || now > edition.stop) {
       throw new HttpsError("failed-precondition", "Pas dans le temps imparti pour les enchères");
     }
@@ -243,7 +194,7 @@ async function remboursement(): Promise<void> {
   await getFirestore().runTransaction(async (transaction) => {
     const snapshot = await transaction.get(editionRef);
     const edition = snapshot.data();
-    if (!edition || !edition.active) return;
+    if (!edition || !edition.active || edition.transitioning === true) return;
 
     const now = test.Timestamp.now().toMillis();
     const cercles = edition.cercles || {};
@@ -443,70 +394,29 @@ exports.resetpassworduser = onCall(async (request) => {
  * @throws {functions.https.HttpsError} - Throws an error if the request is unauthorized or if there is an internal error.
  */
 
-exports.resetpasswords = onCall(async (request) => {
-  const context_auth = request.auth;
-  const data = request.data;
-  //const auth = getAuth();
-
-  // Check if the request is made by an admin
-  if (!context_auth || !(await getAdminUid(context_auth.uid))) {
+exports.resetpasswords = onCall({ timeoutSeconds: 540 }, async (request) => {
+  if (!request.auth || !(await getAdminUid(request.auth.uid))) {
     throw new HttpsError("permission-denied", "Unauthorized request!");
   }
-
-  console.log("edition id:", data.editionId);
-  if (data.editionId === undefined) {
-    throw new HttpsError("invalid-argument", "Edition id is invalid");
-  }
-
-  const activeEdition = await getEdition(data.editionId);
-  const activeEditionData = await activeEdition.get();
-  const activeEditionCercle = activeEditionData.data()?.cercles || {};
-
-  console.log("activeEditionCercle: ", activeEditionCercle);
-
-  if (Object.keys(activeEditionCercle).length === 0) {
-    // No editions found
-    throw new HttpsError("unavailable", "No editions found!");
-  }
-
-  //
-
-  const userUIDs = Object.keys(activeEditionCercle);
-  const emailArray = [];
-
-  // Loop through user UIDs in the cercle
-  for (const uid of userUIDs) {
-    // Generate a random password
-    console.log("uid: ", uid);
-    const newPassword = data.password || generateRandomPassword();
-
-    // Reset password for each user
-    try {
-      await getAuth().updateUser(uid, { password: newPassword });
-      //console.log("Password reset for user: ", uid, newPassword); //FOR DEBUG
-    } catch (error: any) {
-      console.log("Error resetting password for user: ", uid);
-    }
-
-    const user = await getAuth().getUser(uid);
-    const email = user.email;
-
-    // Send reset password email
-    // admin sdk give us email, send password reset email with firebase auth sdk
-    // necessary to do that. Only way to track user eamil is with firebase admin sdk.
-    // Firebase auth sdk only give us uid.
-    if (email) {
-      emailArray.push(email);
-
-      console.log("email: ", email);
-    } else {
-      throw new Error("No email found for user!");
-    }
-  }
-
-  return { message: "Passwords reseted to all users.", emails: emailArray };
-  //return { message: "Passwords reset and reset email sent to all users." };
+  return beginEditionOperation("passwords", request.data, request.auth.uid);
 });
+
+exports.createedition = onCall({ timeoutSeconds: 540 }, async (request) => {
+  await assertAdmin(request);
+  return beginEditionOperation("create", request.data, request.auth!.uid);
+});
+
+exports.activateedition = onCall({ timeoutSeconds: 540 }, async (request) => {
+  await assertAdmin(request);
+  return beginEditionOperation("activate", request.data, request.auth!.uid);
+});
+
+exports.retryeditionoperation = onCall({ timeoutSeconds: 540 }, async (request) => {
+  await assertAdmin(request);
+  return resumeEditionOperation(identifier(request.data?.operationId, "operationId"));
+});
+
+exports.retryeditionoperations = onSchedule({ schedule: "every 1 minutes", timeoutSeconds: 540 }, retryEditionOperations);
 
 /**
  * Generate a random password.
@@ -604,6 +514,7 @@ exports.deleteuser = onCall(async (request) => {
   const needsAuthDeletion = await db.runTransaction(async (tx) => {
     const [snapshot, deletion] = await tx.getAll(editionRef, deletionRef);
     if (deletion.data()?.state === "completed") return false;
+    if (snapshot.data()?.transitioning === true) throw new HttpsError("failed-precondition", "Edition transition in progress");
     const cercles = snapshot.data()?.cercles || {};
     if (!Object.prototype.hasOwnProperty.call(cercles, uid)) {
       if (deletion.exists) return true; // Resume an interrupted Authentication deletion.
@@ -645,6 +556,7 @@ async function changeBid(request: any, remove: boolean) {
   await getFirestore().runTransaction(async (tx) => {
     const edition = (await tx.get(editionRef)).data();
     if (!edition) throw new HttpsError("not-found", "Edition not found");
+    if (edition.transitioning === true) throw new HttpsError("failed-precondition", "Edition transition in progress");
     const cercles = edition.cercles || {};
     let selected: { sellerId: string; profileId: string; profile: any; bid: any } | undefined;
     for (const [sellerId, circle] of Object.entries(cercles) as [string, any][]) {
@@ -710,7 +622,7 @@ exports.signupuser = onCall(async (request) => {
 
   const editionRef = await getEdition(editionId);
   const edition = (await editionRef.get()).data();
-  if (!edition || !Number.isSafeInteger(edition.nbFut) || edition.nbFut < 0) {
+  if (!edition || edition.transitioning === true || !Number.isSafeInteger(edition.nbFut) || edition.nbFut < 0) {
     throw new HttpsError("failed-precondition", "Invalid edition starting balance");
   }
 
@@ -724,14 +636,15 @@ exports.signupuser = onCall(async (request) => {
   });
 
   try {
-    await editionRef.update({
-      [`cercles.${user.uid}`]: {
-        description: data.description ?? "",
-        nbFut: edition.nbFut,
-        name: data.displayName,
-        comitards: {},
-        admins: [],
-      },
+    await getFirestore().runTransaction(async tx => {
+      const current = (await tx.get(editionRef)).data();
+      if (!current || current.transitioning === true || !Number.isSafeInteger(current.nbFut) || current.nbFut < 0) {
+        throw new HttpsError("failed-precondition", "Edition cannot accept accounts");
+      }
+      tx.update(editionRef, { [`cercles.${user.uid}`]: {
+        description: data.description ?? "", nbFut: current.nbFut,
+        name: data.displayName, comitards: {}, admins: [],
+      } });
     });
   } catch {
     // A lost write acknowledgement can mean the document was actually updated.

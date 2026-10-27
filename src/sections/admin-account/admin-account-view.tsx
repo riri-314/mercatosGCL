@@ -29,7 +29,9 @@ import Iconify from "../../components/iconify/iconify.tsx";
 import EncheresTable from "./enchere_table.tsx";
 import EditEnchere from "./edit_enchere.tsx";
 import EditMDP from "./edit_mdp.tsx";
-import { lockAllPastEditions } from "../../utils/admin-tools";
+import { lockAllPastEditions, resetEditionPasswords } from "../../utils/admin-tools";
+
+import EditionOperationStatus from "./edition-operation-status";
 
 interface AdminAccountProps {
   data: DocumentData[];
@@ -43,6 +45,8 @@ export default function AdminAccount({
   activeData,
 }: AdminAccountProps) {
   const { user } = useAuth();
+  const [passwordResult, setPasswordResult] = useState("");
+  const [resettingPasswords, setResettingPasswords] = useState(false);
   const [errorEditionEdit, setErrorEditionEdit] = useState("");
   const [lockingPast, setLockingPast] = useState(false);
   const [lockPastResult, setLockPastResult] = useState("");
@@ -76,6 +80,7 @@ export default function AdminAccount({
         </Typography>
       </Stack>
 
+      <EditionOperationStatus refetchData={refetchData} />
       <Card sx={{ width: "100%", mb: 4 }}>
         <CardContent>
           <Accordion>
@@ -363,21 +368,22 @@ export default function AdminAccount({
                 variant={"outlined"}
                 size={"large"}
                 onClick={async () => {
-                  const addMessage = httpsCallable(functions, "resetpasswords");
-                  addMessage({
-                    text: "Test super function",
-                    editionId: activeData.id,
-                  }).then((result) => {
-                    // Read result of the Cloud Function.
-                    /** @type {any} */
-                    const data: any = result.data;
-                    //const sanitizedMessage = data.text;
-                    console.log("data:", data);
-                  });
+                  setResettingPasswords(true);
+                  setPasswordResult("");
+                  try {
+                    await resetEditionPasswords(activeData.id);
+                    setPasswordResult("Mots de passe réinitialisés et e-mails de récupération envoyés.");
+                  } catch (cause: unknown) {
+                    setPasswordResult(cause instanceof Error ? cause.message : "La réinitialisation n'a pas abouti.");
+                  } finally {
+                    setResettingPasswords(false);
+                  }
                 }}
+                loading={resettingPasswords}
               >
                 Réinitialiser tous les mots de passe DANGER
               </LoadingButton>
+              {passwordResult && <Alert severity="info">{passwordResult}</Alert>}
               <LoadingButton
                 variant={"outlined"}
                 size={"large"}

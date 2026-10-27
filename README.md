@@ -83,6 +83,11 @@ required; ports 8180, 9098, and 9198 must be available. Tests refuse to run agai
 production and use only synthetic test data. Backend test files run
 sequentially because they clear the same emulator database between tests.
 
+## Edition operations
+
+Edition creation, activation and bulk password resets are resumable server operations.
+See [operation lifecycle, recovery and deployment](docs/edition-operations.md).
+
 ## Dependency maintenance
 
 React 18, Material UI 5 / MUI X 6, TypeScript 5, and ESLint 8 stay on their latest

@@ -141,57 +141,63 @@ export default function NewEdition({
 
       return;
     }
-    let ret = 0;
-    if (updateMode) {
-      const updateData = {
-        rules,
-        start: start?.toDate(),
-        stop: stop?.toDate(),
-        nbFut,
-        duration,
-        nbComitard,
-        enchereMin,
-        enchereMax,
-        remboursementVendeur,
-        remboursementPerdant,
-        remboursementGagnant,
-        edition: data.edition, // Set the edition field to data.edition
-      };
-      ret = await editEdition(updateData);
-    } else {
-      ret = await newEdition(
-        rules,
-        start,
-        stop,
-        nbFut,
-        duration,
-        nbComitard,
-        enchereMin,
-        enchereMax,
-        remboursementVendeur,
-        remboursementPerdant,
-        remboursementGagnant
-      );
-    }
-
-    //console.log("ret: ", ret);
-    if (ret) {
-      refetchData();
-      setErrorType("success");
+    try {
+      let ret = 0;
       if (updateMode) {
-        setError("Edition mise à jour");
+        const updateData = {
+          rules,
+          start: start?.toDate(),
+          stop: stop?.toDate(),
+          nbFut,
+          duration,
+          nbComitard,
+          enchereMin,
+          enchereMax,
+          remboursementVendeur,
+          remboursementPerdant,
+          remboursementGagnant,
+          edition: data.edition, // Set the edition field to data.edition
+        };
+        ret = await editEdition(updateData);
       } else {
-        setError("Edition créée");
+        ret = await newEdition(
+          rules,
+          start,
+          stop,
+          nbFut,
+          duration,
+          nbComitard,
+          enchereMin,
+          enchereMax,
+          remboursementVendeur,
+          remboursementPerdant,
+          remboursementGagnant
+        );
       }
 
-      // load modal that ask to reload the website to fetch new data.
-    } else {
-      setErrorType("error");
-      setError("Erreur lors de la création de l'édition, contactez un geek");
-    }
+      //console.log("ret: ", ret);
+      if (ret) {
+        refetchData();
+        setErrorType("success");
+        if (updateMode) {
+          setError("Edition mise à jour");
+        } else {
+          setError("Edition créée");
+        }
 
-    setLoading(false);
-    console.log("create edition");
+        // load modal that ask to reload the website to fetch new data.
+      } else {
+        setErrorType("error");
+        setError("Erreur lors de la création de l'édition, contactez un geek");
+      }
+
+    } catch (error: unknown) {
+      setErrorType("error");
+      setError(error instanceof Error ? error.message : "Impossible de terminer l'opération.");
+      refetchData();
+    } finally {
+      setLoading(false);
+    }
   }
 
   // stop come after start. Duration of auction cannot be gretter than the duration of the contest (stop - start)

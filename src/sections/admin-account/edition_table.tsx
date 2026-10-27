@@ -143,12 +143,14 @@ export default function QuickFilteringGrid({
                 onClick={async () => {
                     setLoading(true);
                     error("");
-                    const ret = await setActiveEdition(params.row.edition);
-                    if (!ret) {
-                        error("Error while setting active edition");
+                    try {
+                        await setActiveEdition(params.row.edition);
+                        refetchData();
+                    } catch (cause: unknown) {
+                        error(cause instanceof Error ? cause.message : "Impossible d'activer cette édition.");
+                    } finally {
+                        setLoading(false);
                     }
-                    refetchData();
-                    setLoading(false);
                 }}
                 variant="contained"
             >

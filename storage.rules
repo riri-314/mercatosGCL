@@ -9,8 +9,9 @@ service firebase.storage {
     }
 
     function isActiveEdition(editionID) {
-      return firestore.get(/databases/(default)/documents/editions/$(editionID))
-        .data.get('active', false) == true;
+      let edition = firestore.get(/databases/(default)/documents/editions/$(editionID)).data;
+      return edition.get('active', false) == true
+        && edition.get('transitioning', false) != true;
     }
 
     match /{editionID}/{userID}/{fileName} {

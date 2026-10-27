@@ -1,8 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { writeBatch } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { deleteEnchereWithStates, editEnchereAmount, setActiveEdition } from '../../src/utils/admin-tools';
-import { getDocs } from 'firebase/firestore';
 
 vi.mock('firebase/firestore', () => ({
   collection: vi.fn(), doc: vi.fn(() => 'edition-reference'), query: vi.fn(), where: vi.fn(),
@@ -29,6 +27,7 @@ const correction = Object.assign(vi.fn(), { stream: vi.fn() });
 beforeEach(() => {
   vi.spyOn(console, 'log').mockImplementation(() => {});
   vi.spyOn(console, 'error').mockImplementation(() => {});
+  localStorage.clear();
   correction.mockReset().mockResolvedValue({ data: { success: true } });
   vi.mocked(httpsCallable).mockReturnValue(correction);
 });
@@ -69,46 +68,27 @@ describe('admin bid corrections', () => {
 });
 
 describe('edition activation', () => {
-  const batch = { update: vi.fn(), commit: vi.fn() };
-  const lock = Object.assign(vi.fn(), { stream: vi.fn() });
-  const unlock = Object.assign(vi.fn(), { stream: vi.fn() });
-
-  beforeEach(() => {
-    batch.commit.mockReset().mockResolvedValue(undefined);
-    lock.mockReset().mockResolvedValue({ data: {} });
-    unlock.mockReset().mockResolvedValue({ data: {} });
-    vi.mocked(writeBatch).mockReturnValue(batch as unknown as ReturnType<typeof writeBatch>);
-    vi.mocked(httpsCallable).mockImplementation((_functions, name) => name === 'unlockeditionpictures' ? unlock : lock);
-    const documents = [
-      { id: 'target', ref: 'target-ref', data: () => ({ edition: 3, active: false }) },
-      { id: 'current', ref: 'current-ref', data: () => ({ edition: 2, active: true }) },
-      { id: 'archive', ref: 'archive-ref', data: () => ({ edition: 1, active: false }) },
-    ];
-    vi.mocked(getDocs).mockResolvedValue({ forEach: (callback: (doc: unknown) => void) => documents.forEach(callback) } as unknown as Awaited<ReturnType<typeof getDocs>>);
-  });
-
-  it('switches the active edition atomically and toggles only affected picture locks', async () => {
+  it('uses the backend workflow and requires completed success', async () => {
+    correction.mockResolvedValue({ data: { success: true, state: 'completed' } });
     expect(await setActiveEdition(3)).toBe(1);
-    expect(batch.update.mock.calls).toEqual([
-      ['target-ref', { active: true }], ['current-ref', { active: false }], ['archive-ref', { active: false }],
-    ]);
-    expect(batch.commit).toHaveBeenCalledOnce();
-    expect(unlock).toHaveBeenCalledWith({ editionId: 'target' });
-    expect(lock).toHaveBeenCalledExactlyOnceWith({ editionId: 'current' });
-    expect(batch.commit.mock.invocationCallOrder[0]).toBeLessThan(unlock.mock.invocationCallOrder[0]);
+    expect(httpsCallable).toHaveBeenCalledWith(expect.anything(), 'activateedition');
+    expect(correction).toHaveBeenCalledWith({ edition: 3, operationId: expect.any(String) });
   });
 
-  it('does not commit changes or toggle pictures if the requested edition is missing', async () => {
-    expect(await setActiveEdition(99)).toBe(0);
-    expect(batch.commit).not.toHaveBeenCalled();
-    expect(unlock).not.toHaveBeenCalled();
-    expect(lock).not.toHaveBeenCalled();
+  it('keeps the same operation ID when retrying a partial failure', async () => {
+    correction.mockResolvedValueOnce({ data: { success: false, state: 'pending' } });
+    await expect(setActiveEdition(3)).rejects.toThrow('reprise automatique');
+    const first = correction.mock.calls[0][0];
+    correction.mockResolvedValueOnce({ data: { success: true, state: 'completed' } });
+    expect(await setActiveEdition(3)).toBe(1);
+    expect(correction.mock.calls[1][0]).toEqual(first);
   });
 
-  it('does not toggle picture access when the database commit fails', async () => {
-    batch.commit.mockRejectedValue(new Error('offline'));
+  it('keeps the operation ID after a lost acknowledgement', async () => {
+    correction.mockRejectedValueOnce(new Error('offline'));
     await expect(setActiveEdition(3)).rejects.toThrow('offline');
-    expect(unlock).not.toHaveBeenCalled();
-    expect(lock).not.toHaveBeenCalled();
+    correction.mockResolvedValueOnce({ data: { success: true, state: 'completed' } });
+    await setActiveEdition(3);
+    expect(correction.mock.calls[1][0]).toEqual(correction.mock.calls[0][0]);
   });
 });
