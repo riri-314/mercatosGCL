@@ -143,213 +143,90 @@ export const beforecreated = beforeUserCreated((_event) => {
   throw new HttpsError("permission-denied", "Unauthorized request!");
 });
 
-// check if login in first ?
-// define the now const at the start of the function. Will "fix" the issue with late votes.
-
 exports.vote = onCall(async (request) => {
   const now = test.Timestamp.now();
-  const context_auth = request.auth;
-  if (!context_auth) {
-    throw new HttpsError("permission-denied", "Unauthorized request!"); // return error if not connected
+  const auth = request.auth;
+  if (!auth) {
+    throw new HttpsError("unauthenticated", "Unauthorized request!");
   }
-  let isAdmin = false;
-  const timeDelay = 2500;
-  const data = request.data;
-
-  //console.log("edition id:", data.editionId);
-  if (data.editionId === undefined || data.editionId == null) {
-    return { message: "Erreur interne: Pas d'édition trouvée" };
+  const data = request.data || {};
+  if (!data.editionId) {
+    throw new HttpsError("invalid-argument", "Pas d'édition trouvée");
   }
+  const editionRef = await getEdition(data.editionId);
 
-  const activeEdition = await getEditionBis(data.editionId);
-  const activeEditionData = await activeEdition.get();
-  const activeEditionCercle = activeEditionData.data()?.cercles || {};
-
-  if (Object.keys(activeEditionCercle).length === 0) {
-    // No editions found
-    return { message: "Erreur interne: Pas de cercles trouvés dans l'édition" };
-  }
-
-  // Check if the request is made by an isAdmin
-
-  isAdmin = await getAdminUid(context_auth.uid);
-  if (!activeEditionCercle[context_auth.uid] && !isAdmin) {
-    throw new HttpsError("permission-denied", "Unauthorized request!"); // return error if not isAdmin or not a active cercle
-  }
-
-  // check clientTime
-
-  if (data.clientTime === undefined) {
-    return { message: "Erreur interne: Ne peut pas vérifier l'enchère" };
-  }
-  const clientTimestamp = Date.parse(data.clientTime);
-
-  const start = activeEditionData.data()?.start;
-  const stop = activeEditionData.data()?.stop;
-
-  if (start && stop) {
-    if (now < start || now > stop) {
-      return {
-        message:
-          "Pas dans le temps impartie pour les enchères. Too soon or too late",
-      };
+  return admin.firestore().runTransaction(async (transaction) => {
+    // Every decision and mutation uses the same transaction snapshot. A
+    // competing bid or settlement forces a retry before any balance is spent.
+    const snapshot = await transaction.get(editionRef);
+    const edition = snapshot.data();
+    if (!edition) {
+      throw new HttpsError("not-found", "Pas d'édition trouvée");
     }
-  } else {
-    return { message: "Erreur interne: Pas de temps d'enchère trouvé" };
-  }
+    const cercles = edition.cercles || {};
+    const senderId = auth.uid;
+    if (!Object.prototype.hasOwnProperty.call(cercles, senderId)) {
+      throw new HttpsError("permission-denied", "Unauthorized request!");
+    }
+    if (!edition.active || !edition.start || !edition.stop ||
+        now < edition.start || now > edition.stop) {
+      throw new HttpsError("failed-precondition", "Pas dans le temps imparti pour les enchères");
+    }
 
-  let senderId = context_auth.uid;
+    const minimum = edition.enchereMin;
+    const maximum = edition.enchereMax;
+    const balance = cercles[senderId].nbFut;
+    if (!minimum || !maximum || !Number.isSafeInteger(balance) || balance <= 0) {
+      throw new HttpsError("failed-precondition", "Le nombre de fûts est invalide");
+    }
+    if (data.vote === undefined || data.vote < 0 || data.vote == Infinity ||
+        data.vote < minimum || data.vote > maximum || data.vote > balance) {
+      throw new HttpsError("invalid-argument", "Le nombre de fûts est invalide");
+    }
 
-  // Check if the request contains the required data
-
-  const enchereMin = activeEditionData.data()?.enchereMin;
-  const enchereMax = activeEditionData.data()?.enchereMax;
-  if (!enchereMin || !enchereMax) {
-    return { message: "Erreur interne: pas de min max enchere" };
-  }
-
-  let nbFut = 0;
-  if (isAdmin) {
-    nbFut = Infinity;
-  } else {
-    nbFut = activeEditionCercle[senderId].nbFut;
-  }
-  if (!nbFut) {
-    return { message: "Erreur: le nombre de fûts est invalide" };
-  }
-
-  // check vote number > 0, > votemin, < votemax, <= nbFut
-  //console.log("data.vote: ", data.vote);
-  if (
-    data.vote === undefined ||
-    data.vote < 0 ||
-    data.vote == Infinity ||
-    data.vote > enchereMax ||
-    data.vote < enchereMin ||
-    data.vote > nbFut
-  ) {
-    return { message: "Erreur: le nombre de fûts est invalide" };
-  }
-  // comitard id exist and not same cercle
-  const cercleId = getCercleId(data.comitardId, activeEditionCercle);
-
-  if (!cercleId) {
-    return { message: "Erreur: l'id du comitard n'est pas valide" };
-  } else {
+    const cercleId = getCercleId(data.comitardId, cercles);
+    if (!cercleId) {
+      throw new HttpsError("not-found", "L'id du comitard n'est pas valide");
+    }
     if (cercleId === senderId) {
-      return { message: "Erreur: Vous ne pouvez pas voter pour vous même" };
+      throw new HttpsError("permission-denied", "Vous ne pouvez pas voter pour vous-même");
     }
-  }
-  const enchereStart =
-    activeEditionCercle[cercleId].comitards[data.comitardId].enchereStart;
-  const enchereStop =
-    activeEditionCercle[cercleId].comitards[data.comitardId].enchereStop;
+    const comitard = cercles[cercleId].comitards[data.comitardId];
+    if (comitard.enchereProcessed === true) {
+      throw new HttpsError("failed-precondition", "Cette enchère est déjà terminée");
+    }
 
-  const duration = activeEditionData.data()?.duration;
-
-  if (!duration) {
-    return {
-      message: "Erreur interne lors de l'ajout de l'enchère! No duration",
+    const path = `cercles.${cercleId}.comitards.${data.comitardId}`;
+    const updates: Record<string, any> = {
+      [`${path}.encheres.${uuidv4()}`]: { vote: data.vote, sender: senderId, date: now },
+      [`cercles.${senderId}.nbFut`]: test.FieldValue.increment(-data.vote),
     };
-  }
-
-  if (!enchereStart || !enchereStop) {
-    // start enchere
-    // set start and end date for enchere
-    // add enchere
-    // increment jobs
-    // decrement nbFut
-    const secondsToAdd = duration * 60 * 60;
-    const future = test.Timestamp.fromMillis(
-      now.toMillis() + secondsToAdd * 1000
-    );
-    const s = `cercles.${cercleId}.comitards.${data.comitardId}`;
-    const e = `cercles.${senderId}.nbFut`;
-    const enchereId = uuidv4();
-    const encherePath = `${s}.encheres.${enchereId}`;
-
-    activeEdition
-      .update({
-        [encherePath]: {
-          vote: data.vote,
-          sender: senderId,
-          date: now,
-        },
-        [`${s}.enchereStart`]: now,
-        [`${s}.enchereStop`]: future,
-        [`${s}.enchereProcessed`]: false,
-        [e]: test.FieldValue.increment(-data.vote),
-        jobs: test.FieldValue.increment(1),
-      })
-      .catch((error: any) => {
-        console.log("Error adding new enchere:", error);
-        return {
-          message:
-            "Erreur interne lors de l'ajout de l'enchère! Error starting enchère",
-        };
-      })
-      .then(() => {
-        return { message: "Nouvelle enchère ajoutée" };
-      });
-  } else {
-    // need to check here if the vote is bigger than last bigest vote
-    const encheres =
-      activeEditionCercle[cercleId].comitards[data.comitardId].encheres;
-    if (encheres) {
-      const tmp = Object.values(encheres)
-        .filter((enchere) => enchere !== null)
-        .map((enchere) => (enchere as { vote: number }).vote);
-      if (tmp.length > 0) {
-        if (Math.max(Math.max(...tmp) + 1, enchereMin) > data.vote) {
-          return {
-            message: "L'enchère doit etre plus élevée que la dernière enchère",
-          };
-        }
+    if (!comitard.enchereStart || !comitard.enchereStop) {
+      if (!edition.duration) {
+        throw new HttpsError("failed-precondition", "Aucune durée d'enchère trouvée");
       }
+      updates[`${path}.enchereStart`] = now;
+      updates[`${path}.enchereStop`] = test.Timestamp.fromMillis(
+        now.toMillis() + edition.duration * 60 * 60 * 1000
+      );
+      updates[`${path}.enchereProcessed`] = false;
+      updates.jobs = test.FieldValue.increment(1);
     } else {
-      return {
-        message:
-          "Erreur interne lors de l'ajout de l'enchère! No enchère found",
-      };
+      const bids = Object.values(comitard.encheres || {}) as { vote: number }[];
+      const highest = Math.max(...bids.filter(Boolean).map((bid) => bid.vote));
+      if (!bids.length || data.vote < Math.max(highest + 1, minimum)) {
+        throw new HttpsError("failed-precondition", "L'enchère doit être plus élevée que la dernière enchère");
+      }
+      const clientTime = Date.parse(data.clientTime);
+      const stop = comitard.enchereStop.toMillis();
+      if (!(now >= comitard.enchereStart && now <= comitard.enchereStop) &&
+          !(now.toMillis() <= stop + 2500 && clientTime <= stop && clientTime >= stop - 5000)) {
+        throw new HttpsError("failed-precondition", "Pas dans le temps imparti");
+      }
     }
-
-    if (
-      (now >= enchereStart && now <= enchereStop) ||
-      (now.toMillis() <= enchereStop.toMillis() + timeDelay && clientTimestamp <= enchereStop.toMillis() && clientTimestamp >= enchereStop.toMillis() -timeDelay*2)
-    ) {
-      //console.log(
-      //  "added new enchere to a comitard that has a enchere (might be a little laye but it's okay)"
-      //);
-      const s = `cercles.${cercleId}.comitards.${data.comitardId}`;
-
-      const enchereId = uuidv4();
-      const encherePath = `${s}.encheres.${enchereId}`;
-      const e = `cercles.${senderId}.nbFut`;
-      activeEdition
-        .update({
-          [encherePath]: {
-            vote: data.vote,
-            sender: senderId,
-            date: now,
-          },
-          [e]: test.FieldValue.increment(-data.vote),
-        })
-        .catch((error: any) => {
-          console.log("Error adding new enchere:", error);
-          return {
-            message:
-              "Erreur interne lors de l'ajout de l'enchère! Error updating db",
-          };
-        })
-        .then(() => {
-          return { message: "Nouvelle enchère ajoutée" };
-        });
-    } else {
-      //console.log("Error: not in timeframe");
-      return { message: "Erreur: Pas dans le temps impartie" };
-    }
-  }
-  return { message: "Nouvelle enchère ajoutée" };
+    transaction.update(editionRef, updates);
+    return { success: true, message: "Nouvelle enchère ajoutée" };
+  });
 });
 
 async function remboursement(): Promise<void> {
@@ -1158,10 +1035,3 @@ async function getActiveEdition(): Promise<FirebaseFirestore.DocumentReference> 
   //return test3;
 }
 
-async function getEditionBis(
-  editionId: string
-): Promise<FirebaseFirestore.DocumentReference> {
-  const db = test.getFirestore();
-  const test3 = db.collection("editions").doc(editionId);
-  return test3;
-}

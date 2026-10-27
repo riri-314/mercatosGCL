@@ -138,3 +138,78 @@ test("invalid reimbursement data cannot partially credit an auction", async () =
   assert.deepEqual((await editionRef.get()).data(), before);
   assert.equal(edition.cercles.buyer.nbFut, 100);
 });
+
+function bid(uid, vote, comitardId = "target") {
+  return handlers.vote.run({
+    auth: { uid },
+    data: { editionId: editionRef.id, comitardId, vote,
+      clientTime: new Date(now).toISOString() },
+  });
+}
+
+async function seedUnstartedAuctions() {
+  const edition = await seed({ jobs: 0 });
+  edition.cercles.seller.comitards = { target: { name: "Target" }, other: { name: "Other" } };
+  await editionRef.set(edition);
+}
+
+test("parallel bids on different auctions cannot overspend one balance", async () => {
+  await seedUnstartedAuctions();
+  const results = await Promise.allSettled([
+    bid("buyer", 60), bid("buyer", 60, "other"),
+  ]);
+  assert.equal(results.filter((result) => result.status === "fulfilled").length, 1);
+  assert.equal(results.filter((result) => result.status === "rejected").length, 1);
+  const current = (await editionRef.get()).data();
+  assert.equal(current.cercles.buyer.nbFut, 40);
+  assert.equal(current.jobs, 1);
+  assert.equal(Object.values(current.cercles.seller.comitards)
+    .filter((profile) => profile.encheres).length, 1);
+});
+
+test("competing first bids initialize an auction and its job only once", async () => {
+  await seedUnstartedAuctions();
+  const results = await Promise.allSettled([bid("buyer", 10), bid("loser", 10)]);
+  assert.equal(results.filter((result) => result.status === "fulfilled").length, 1);
+  const current = (await editionRef.get()).data();
+  assert.equal(current.jobs, 1);
+  assert.equal(Object.keys(current.cercles.seller.comitards.target.encheres).length, 1);
+  assert.equal(current.cercles.buyer.nbFut + current.cercles.loser.nbFut, 190);
+});
+
+test("counterbids use the latest highest bid and debit the committed amount", async () => {
+  await seedUnstartedAuctions();
+  await bid("buyer", 10);
+  await assert.rejects(bid("loser", 10), { code: "failed-precondition" });
+  const result = await bid("loser", 11);
+  assert.equal(result.success, true);
+  const current = (await editionRef.get()).data();
+  assert.equal(current.cercles.buyer.nbFut, 90);
+  assert.equal(current.cercles.loser.nbFut, 89);
+  assert.equal(current.jobs, 1);
+  assert.equal(Object.keys(current.cercles.seller.comitards.target.encheres).length, 2);
+});
+
+test("bids reject missing membership, own profiles, inactive and settled auctions", async () => {
+  await seedUnstartedAuctions();
+  await assert.rejects(bid("outsider", 10), { code: "permission-denied" });
+  await assert.rejects(bid("seller", 10), { code: "permission-denied" });
+  await editionRef.update({ active: false });
+  await assert.rejects(bid("buyer", 10), { code: "failed-precondition" });
+  await editionRef.update({ active: true,
+    "cercles.seller.comitards.target.enchereProcessed": true });
+  await assert.rejects(bid("buyer", 10), { code: "failed-precondition" });
+  assert.equal((await editionRef.get()).data().cercles.buyer.nbFut, 100);
+});
+
+test("failed bid commits do not spend funds, start an auction, or report success", async () => {
+  await seedUnstartedAuctions();
+  const before = (await editionRef.get()).data();
+  const runTransaction = db.runTransaction.bind(db);
+  mock.method(db, "runTransaction", (callback) => runTransaction(async (transaction) => {
+    await callback(transaction);
+    throw new Error("simulated bid commit failure");
+  }));
+  await assert.rejects(bid("buyer", 10), /simulated bid commit failure/);
+  assert.deepEqual((await editionRef.get()).data(), before);
+});
