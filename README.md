@@ -12,10 +12,14 @@
 ## Quick start
 
 - **Clone** `git clone https://github.com/riri-314/mercatosGCL.git`
-- Need to use `Node.js v20.x`!!!!
+- Use Node.js 22.12+ or 24.x (Vite also supports Node.js 20.19+).
 - **Install:** `npm install`
 - **Start:** `npm run dev`
-- **Build:** `npm build`
+- **Build:** `npm run build`
+
+Development and preview bind to `127.0.0.1`. To deliberately expose the development
+server, run `npm run dev -- --host`. Run `npm run test:dev-security` to check local
+file access restrictions and the default binding.
 
 ## Emulator
 First change debug to true in firebase_config.ts
