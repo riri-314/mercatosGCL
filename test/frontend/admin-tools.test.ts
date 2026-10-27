@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { runTransaction, writeBatch } from 'firebase/firestore';
+import { writeBatch } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
-import { deleteEnchereWithStates, setActiveEdition } from '../../src/utils/admin-tools';
+import { deleteEnchereWithStates, editEnchereAmount, setActiveEdition } from '../../src/utils/admin-tools';
 import { getDocs } from 'firebase/firestore';
 
 vi.mock('firebase/firestore', () => ({
@@ -23,78 +23,48 @@ function editionData() {
   } };
 }
 
-const transaction = { get: vi.fn(), update: vi.fn() };
 const original = (data: unknown) => ({ id: 'edition', data: () => data });
+const correction = Object.assign(vi.fn(), { stream: vi.fn() });
 
 beforeEach(() => {
   vi.spyOn(console, 'log').mockImplementation(() => {});
   vi.spyOn(console, 'error').mockImplementation(() => {});
-  transaction.get.mockReset();
-  vi.mocked(runTransaction).mockReset();
-  vi.mocked(runTransaction).mockImplementation((_db, callback) => callback(transaction as unknown as Parameters<typeof callback>[0]));
+  correction.mockReset().mockResolvedValue({ data: { success: true } });
+  vi.mocked(httpsCallable).mockReturnValue(correction);
 });
 
-describe('admin bid deletion', () => {
-  it('atomically refunds the sender and resets an auction when its last bid is deleted', async () => {
-    const data = editionData();
-    transaction.get.mockResolvedValue({ exists: () => true, data: () => data });
-    expect(await deleteEnchereWithStates(original(data), 'bid', true)).toMatchObject({ status: 'ok' });
-    expect(transaction.update).toHaveBeenCalledOnce();
-    expect(transaction.update).toHaveBeenCalledWith('edition-reference', {
-      'cercles.seller.comitards.target.enchereProcessed': 'DELETE_FIELD',
-      'cercles.seller.comitards.target.enchereStart': 'DELETE_FIELD',
-      'cercles.seller.comitards.target.enchereStop': 'DELETE_FIELD',
-      'cercles.seller.comitards.target.encheres': 'DELETE_FIELD',
-      'cercles.buyer.nbFut': { increment: 10 },
-    });
+describe('admin bid corrections', () => {
+  it('sends the expected bid amount and refund choice to the backend', async () => {
+    expect(await deleteEnchereWithStates(original(editionData()), 'bid', true)).toMatchObject({ status: 'ok' });
+    expect(httpsCallable).toHaveBeenCalledWith(expect.anything(), 'deletebid');
+    expect(correction).toHaveBeenCalledWith({ editionId: 'edition', bidId: 'bid', expectedAmount: 10, refund: true });
   });
 
-  it('keeps other bids and auction timing when deleting one of several bids without a refund', async () => {
-    const data = editionData();
-    Object.assign(data.cercles.seller.comitards.target.encheres, { second: { sender: 'buyer', vote: 11 } });
-    transaction.get.mockResolvedValue({ exists: () => true, data: () => data });
-    expect(await deleteEnchereWithStates(original(data), 'bid', false)).toMatchObject({ status: 'ok' });
-    expect(transaction.update).toHaveBeenCalledWith('edition-reference', {
-      'cercles.seller.comitards.target.encheres.bid': 'DELETE_FIELD',
-    });
+  it('lets the backend compute balance adjustments when editing a bid', async () => {
+    expect(await editEnchereAmount(true, original(editionData()), 'bid', 15)).toBe(0);
+    expect(correction).toHaveBeenCalledWith({ editionId: 'edition', bidId: 'bid', expectedAmount: 10, amount: 15, refund: true });
   });
 
-  it('refuses stale client data without deleting a bid or refunding funds', async () => {
-    const data = editionData();
-    const current = structuredClone(data);
-    current.cercles.buyer.nbFut = 10;
-    transaction.get.mockResolvedValue({ exists: () => true, data: () => current });
-    expect(await deleteEnchereWithStates(original(data), 'bid', true)).toMatchObject({ status: 'stale_client' });
-    expect(transaction.update).not.toHaveBeenCalled();
-  });
-
-  it('rejects missing original data before opening a transaction', async () => {
+  it('rejects missing source data and unknown bids without calling the backend', async () => {
     expect(await deleteEnchereWithStates(original(undefined), 'bid', true)).toMatchObject({ status: 'error' });
-    expect(runTransaction).not.toHaveBeenCalled();
+    expect(await deleteEnchereWithStates(original(editionData()), 'unknown', true)).toMatchObject({ status: 'error' });
+    expect(correction).not.toHaveBeenCalled();
   });
 
-  it('handles an edition that was deleted', async () => {
-    transaction.get.mockResolvedValue({ exists: () => false });
+  it('reports stale amounts from the backend', async () => {
+    correction.mockRejectedValue({ code: 'functions/aborted' });
+    expect(await deleteEnchereWithStates(original(editionData()), 'bid', true)).toMatchObject({ status: 'stale_client' });
+  });
+
+  it('requires a confirmed successful response', async () => {
+    correction.mockResolvedValue({ data: {} });
     expect(await deleteEnchereWithStates(original(editionData()), 'bid', true)).toMatchObject({ status: 'error' });
-    expect(transaction.update).not.toHaveBeenCalled();
+    await expect(editEnchereAmount(true, original(editionData()), 'bid', 15)).rejects.toThrow();
   });
 
-  it('does not refund an unknown bid', async () => {
-    const data = editionData();
-    transaction.get.mockResolvedValue({ exists: () => true, data: () => data });
-    expect(await deleteEnchereWithStates(original(data), 'unknown', true)).toMatchObject({ status: 'error' });
-    expect(transaction.update).not.toHaveBeenCalled();
-  });
-
-  it.each(['aborted', 'failed-precondition'])('reports a %s conflict as retryable', async (code) => {
-    vi.mocked(runTransaction).mockRejectedValue({ code });
-    expect(await deleteEnchereWithStates(original(editionData()), 'bid', true))
-      .toMatchObject({ status: 'concurrent_write' });
-  });
-
-  it('reports unexpected transaction failures without claiming success', async () => {
-    vi.mocked(runTransaction).mockRejectedValue(new Error('offline'));
-    expect(await deleteEnchereWithStates(original(editionData()), 'bid', true)).toMatchObject({ status: 'error' });
+  it('reports rejected corrections without claiming success', async () => {
+    correction.mockRejectedValue(new Error('Settled auction'));
+    expect(await deleteEnchereWithStates(original(editionData()), 'bid', false)).toMatchObject({ status: 'error', message: 'Settled auction' });
   });
 });
 

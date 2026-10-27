@@ -110,7 +110,7 @@ export default function CercleTable({
       .catch((errorMessage) => {
         console.log("error:", errorMessage);
         setLoading(false);
-        setError(`Error. Please try again later. See console for more info`);
+        setError(errorMessage?.message ?? "Erreur. Réessayez plus tard.");
       });
   }
 

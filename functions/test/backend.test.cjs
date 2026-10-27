@@ -576,6 +576,7 @@ test("admins can disable and re-enable accounts and read their status", async ()
 
 test("admin deletion removes the selected circle and authentication account only", async () => {
   await seedCircleUsers();
+  await editionRef.update({ "cercles.seller.comitards.target.enchereProcessed": true });
   const before = (await editionRef.get()).data();
   await handlers.deleteuser.run({ auth: { uid: "admin" },
     data: { uid: "buyer", editionId: editionRef.id } });
@@ -610,4 +611,103 @@ test("password reset confirms success without logging passwords or account recor
   assert.equal(output.includes("passwordHash"), false);
   assert.equal(output.includes("passwordSalt"), false);
   assert.equal(output.includes("buyer@example.test"), false);
+});
+
+function correctionData(overrides = {}) {
+  return { editionId: editionRef.id, bidId: "second", expectedAmount: 10, amount: 15, refund: true, ...overrides };
+}
+
+test("bid edits atomically debit or refund the current sender balance", async () => {
+  await seed();
+  await handlers.editbid.run({ ...adminRequest, data: correctionData() });
+  let current = (await editionRef.get()).data();
+  assert.equal(current.cercles.buyer.nbFut, 95);
+  assert.equal(current.cercles.seller.comitards.target.encheres.second.vote, 15);
+  await handlers.editbid.run({ ...adminRequest, data: correctionData({ expectedAmount: 15, amount: 5 }) });
+  current = (await editionRef.get()).data();
+  assert.equal(current.cercles.buyer.nbFut, 105);
+  assert.equal(current.cercles.seller.comitards.target.encheres.second.vote, 5);
+});
+
+test("invalid, stale and settled bid edits leave bids and balances unchanged", async () => {
+  await seed();
+  const before = (await editionRef.get()).data();
+  for (const updates of [{ amount: 0 }, { amount: 1.5 }, { amount: 101 }, { expectedAmount: 9 }, { refund: 1 }]) {
+    await assert.rejects(handlers.editbid.run({ ...adminRequest, data: correctionData(updates) }));
+    assert.deepEqual((await editionRef.get()).data(), before);
+  }
+  await editionRef.update({ "cercles.seller.comitards.target.enchereProcessed": true });
+  for (const operation of ["editbid", "deletebid"]) {
+    await assert.rejects(handlers[operation].run({ ...adminRequest, data: correctionData() }), { code: "failed-precondition" });
+    await assert.rejects(handlers[operation].run({ auth: { uid: "buyer" }, data: correctionData() }), { code: "permission-denied" });
+  }
+});
+
+test("failed bid edit commits leave both the bid and balance unchanged", async () => {
+  await seed();
+  const before = (await editionRef.get()).data();
+  const run = db.runTransaction.bind(db);
+  mock.method(db, "runTransaction", (callback) => run(async tx => {
+    await callback(tx);
+    throw new Error("failed correction commit");
+  }));
+  await assert.rejects(handlers.editbid.run({ ...adminRequest, data: correctionData() }), /failed correction commit/);
+  assert.deepEqual((await editionRef.get()).data(), before);
+});
+
+test("parallel bid edits cannot spend twice or overwrite a committed correction", async () => {
+  await seed();
+  await editionRef.update({ "cercles.buyer.nbFut": 5 });
+  const results = await Promise.allSettled([
+    handlers.editbid.run({ ...adminRequest, data: correctionData({ amount: 15 }) }),
+    handlers.editbid.run({ ...adminRequest, data: correctionData({ amount: 14 }) }),
+  ]);
+  assert.equal(results.filter(result => result.status === "fulfilled").length, 1);
+  const current = (await editionRef.get()).data();
+  const amount = current.cercles.seller.comitards.target.encheres.second.vote;
+  assert.equal(current.cercles.buyer.nbFut, 5 + 10 - amount);
+  assert.ok(current.cercles.buyer.nbFut >= 0);
+});
+
+test("bid deletion refunds once, resets the last auction and recomputes jobs", async () => {
+  await seed();
+  await handlers.deletebid.run({ ...adminRequest, data: correctionData({ bidId: "first", expectedAmount: 6 }) });
+  await handlers.deletebid.run({ ...adminRequest, data: correctionData() });
+  const current = (await editionRef.get()).data();
+  assert.equal(current.cercles.buyer.nbFut, 110);
+  assert.equal(current.cercles.loser.nbFut, 106);
+  assert.equal(current.jobs, 0);
+  assert.equal(current.cercles.seller.comitards.target.encheres, undefined);
+  assert.equal(current.cercles.seller.comitards.target.enchereStop, undefined);
+  await assert.rejects(handlers.deletebid.run({ ...adminRequest, data: correctionData() }), { code: "not-found" });
+  assert.deepEqual((await editionRef.get()).data(), current);
+});
+
+test("account deletion preserves concurrent balances and can resume failed Auth cleanup", async () => {
+  await seedCircleUsers();
+  await getAuth().createUser({ uid: "idle", email: "idle@example.test", password: "test-password" });
+  await editionRef.update({ "cercles.idle": { nbFut: 100, comitards: {} } });
+  const remove = { ...adminRequest, data: { editionId: editionRef.id, uid: "idle" } };
+  const fail = mock.method(getAuth(), "deleteUser", async () => { throw new Error("Auth offline"); });
+  await Promise.all([
+    assert.rejects(handlers.deleteuser.run(remove), { code: "unavailable" }),
+    editionRef.update({ "cercles.buyer.nbFut": 77 }),
+  ]);
+  assert.equal((await editionRef.get()).data().cercles.buyer.nbFut, 77);
+  assert.equal((await db.doc(`accountDeletions/${editionRef.id}/users/idle`).get()).data().state, "pending");
+  fail.mock.restore();
+  await handlers.deleteuser.run(remove);
+  await assert.rejects(getAuth().getUser("idle"), { code: "auth/user-not-found" });
+  await handlers.deleteuser.run(remove);
+  assert.equal((await editionRef.get()).data().cercles.buyer.nbFut, 77);
+});
+
+test("account deletion refuses unsettled auction participants", async () => {
+  await seedCircleUsers();
+  const before = (await editionRef.get()).data();
+  for (const uid of ["buyer", "seller"]) {
+    await assert.rejects(handlers.deleteuser.run({ ...adminRequest, data: { editionId: editionRef.id, uid } }), { code: "failed-precondition" });
+  }
+  assert.deepEqual((await editionRef.get()).data(), before);
+  assert.equal((await getAuth().listUsers()).users.length, 3);
 });

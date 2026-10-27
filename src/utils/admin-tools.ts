@@ -8,13 +8,12 @@ import {
   query,
   where,
   DocumentData,
-  increment,
-  runTransaction,
 } from "firebase/firestore";
 import { auth, db, functions } from "../firebase_config";
 import { Dayjs } from "dayjs";
 import { httpsCallable } from "firebase/functions";
 import { sendPasswordResetEmail } from "firebase/auth";
+import { requireMutationSuccess } from "./callable-result";
 
 type Dict = {
   [key: string]: any;
@@ -296,38 +295,18 @@ function getEnchre(data: DocumentData, enchereID: string) {
 }
 
 export async function editEnchereAmount(
-  amountReemboursement: number,
+  refund: boolean,
   data: DocumentData,
   enchereID: string,
   amount: number
 ) {
-  const editionId = data.id;
-  const { enchereFound, comitardIdFound, cercleIdFound, senderId } = getEnchre(
-    data,
-    enchereID
-  );
-
-  if (enchereFound === null) {
-    console.log("Error enchere not found");
-    return -1;
-  } else {
-    console.log("enchereFound: ", enchereFound);
-    // only update enchere amount
-    const s = `cercles.${cercleIdFound}.comitards.${comitardIdFound}.encheres.${enchereID}.vote`;
-    // update the document
-    const docRef = doc(db, "editions", editionId);
-    await updateDoc(docRef, {
-      [s]: amount,
-    });
-
-    // increment fut amount of the enchere sender by amountReemboursement
-    console.log("Reimbursing cercle ", senderId, " by ", amountReemboursement);
-    const t = `cercles.${senderId}.nbFut`;
-    await updateDoc(docRef, {
-      [t]: increment(amountReemboursement),
-    });
-    return 0;
-  }
+  const { enchereFound } = getEnchre(data, enchereID);
+  if (!enchereFound) return -1;
+  const result = await httpsCallable(functions, "editbid")({
+    editionId: data.id, bidId: enchereID, expectedAmount: enchereFound.vote, amount, refund,
+  });
+  requireMutationSuccess(result.data);
+  return 0;
 }
 
 export type DeleteEnchereStatus =
@@ -346,105 +325,20 @@ export async function deleteEnchereWithStates(
   enchereID: string,
   rembourse: boolean
 ): Promise<DeleteEnchereResult> {
-  const editionId = originalSnap.id;
-  const editionRef = doc(db, "editions", editionId);
-  const originalData = originalSnap.data();
-
-  if (!originalData) {
-    return {
-      status: "error",
-      message: "Original document data is missing.",
-    };
-  }
-
+  if (!originalSnap.data()) return { status: "error", message: "Original document data is missing." };
+  const { enchereFound } = getEnchre(originalSnap, enchereID);
+  if (!enchereFound) return { status: "error", message: "Impossible de trouver cette enchère." };
   try {
-    const result = await runTransaction(db, async (tx) => {
-      const snap = await tx.get(editionRef);
-      if (!snap.exists()) {
-        return {
-          status: "error",
-          message: "L'édition n'existe plus.",
-        } as DeleteEnchereResult;
-      }
-
-      const currentData = snap.data() as DocumentData;
-
-      // 1) ERROR: old and new data are not the same
-      if (JSON.stringify(currentData) !== JSON.stringify(originalData)) {
-        return {
-          status: "stale_client",
-          message:
-            "Les données ont été modifiées depuis l’ouverture de la page. Recharge la page pour voir la version à jour.",
-        } as DeleteEnchereResult;
-      }
-
-      // Recompute everything based on the transaction snapshot
-      const { enchereFound, comitardIdFound, cercleIdFound, senderId } =
-        getEnchre(snap, enchereID);
-
-      if (
-        enchereFound === null ||
-        comitardIdFound === null ||
-        cercleIdFound === null ||
-        senderId === null
-      ) {
-        return {
-          status: "error",
-          message:
-            "Impossible de trouver cette enchère. Elle a peut-être déjà été supprimée.",
-        } as DeleteEnchereResult;
-      }
-
-      const updates: Record<string, any> = {};
-
-      const comitardEncheres =
-        currentData.cercles[cercleIdFound].comitards[comitardIdFound].encheres;
-
-      const basePath = `cercles.${cercleIdFound}.comitards.${comitardIdFound}`;
-
-      // If this is the only enchère for this comitard, delete other fields
-      if (Object.keys(comitardEncheres).length === 1) {
-        updates[`${basePath}.enchereProcessed`] = deleteField();
-        updates[`${basePath}.enchereStart`] = deleteField();
-        updates[`${basePath}.enchereStop`] = deleteField();
-        updates[`${basePath}.encheres`] = deleteField();
-      } else {
-        updates[`${basePath}.encheres.${enchereID}`] = deleteField();
-      }
-
-      // Remboursement
-      if (rembourse) {
-        const futPath = `cercles.${senderId}.nbFut`;
-        updates[futPath] = increment(enchereFound.vote);
-      }
-
-      // All writes atomically in the transaction
-      tx.update(editionRef, updates);
-
-      return {
-        status: "ok",
-        message: "Enchère supprimée avec succès.",
-      } as DeleteEnchereResult;
+    const result = await httpsCallable(functions, "deletebid")({
+      editionId: originalSnap.id, bidId: enchereID, expectedAmount: enchereFound.vote, refund: rembourse,
     });
-
-    // If the transaction callback returned a DeleteEnchereResult, we just pass it through
-    return result;
-  } catch (e: any) {
-    // 2) ERROR: document changed in between (transaction conflicted)
-    // Firestore uses "aborted" / "failed-precondition" for concurrent updates
-    if (e?.code === "aborted" || e?.code === "failed-precondition") {
-      return {
-        status: "concurrent_write",
-        message:
-          "Les données ont été modifiées en même temps par quelqu'un d'autre. Réessaie l'action.",
-      };
-    }
-
-    // 3) Any other error
-    console.error("deleteEnchereWithStates error:", e);
+    requireMutationSuccess(result.data);
+    return { status: "ok", message: "Enchère supprimée avec succès." };
+  } catch (error: unknown) {
+    const code = (error as { code?: string }).code?.replace("functions/", "");
     return {
-      status: "error",
-      message: "Erreur inattendue lors de la suppression de l'enchère.",
+      status: code === "aborted" ? "stale_client" : "error",
+      message: error instanceof Error ? error.message : "Erreur lors de la suppression de l'enchère.",
     };
   }
 }

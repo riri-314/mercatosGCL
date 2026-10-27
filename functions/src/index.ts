@@ -580,47 +580,110 @@ exports.enableuser = onCall(async (request) => {
 });
 
 exports.deleteuser = onCall(async (request) => {
-  const auth = request.auth;
-  const data = request.data;
-  const uid = data.uid; //user uid
-  const editionId = data.editionId;
-
-  if (!auth || !(await getAdminUid(auth.uid))) {
+  if (!request.auth || !(await getAdminUid(request.auth.uid))) {
     throw new HttpsError("permission-denied", "Unauthorized request!");
   }
-
-  console.log("edition id:", editionId);
-  if (editionId === undefined) {
-    throw new HttpsError("invalid-argument", "Edition id is invalid");
-  }
-
-  if (!uid) {
-    throw new HttpsError("invalid-argument", "User id is invalid");
-  }
-
-  const activeEdition = await getEdition(editionId);
-  const activeEditionData = await activeEdition.get();
-  const activeEditionCercle = activeEditionData.data()?.cercles || {};
-
-  if (Object.keys(activeEditionCercle).length === 0) {
-    // No editions found
-    throw new HttpsError("unavailable", "No cercles found in edition!");
-  }
-
-  Object.keys(activeEditionCercle).forEach((cercleId) => {
-    if (cercleId === uid) {
-      delete activeEditionCercle[cercleId];
+  const uid = identifier(request.data?.uid, "uid");
+  const editionId = identifier(request.data?.editionId, "editionId");
+  if (await getAdminUid(uid)) throw new HttpsError("failed-precondition", "Cannot delete an administrator");
+  const db = getFirestore();
+  const editionRef = db.collection("editions").doc(editionId);
+  const deletionRef = db.doc(`accountDeletions/${editionId}/users/${uid}`);
+  const needsAuthDeletion = await db.runTransaction(async (tx) => {
+    const [snapshot, deletion] = await tx.getAll(editionRef, deletionRef);
+    if (deletion.data()?.state === "completed") return false;
+    const cercles = snapshot.data()?.cercles || {};
+    if (!Object.prototype.hasOwnProperty.call(cercles, uid)) {
+      if (deletion.exists) return true; // Resume an interrupted Authentication deletion.
+      throw new HttpsError("not-found", "Circle not found");
     }
+    for (const [sellerId, circle] of Object.entries(cercles) as [string, any][]) {
+      for (const profile of Object.values(circle.comitards || {}) as any[]) {
+        const bids = Object.values(profile.encheres || {}) as any[];
+        if (profile.enchereProcessed !== true && bids.length &&
+            (sellerId === uid || bids.some((bid) => bid.sender === uid))) {
+          throw new HttpsError("failed-precondition", "Settle or cancel this circle's auctions before deleting it");
+        }
+      }
+    }
+    tx.update(editionRef, { [`cercles.${uid}`]: test.FieldValue.delete() });
+    tx.set(deletionRef, { uid, editionId, state: "pending", createdAt: test.Timestamp.now() });
+    return true;
   });
-
-  const editionRef = getFirestore().collection("editions").doc(editionId);
-
-  await editionRef.update({ cercles: activeEditionCercle });
-
-  await deleteUserAuth(uid);
-
-  return { message: "User deleted" };
+  if (needsAuthDeletion) {
+    await deleteUserAuth(uid);
+    await deletionRef.update({ state: "completed" });
+  }
+  return { success: true, message: "User deleted" };
 });
+
+// Bid corrections use the current transaction snapshot for both the bid and its
+// balance adjustment. The client supplies an expected amount, never a refund.
+async function changeBid(request: any, remove: boolean) {
+  await assertAdmin(request);
+  const data = request.data;
+  const editionId = identifier(data?.editionId, "editionId");
+  const bidId = identifier(data?.bidId, "bidId");
+  if (!Number.isSafeInteger(data.expectedAmount) || data.expectedAmount <= 0 ||
+      typeof data.refund !== "boolean" ||
+      (!remove && (!Number.isSafeInteger(data.amount) || data.amount <= 0))) {
+    throw new HttpsError("invalid-argument", "Invalid bid correction");
+  }
+  const editionRef = getFirestore().collection("editions").doc(editionId);
+  await getFirestore().runTransaction(async (tx) => {
+    const edition = (await tx.get(editionRef)).data();
+    if (!edition) throw new HttpsError("not-found", "Edition not found");
+    const cercles = edition.cercles || {};
+    let selected: { sellerId: string; profileId: string; profile: any; bid: any } | undefined;
+    for (const [sellerId, circle] of Object.entries(cercles) as [string, any][]) {
+      for (const [profileId, profile] of Object.entries(circle.comitards || {}) as [string, any][]) {
+        if (Object.prototype.hasOwnProperty.call(profile.encheres || {}, bidId)) {
+          selected = { sellerId, profileId, profile, bid: profile.encheres[bidId] };
+        }
+      }
+    }
+    if (!selected) throw new HttpsError("not-found", "Bid not found");
+    const { sellerId, profileId, profile, bid } = selected;
+    if (profile.enchereProcessed === true) {
+      throw new HttpsError("failed-precondition", "Settled auctions cannot be corrected");
+    }
+    if (bid.vote !== data.expectedAmount) {
+      throw new HttpsError("aborted", "This bid changed. Refresh before retrying.");
+    }
+    if (!remove && (data.amount < edition.enchereMin || data.amount > edition.enchereMax)) {
+      throw new HttpsError("invalid-argument", "Bid amount is outside edition limits");
+    }
+    const balance = cercles[bid.sender]?.nbFut;
+    const delta = data.refund ? bid.vote - (remove ? 0 : data.amount) : 0;
+    if (!Number.isSafeInteger(balance) || !Number.isSafeInteger(balance + delta) || balance + delta < 0) {
+      throw new HttpsError("failed-precondition", "Insufficient or invalid balance");
+    }
+    const path = `cercles.${sellerId}.comitards.${profileId}`;
+    const updates: Record<string, unknown> = {};
+    if (remove && Object.keys(profile.encheres).length === 1) {
+      for (const field of ["encheres", "enchereStart", "enchereStop", "enchereProcessed"]) {
+        updates[`${path}.${field}`] = test.FieldValue.delete();
+      }
+      let jobs = 0;
+      for (const [circleId, circle] of Object.entries(cercles) as [string, any][]) {
+        for (const [id, candidate] of Object.entries(circle.comitards || {}) as [string, any][]) {
+          if (!(circleId === sellerId && id === profileId) && candidate.enchereProcessed === false) jobs++;
+        }
+      }
+      updates.jobs = jobs;
+    } else if (remove) {
+      updates[`${path}.encheres.${bidId}`] = test.FieldValue.delete();
+    } else {
+      updates[`${path}.encheres.${bidId}.vote`] = data.amount;
+    }
+    if (delta) updates[`cercles.${bid.sender}.nbFut`] = test.FieldValue.increment(delta);
+    tx.update(editionRef, updates);
+  });
+  return { success: true };
+}
+
+exports.editbid = onCall((request) => changeBid(request, false));
+exports.deletebid = onCall((request) => changeBid(request, true));
 
 exports.signupuser = onCall(async (request) => {
   await assertAdmin(request);
@@ -728,7 +791,9 @@ async function deleteUserAuth(uid: string): Promise<void> {
   try {
     await admin_auth.deleteUser(uid);
   } catch (error: any) {
-    throw new HttpsError("internal", "Failed to delete user: " + error.message);
+    if (error.code !== "auth/user-not-found") {
+      throw new HttpsError("unavailable", "Account removal is pending. Retry the same deletion to finish it.");
+    }
   }
 
   return;

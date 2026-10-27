@@ -30,14 +30,8 @@ export default function EditEnchere({
     setLoading(true);
     setError(null);
     setFinished(false);
-    let valueToReembourse = 0;
-    if (reemboursement === true) {
-      valueToReembourse = oldValue - value;
-    } else {
-      valueToReembourse = 0;
-    }
     try {
-      const ret = await editEnchereAmount(valueToReembourse, data, enchereData.id, value);
+      const ret = await editEnchereAmount(reemboursement, data, enchereData.id, value);
       if (ret !== 0) {
         setError("Error updating enchere.");
         return;
@@ -93,8 +87,8 @@ export default function EditEnchere({
               <QuantityInput
                 title="Enchère"
                 defaultValue={value}
-                min={0}
-                max={1000000000}
+                min={data.data().enchereMin}
+                max={data.data().enchereMax}
                 error={false}
                 helpText={""}
                 change={(_event: any, val: any) => {
