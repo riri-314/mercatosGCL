@@ -12,7 +12,8 @@ service firebase.storage {
       // URLs, which bypass these rules. Non-token (SDK getBlob) reads — the path
       // admins use to view past editions whose tokens were revoked — are limited
       // to admins here.
-      allow get: if firestore.get(/databases/(default)/documents/admin/admin).data.admins[request.auth.token.email] == request.auth.uid;
+      allow get: if firestore.get(/databases/(default)/documents/admin/admin).data.admins[request.auth.token.email] == request.auth.uid
+      || firestore.get(/databases/(default)/documents/editions/$(editionID)).data.active == true;
       allow list: if false;
       allow update: if firestore.get(/databases/(default)/documents/admin/admin).data.admins[request.auth.token.email] == request.auth.uid;
       allow delete: if firestore.get(/databases/(default)/documents/admin/admin).data.admins[request.auth.token.email] == request.auth.uid;
