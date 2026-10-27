@@ -9,8 +9,13 @@ if (!emulatorHost || !/^(127\.0\.0\.1|localhost):\d+$/.test(emulatorHost) ||
 }
 
 const handlers = require("../lib/index.js");
-const { getFirestore, Timestamp } = require("firebase-admin/firestore");
+const { getFirestore, Timestamp, DocumentReference } = require("firebase-admin/firestore");
 const { getApp, deleteApp } = require("firebase-admin/app");
+const { getAuth } = require("firebase-admin/auth");
+const authHost = process.env.FIREBASE_AUTH_EMULATOR_HOST;
+if (!authHost || !/^(127\.0\.0\.1|localhost):\d+$/.test(authHost)) {
+  throw new Error("Backend tests require the local Authentication emulator");
+}
 const db = getFirestore();
 const editionRef = db.collection("editions").doc("test-edition");
 const now = 1800000000000;
@@ -63,6 +68,8 @@ beforeEach(async () => {
     { method: "DELETE" }
   );
   assert.equal(response.status, 200);
+  const users = (await getAuth().listUsers()).users;
+  if (users.length) await getAuth().deleteUsers(users.map((user) => user.uid));
   await db.doc("admin/admin").set({ admins: { "admin@example.test": "admin" } });
 });
 
@@ -303,4 +310,127 @@ test("profile validation preserves server-side ownership and admin selection", a
   await handlers.addcomitard.run({ auth: { uid: "admin" },
     data: profileData({ cercle: "seller" }) });
   assert.equal(Object.keys((await editionRef.get()).data().cercles.seller.comitards).length, 3);
+});
+
+function defer() {
+  let resolve;
+  const promise = new Promise((done) => { resolve = done; });
+  return { promise, resolve };
+}
+
+for (const operation of ["addcomitard", "editcomitard"]) {
+  test(`${operation} waits for persistence before reporting success`, async () => {
+    await seedUnstartedAuctions();
+    await editionRef.update({ "cercles.buyer.comitards.own": { name: "Own" } });
+    const started = defer();
+    const release = defer();
+    const update = DocumentReference.prototype.update;
+    mock.method(DocumentReference.prototype, "update", async function (...args) {
+      started.resolve();
+      await release.promise;
+      return update.apply(this, args);
+    });
+    let finished = false;
+    const pending = handlers[operation].run({ auth: { uid: "buyer" },
+      data: operation === "addcomitard" ? profileData() : {
+        editionId: editionRef.id, comitardId: "own", name: "Updated",
+      } }).then((result) => { finished = true; return result; });
+    try {
+      await started.promise;
+      await new Promise(setImmediate);
+      assert.equal(finished, false);
+    } finally {
+      release.resolve();
+    }
+    assert.equal((await pending).success, true);
+  });
+
+  test(`${operation} propagates a failed database write`, async () => {
+    await seedUnstartedAuctions();
+    await editionRef.update({ "cercles.buyer.comitards.own": { name: "Own" } });
+    const before = (await editionRef.get()).data();
+    mock.method(DocumentReference.prototype, "update", async () => {
+      throw new Error("simulated profile write failure");
+    });
+    await assert.rejects(handlers[operation].run({ auth: { uid: "buyer" },
+      data: operation === "addcomitard" ? profileData() : {
+        editionId: editionRef.id, comitardId: "own", name: "Updated",
+      } }), /simulated profile write failure/);
+    assert.deepEqual((await editionRef.get()).data(), before);
+  });
+}
+
+function signup(data = {}) {
+  return handlers.signupuser.run({ auth: { uid: "admin" }, data: {
+    editionId: editionRef.id, email: "new-circle@example.test",
+    displayName: "New circle", description: "Example description", ...data,
+  } });
+}
+
+test("account creation waits until Authentication and Firestore both finish", async () => {
+  await seed();
+  const started = defer();
+  const release = defer();
+  const update = DocumentReference.prototype.update;
+  mock.method(DocumentReference.prototype, "update", async function (...args) {
+    started.resolve();
+    await release.promise;
+    return update.apply(this, args);
+  });
+  let finished = false;
+  const pending = signup().then((result) => { finished = true; return result; });
+  try {
+    await started.promise;
+    assert.equal(finished, false);
+    assert.equal((await getAuth().listUsers()).users.length, 1);
+    assert.equal(Object.keys((await editionRef.get()).data().cercles).length, 3);
+  } finally {
+    release.resolve();
+  }
+  assert.equal((await pending).success, true);
+  const user = await getAuth().getUserByEmail("new-circle@example.test");
+  const circle = (await editionRef.get()).data().cercles[user.uid];
+  assert.equal(circle.name, "New circle");
+  assert.equal(circle.nbFut, 100);
+});
+
+test("failed account database writes roll back the new Authentication account", async () => {
+  await seed();
+  const before = (await editionRef.get()).data();
+  mock.method(DocumentReference.prototype, "update", async () => {
+    throw new Error("simulated account write failure");
+  });
+  await assert.rejects(signup(), { code: "unavailable" });
+  assert.equal((await getAuth().listUsers()).users.length, 0);
+  assert.deepEqual((await editionRef.get()).data(), before);
+});
+
+test("a lost database acknowledgement preserves an account that was linked", async () => {
+  await seed();
+  const update = DocumentReference.prototype.update;
+  mock.method(DocumentReference.prototype, "update", async function (...args) {
+    await update.apply(this, args);
+    throw new Error("simulated lost acknowledgement");
+  });
+  assert.equal((await signup()).success, true);
+  const user = await getAuth().getUserByEmail("new-circle@example.test");
+  assert.equal((await editionRef.get()).data().cercles[user.uid].name, "New circle");
+});
+
+test("authentication failures never create a circle or report success", async () => {
+  await seed();
+  const before = (await editionRef.get()).data();
+  await assert.rejects(signup({ email: "not-an-email" }), { code: "unavailable" });
+  assert.deepEqual((await editionRef.get()).data(), before);
+  assert.equal((await getAuth().listUsers()).users.length, 0);
+});
+
+test("account creation rejects unauthorized callers and invalid edition balances", async () => {
+  await seed();
+  await assert.rejects(handlers.signupuser.run({ data: {} }), { code: "unauthenticated" });
+  await assert.rejects(handlers.signupuser.run({ auth: { uid: "buyer" }, data: {} }),
+    { code: "permission-denied" });
+  await editionRef.update({ nbFut: NaN });
+  await assert.rejects(signup(), { code: "failed-precondition" });
+  assert.equal((await getAuth().listUsers()).users.length, 0);
 });

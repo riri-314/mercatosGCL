@@ -36,7 +36,7 @@ firebase emulators:start --import ./2025-02-10T17:25:33_46845 --export-on-exit
 ### Backend regression tests
 
 Run `npm ci --prefix functions`, then `npm test --prefix functions`.
-The tests build the backend and start an isolated Firestore emulator using the
+The tests build the backend and start isolated Firestore and Authentication emulators using the
 `demo-mercatos-security` project. Java is required. Tests refuse to run against
 production and do not import the repository's account or database exports.
 

@@ -17,6 +17,7 @@ import {LoadingButton} from "@mui/lab";
 import {httpsCallable} from "@firebase/functions";
 import {functions} from "../../firebase_config";
 import Iconify from "../../components/iconify/iconify.tsx";
+import { requireMutationSuccess } from "../../utils/callable-result";
 
 interface NewCerleProps {
     editionId: string;
@@ -61,6 +62,7 @@ export default function NewCerle({refetchData, editionId}: NewCerleProps) {
                 email: cercleEmail, displayName: cercleName, description: cercleDescription, editionId: editionId,
             })
                 .then((result) => {
+                    requireMutationSuccess(result.data);
                     const data: any = result.data;
                     //const sanitizedMessage = data.text;
                     refetchData();

@@ -14,7 +14,7 @@ import { beforeUserCreated } from "firebase-functions/v2/identity";
 import { randomUUID as uuidv4 } from "node:crypto";
 import { onSchedule } from "firebase-functions/scheduler";
 import { setGlobalOptions } from "firebase-functions/options";
-import { parseProfile, parseVote } from "./validation";
+import { identifier, parseProfile, parseVote } from "./validation";
 //import { Timestamp, increment } from "@firebase/firestore";
 
 admin.initializeApp();
@@ -624,74 +624,63 @@ exports.deleteuser = onCall(async (request) => {
 });
 
 exports.signupuser = onCall(async (request) => {
-  const auth = request.auth;
+  await assertAdmin(request);
   const data = request.data;
-  const description = data.description || "";
-
-  if (!auth || !(await getAdminUid(auth.uid))) {
-    console.log("Error not admin");
-    throw new HttpsError("permission-denied", "Unauthorized request!");
-  }
-  console.log("OK is admin");
-
-  if (data.email === undefined || data.displayName === undefined) {
-    console.log("Error missing data");
-    throw new HttpsError("invalid-argument", "Missing data!");
+  const editionId = identifier(data?.editionId, "editionId");
+  if (typeof data.email !== "string" || !data.email.trim() || data.email.length > 320 ||
+      typeof data.displayName !== "string" || !data.displayName.trim() || data.displayName.length > 150 ||
+      (data.description !== undefined &&
+       (typeof data.description !== "string" || data.description.length > 150))) {
+    throw new HttpsError("invalid-argument", "Invalid account details");
   }
 
-  console.log("edition id:", data.editionId);
-  if (data.editionId === undefined) {
-    throw new HttpsError("invalid-argument", "Edition id is invalid");
+  const editionRef = await getEdition(editionId);
+  const edition = (await editionRef.get()).data();
+  if (!edition || !Number.isSafeInteger(edition.nbFut) || edition.nbFut < 0) {
+    throw new HttpsError("failed-precondition", "Invalid edition starting balance");
   }
 
-  const activeEdition = await getEdition(data.editionId);
-  const activeEditionData = await activeEdition.get();
-  const activeEditionVotes = activeEditionData.data()?.nbFut;
+  const authClient = getAuth();
+  const user = await authClient.createUser({
+    email: data.email.trim(),
+    password: generateRandomPassword(),
+    displayName: data.displayName,
+  }).catch(() => {
+    throw new HttpsError("unavailable", "Could not create authentication account");
+  });
 
-  console.log("activeEditionVotes: ", activeEditionVotes);
-
-  if (activeEditionVotes === undefined) {
-    // No editions found
-    throw new HttpsError("unavailable", "No editions found!");
-  }
-
-  // create user account, catch uid
-  getAuth()
-    .createUser({
-      email: data.email,
-      password: generateRandomPassword(),
-      displayName: data.displayName,
-    })
-    .then((userRecord) => {
-      // See the UserRecord reference doc for the contents of userRecord.
-      console.log("Successfully created new user:", userRecord.uid);
-      // add user to cercle
-      const s = `cercles.${userRecord.uid}`;
-      activeEdition
-        .update({
-          [s]: {
-            description: description,
-            nbFut: activeEditionVotes,
-            name: data.displayName,
-            comitards: {},
-            admins : [],
-          },
-        })
-        .catch((error: any) => {
-          console.log("Error creating new user:", error);
-          throw new HttpsError("unavailable", "Error creating new user!");
-        });
-
-      // send pawword reset email to user. NOPE
-
-      return 1;
-    })
-    .catch((error) => {
-      console.log("Error creating new user:", error);
-      throw new HttpsError("unavailable", "Error creating new user!");
+  try {
+    await editionRef.update({
+      [`cercles.${user.uid}`]: {
+        description: data.description ?? "",
+        nbFut: edition.nbFut,
+        name: data.displayName,
+        comitards: {},
+        admins: [],
+      },
     });
+  } catch {
+    // A lost write acknowledgement can mean the document was actually updated.
+    // Verify the outcome before deleting an account that may already be linked.
+    let linked;
+    try {
+      linked = (await editionRef.get()).data()?.cercles?.[user.uid];
+    } catch {
+      console.error("Could not verify account creation", { uid: user.uid, editionId });
+      throw new HttpsError("unavailable", "Account creation could not be verified. Contact an administrator.");
+    }
+    if (!linked) {
+      try {
+        await authClient.deleteUser(user.uid);
+      } catch {
+        console.error("Could not roll back account creation", { uid: user.uid, editionId });
+        throw new HttpsError("internal", "Account creation failed and cleanup is required. Contact an administrator.");
+      }
+      throw new HttpsError("unavailable", "Could not add account to edition. Account creation was rolled back.");
+    }
+  }
 
-  return { message: "User created and added to edition map" };
+  return { success: true, message: "User created and added to edition map" };
 });
 
 exports.getdisabledstatus = onCall(async (request) => {

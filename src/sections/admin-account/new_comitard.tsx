@@ -24,6 +24,7 @@ import { v4 as uuidv4 } from "uuid";
 import { DocumentData } from "@firebase/firestore";
 import { useAuth } from "../../auth/AuthProvider";
 import { httpsCallable } from "@firebase/functions";
+import { requireMutationSuccess } from "../../utils/callable-result";
 import Iconify from "../../components/iconify/iconify.tsx";
 
 interface NewComitardProps {
@@ -247,6 +248,7 @@ export default function NewComitard({
               const addMessage = httpsCallable(functions, "addcomitard");
               addMessage(data1)
                 .then((result) => {
+                  requireMutationSuccess(result.data);
                   const data: any = result.data;
                   // reload data
                   refetchData();
