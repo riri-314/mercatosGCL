@@ -1,6 +1,6 @@
 import { Button, FormHelperText } from "@mui/material";
 import imageCompression from "browser-image-compression";
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import ImageUploading, {
   ImageListType,
   ImageType,
@@ -101,9 +101,9 @@ export default function PictureInput({ change, error, upload }: PictureInputProp
             
           )}
           {images.map((image, index) => (
-            <>
+            <Fragment key={index}>
               &nbsp;
-              <div key={index} className="image-item" style={{ width: "100%" }}>
+              <div className="image-item" style={{ width: "100%" }}>
                 <img
                   src={image.dataURL}
                   alt=""
@@ -122,7 +122,7 @@ export default function PictureInput({ change, error, upload }: PictureInputProp
                   </Button>
                 </div>
               </div>
-            </>
+            </Fragment>
           ))}
 
           {errors && (

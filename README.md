@@ -53,6 +53,12 @@ providers, route access, auction controls and mutation confirmations, results, a
 admin bid deletion and edition activation. Firebase services are mocked, so these
 tests do not initialize the production app or analytics.
 
+Profile form tests exercise the real inputs and image picker for members and admins.
+They cover required fields, numeric zero values, upload progress and failures,
+download URL failures, rejected or unconfirmed saves, retries, cancellation, form
+reset after creation, and circle ownership when display names are duplicated.
+Image compression and Firebase calls are mocked.
+
 Backend tests cover bidding and settlement transactions, timing and balance
 boundaries, profile validation and ownership, account creation and rollback, admin
 account operations, and database access rules. The backend command builds the

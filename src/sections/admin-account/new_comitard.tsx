@@ -79,6 +79,7 @@ export default function NewComitard({
     "error"
   );
   const [loading, setLoading] = useState(false);
+  const [formVersion, setFormVersion] = useState(0);
   const [campus, setCampus] = useState(null);
   const [campusError, setCampusError] = useState(false);
 
@@ -101,25 +102,25 @@ export default function NewComitard({
     setLoading(true);
     let error = false;
     setError("");
-    if (name.length === 0 || name.length > txtlenght1) {
+    if (name.trim().length === 0 || name.length > txtlenght1) {
       setNameError(true);
       error = true;
     } else {
       setNameError(false);
     }
-    if (firstname.length === 0 || firstname.length > txtlenght1) {
+    if (firstname.trim().length === 0 || firstname.length > txtlenght1) {
       error = true;
       setFirstnameError(true);
     } else {
       setFirstnameError(false);
     }
-    if (nickname.length === 0 || nickname.length > txtlenght1) {
+    if (nickname.trim().length === 0 || nickname.length > txtlenght1) {
       error = true;
       setNicknameError(true);
     } else {
       setNicknameError(false);
     }
-    if (post.length === 0 || post.length > txtlenght1) {
+    if (post.trim().length === 0 || post.length > txtlenght1) {
       error = true;
       setPostError(true);
     } else {
@@ -139,7 +140,7 @@ export default function NewComitard({
     } else {
       setTeneurTauleError(false);
     }
-    if (etatCivil.length === 0 || etatCivil.length > txtlenght2) {
+    if (etatCivil.trim().length === 0 || etatCivil.length > txtlenght2) {
       error = true;
       setEtatCivilError(true);
     } else {
@@ -157,19 +158,19 @@ export default function NewComitard({
     } else {
       setNbEtoilesError(false);
     }
-    if (pointFort.length === 0 || pointFort.length > txtlenght2) {
+    if (pointFort.trim().length === 0 || pointFort.length > txtlenght2) {
       error = true;
       setPointFortError(true);
     } else {
       setPointFortError(false);
     }
-    if (pointFaible.length === 0 || pointFaible.length > txtlenght2) {
+    if (pointFaible.trim().length === 0 || pointFaible.length > txtlenght2) {
       error = true;
       setPointFaibleError(true);
     } else {
       setPointFaibleError(false);
     }
-    if (estLeSeul.length === 0 || estLeSeul.length > txtlenght2) {
+    if (estLeSeul.trim().length === 0 || estLeSeul.length > txtlenght2) {
       error = true;
       setEstLeSeulError(true);
     } else {
@@ -270,7 +271,9 @@ export default function NewComitard({
                   setPointFaible("");
                   setEstLeSeul("");
                   setPicture([]);
-                  // really remove the picture
+                  setCampus(null);
+                  // Remount inputs that keep their own number, selection, or photo state.
+                  setFormVersion((version) => version + 1);
                   setLoading(false);
                 })
                 .catch((error) => {
@@ -320,7 +323,7 @@ export default function NewComitard({
               <Typography variant="h5"> Créer nouveau comitard </Typography>
             </AccordionSummary>
             <AccordionDetails>
-              <Grid container spacing={2}>
+              <Grid container spacing={2} key={formVersion}>
                 <Grid item xs={12} sm={6}>
                   <TextField
                     error={nameError}

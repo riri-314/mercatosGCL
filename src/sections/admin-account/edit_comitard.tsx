@@ -118,25 +118,25 @@ export default function EditComitard({
     setLoading(true);
     let error = false;
     setError("");
-    if (name.length === 0 || name.length > txtlenght1) {
+    if (name.trim().length === 0 || name.length > txtlenght1) {
       setNameError(true);
       error = true;
     } else {
       setNameError(false);
     }
-    if (firstname.length === 0 || firstname.length > txtlenght1) {
+    if (firstname.trim().length === 0 || firstname.length > txtlenght1) {
       error = true;
       setFirstnameError(true);
     } else {
       setFirstnameError(false);
     }
-    if (nickname.length === 0 || nickname.length > txtlenght1) {
+    if (nickname.trim().length === 0 || nickname.length > txtlenght1) {
       error = true;
       setNicknameError(true);
     } else {
       setNicknameError(false);
     }
-    if (post.length === 0 || post.length > txtlenght1) {
+    if (post.trim().length === 0 || post.length > txtlenght1) {
       error = true;
       setPostError(true);
     } else {
@@ -156,7 +156,7 @@ export default function EditComitard({
     } else {
       setTeneurTauleError(false);
     }
-    if (etatCivil.length === 0 || etatCivil.length > txtlenght2) {
+    if (etatCivil.trim().length === 0 || etatCivil.length > txtlenght2) {
       error = true;
       setEtatCivilError(true);
     } else {
@@ -174,23 +174,30 @@ export default function EditComitard({
     } else {
       setNbEtoilesError(false);
     }
-    if (pointFort.length === 0 || pointFort.length > txtlenght2) {
+    if (pointFort.trim().length === 0 || pointFort.length > txtlenght2) {
       error = true;
       setPointFortError(true);
     } else {
       setPointFortError(false);
     }
-    if (pointFaible.length === 0 || pointFaible.length > txtlenght2) {
+    if (pointFaible.trim().length === 0 || pointFaible.length > txtlenght2) {
       error = true;
       setPointFaibleError(true);
     } else {
       setPointFaibleError(false);
     }
-    if (estLeSeul.length === 0 || estLeSeul.length > txtlenght2) {
+    if (estLeSeul.trim().length === 0 || estLeSeul.length > txtlenght2) {
       error = true;
       setEstLeSeulError(true);
     } else {
       setEstLeSeulError(false);
+    }
+
+    if (!Number.isInteger(campus) || campus < 1 || campus > 4) {
+      error = true;
+      setCampusError(true);
+    } else {
+      setCampusError(false);
     }
 
     if (pictureUpdated) {
@@ -204,21 +211,20 @@ export default function EditComitard({
 
     if (!error) {
       console.log("Check user input ok");
+      // Display names are not unique; resolve ownership from the profile ID.
+      const cercleId = admin
+        ? getCercleIdByComitardId(activeData, ComitardData.id)
+        : user?.uid;
+      if (!cercleId) {
+        setLoading(false);
+        setErrorSeverity("error");
+        setError("Cercle non trouvé pour ce comitard.");
+        return;
+      }
       if (pictureUpdated) {
-        //update user.uid if admin with the corresponding cercle id
-        let cerlcleUID = user?.uid;
-        if (admin) {
-          cerlcleUID = getCercleIdByComitardId(activeData, ComitardData.id);
-          if (cerlcleUID === undefined) {
-            setLoading(false);
-            setErrorSeverity("error");
-            setError("Cercle non trouvé pour ce comitard.");
-            return;
-          }
-        }
         const storageRef = ref(
           storage,
-          `${activeData.id}/${cerlcleUID}/${uuidv4()}`
+          `${activeData.id}/${cercleId}/${uuidv4()}`
         );
 
         const uploadTask = uploadBytesResumable(
@@ -264,7 +270,7 @@ export default function EditComitard({
                   firstname: firstname,
                   nickname: nickname,
                   post: post,
-                  cercleId: cercle ? cerclesOption()[cercle] : null,
+                  cercleId,
                   cercle: cercle ? cercle : null,
                   teneurTaule: teneurTaule,
                   etatCivil: etatCivil,
@@ -321,7 +327,7 @@ export default function EditComitard({
           firstname: firstname,
           nickname: nickname,
           post: post,
-          cercleId: cercle ? cerclesOption()[cercle] : null,
+          cercleId,
           cercle: cercle ? cercle : null,
           teneurTaule: teneurTaule,
           etatCivil: etatCivil,
