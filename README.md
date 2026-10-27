@@ -46,7 +46,7 @@ development-server security, and backend suites.
 | `npm run test:coverage` | Frontend coverage in the terminal and `coverage/index.html` |
 | `npm run test:typecheck` | Type-check application and frontend test code |
 | `npm run test:dev-security` | Development-server binding and file access restrictions |
-| `npm run test:backend` | Cloud Functions and Firestore security rules against local emulators |
+| `npm run test:backend` | Cloud Functions, Firestore rules, and Storage rules against local emulators |
 
 Frontend tests cover login and password recovery, authentication and edition data
 providers, route access, auction controls and mutation confirmations, results, and
@@ -61,10 +61,12 @@ Image compression and Firebase calls are mocked.
 
 Backend tests cover bidding and settlement transactions, timing and balance
 boundaries, profile validation and ownership, account creation and rollback, admin
-account operations, and database access rules. The backend command builds the
-functions and starts isolated Firestore and Authentication emulators with
+account operations, and database access rules. Storage tests cover public active
+pictures, archive restrictions, circle ownership, MIME and size limits, immutable
+member uploads, and administrator access. The backend command builds the
+functions and starts isolated Firestore, Authentication, and Storage emulators with
 `firebase.test.json` and the `demo-mercatos-security` project. Java 21 or later is
-required; ports 8180 and 9098 must be available. Tests refuse to run against
+required; ports 8180, 9098, and 9198 must be available. Tests refuse to run against
 production and do not import the repository's account or database exports. Backend test files run
 sequentially because they clear the same emulator database between tests.
 

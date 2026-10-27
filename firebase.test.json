@@ -11,9 +11,16 @@
     "auth": {
       "host": "127.0.0.1",
       "port": 9098
+    },
+    "storage": {
+      "host": "127.0.0.1",
+      "port": 9198
     }
   },
   "firestore": {
     "rules": "firestore.rules"
+  },
+  "storage": {
+    "rules": "storage.rules"
   }
 }

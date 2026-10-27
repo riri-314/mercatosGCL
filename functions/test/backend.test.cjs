@@ -596,3 +596,18 @@ test("password reset validates the UID and password before contacting Authentica
   }
   assert.equal((await getAuth().listUsers()).users.length, 0);
 });
+
+test("password reset confirms success without logging passwords or account records", async () => {
+  await seedCircleUsers();
+  const logs = [];
+  mock.method(console, "log", (...args) => logs.push(args));
+  const password = "private-test-password";
+  const result = await handlers.resetpassworduser.run({ auth: { uid: "admin" },
+    data: { uid: "buyer", password } });
+  assert.equal(result.success, true);
+  const output = JSON.stringify(logs);
+  assert.equal(output.includes(password), false);
+  assert.equal(output.includes("passwordHash"), false);
+  assert.equal(output.includes("passwordSalt"), false);
+  assert.equal(output.includes("buyer@example.test"), false);
+});
