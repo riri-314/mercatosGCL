@@ -3,7 +3,7 @@ import Container from "@mui/material/Container";
 import AdminAccount from "../sections/admin-account/admin-account-view";
 import Loading from "../sections/loading/loading";
 import {collection, DocumentData, getDocs} from "firebase/firestore";
-import {db} from "../firebase_config";
+import { db } from "../firebase_config";
 import {useCallback, useEffect, useState} from "react";
 
 // ----------------------------------------------------------------------

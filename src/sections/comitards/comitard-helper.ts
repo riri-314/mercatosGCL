@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { httpsCallable } from "firebase/functions";
 
-import { functions } from "../../firebase_config";
+import { functions } from "../../firebase_functions";
 import { useAuth } from "../../auth/AuthProvider";
 import { requireMutationSuccess } from "../../utils/callable-result";
 

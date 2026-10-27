@@ -1,10 +1,16 @@
 import { Button, FormHelperText } from "@mui/material";
 import imageCompression from "browser-image-compression";
 import { Fragment, useState } from "react";
-import ImageUploading, {
+import ImageUploadingImport, {
   ImageListType,
   ImageType,
 } from "react-images-uploading";
+
+// This CommonJS package can expose its component directly or under `default`
+// depending on development optimization versus production bundling.
+const ImageUploading = typeof ImageUploadingImport === "function"
+  ? ImageUploadingImport
+  : (ImageUploadingImport as unknown as { default: typeof ImageUploadingImport }).default;
 
 interface PictureInputProps {
   change: (images: ImageType[]) => void;

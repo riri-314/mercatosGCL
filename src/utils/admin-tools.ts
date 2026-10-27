@@ -8,7 +8,8 @@ import {
   where,
   DocumentData,
 } from "firebase/firestore";
-import { db, functions } from "../firebase_config";
+import { db } from "../firebase_config";
+import { functions } from "../firebase_functions";
 import { Dayjs } from "dayjs";
 import { httpsCallable } from "firebase/functions";
 import { requireMutationSuccess } from "./callable-result";

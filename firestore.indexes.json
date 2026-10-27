@@ -1,4 +1,40 @@
 {
-  "indexes": [],
-  "fieldOverrides": []
+  "indexes": [
+    {
+      "collectionGroup": "editions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "active",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "edition",
+          "order": "DESCENDING"
+        }
+      ]
+    }
+  ],
+  "fieldOverrides": [
+    {
+      "collectionGroup": "editions",
+      "fieldPath": "cercles",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "editions",
+      "fieldPath": "rules",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "editionOperations",
+      "fieldPath": "accounts",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "editionOperations",
+      "fieldPath": "signature",
+      "indexes": []
+    }
+  ]
 }

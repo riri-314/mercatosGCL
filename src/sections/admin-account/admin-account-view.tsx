@@ -15,7 +15,7 @@ import { LoadingButton } from "@mui/lab";
 import { getAuth, sendPasswordResetEmail } from "firebase/auth";
 import { httpsCallable } from "firebase/functions";
 import NewCerle from "./new_cercle";
-import { functions } from "../../firebase_config";
+import { functions } from "../../firebase_functions";
 import NewEdition from "./new_edition";
 import NewComitard from "./new_comitard";
 import { DocumentData } from "firebase/firestore";

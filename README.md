@@ -39,7 +39,12 @@ GCLOUD_PROJECT=demo-mercatos-local FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 FIREBA
 The fixture creates three accounts at `demo-{admin,buyer,seller}@example.test`,
 with the development-only password `EmulatorOnly123!`. Re-running it resets the
 synthetic edition. The seeder refuses non-demo projects and non-local hosts.
-For the frontend, enable the emulator configuration in `src/firebase_config.ts`.
+Start the frontend with `VITE_USE_EMULATORS=true npm run dev`; no source edits
+are needed. `VITE_EMULATOR_PROJECT_ID` defaults to `demo-mercatos-local`.
+Port overrides are `VITE_AUTH_EMULATOR_PORT`, `VITE_FIRESTORE_EMULATOR_PORT`,
+`VITE_FUNCTIONS_EMULATOR_PORT`, and `VITE_STORAGE_EMULATOR_PORT`.
+Production analytics are opt-in with `VITE_ENABLE_ANALYTICS=true` and initialize
+when the browser is idle.
 
 Previously tracked exports contained emulator passwords and personal data. They
 have been removed from this checkout and local Git history. Any credentials reused
@@ -82,6 +87,10 @@ functions and starts isolated Firestore, Authentication, and Storage emulators w
 required; ports 8180, 9098, and 9198 must be available. Tests refuse to run against
 production and use only synthetic test data. Backend test files run
 sequentially because they clear the same emulator database between tests.
+
+## Performance
+
+See [measurements, bundle checks and the local load probe](docs/performance.md).
 
 ## Edition operations
 

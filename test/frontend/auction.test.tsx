@@ -2,7 +2,7 @@ import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { httpsCallable } from 'firebase/functions';
 import { useAuth } from '../../src/auth/AuthProvider';
-import { functions } from '../../src/firebase_config';
+import { functions } from "../../src/firebase_functions";
 import { campusLabel, formatTimeLeft, useComitardAuction } from '../../src/sections/comitards/comitard-helper';
 import type { UseComitardAuctionArgs } from '../../src/sections/comitards/comitard-helper';
 

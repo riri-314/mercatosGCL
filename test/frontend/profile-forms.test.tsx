@@ -7,7 +7,8 @@ import { httpsCallable } from 'firebase/functions';
 import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
 import type { StorageError, UploadTaskSnapshot } from 'firebase/storage';
 import { useAuth } from '../../src/auth/AuthProvider';
-import { functions, storage } from '../../src/firebase_config';
+import { functions } from "../../src/firebase_functions";
+import { storage } from "../../src/firebase_storage";
 import NewComitard from '../../src/sections/admin-account/new_comitard';
 import EditComitard from '../../src/sections/admin-account/edit_comitard';
 

@@ -15,7 +15,7 @@ import Typography from "@mui/material/Typography";
 import {useState} from "react";
 import {LoadingButton} from "@mui/lab";
 import {httpsCallable} from "firebase/functions";
-import {functions} from "../../firebase_config";
+import { functions } from "../../firebase_functions";
 import Iconify from "../../components/iconify/iconify.tsx";
 import { requireMutationSuccess } from "../../utils/callable-result";
 

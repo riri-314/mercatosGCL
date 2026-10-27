@@ -13,7 +13,7 @@ import { DocumentData } from "firebase/firestore";
 import { LoadingButton } from "@mui/lab";
 import { useState } from "react";
 import { httpsCallable } from "firebase/functions";
-import { functions } from "../../firebase_config";
+import { functions } from "../../firebase_functions";
 import WarningModal from "../../components/modal/warning_modal";
 
 interface CercleTableProps {
@@ -49,7 +49,7 @@ export default function CercleTable({
       setLoadingStatus(true);
       // fetch getdisabledstatus
       const addMessage = httpsCallable(functions, "getdisabledstatus");
-      addMessage({ editionId: data.id }).then((result) => {
+      await addMessage({ editionId: data.id }).then((result) => {
         const data: any = result.data;
         if (data && data.status) {
           console.log("Data fetched disbaled status:", data);

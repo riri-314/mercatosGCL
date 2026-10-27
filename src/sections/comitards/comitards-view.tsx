@@ -35,7 +35,7 @@ export default function ComitardsView() {
     return () => clearInterval(id);
   }, []);
 
-  const raw = data?.data();
+  const raw = useMemo(() => data?.data(), [data]);
 
   const cerclesData: CerclesData = useMemo(() => {
     const cercles = raw?.cercles;

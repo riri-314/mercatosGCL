@@ -15,7 +15,7 @@ import Box from "@mui/material/Box";
 import { useState } from "react";
 import EditComitard from "../admin-account/edit_comitard";
 import { httpsCallable } from "firebase/functions";
-import { functions } from "../../firebase_config.ts";
+import { functions } from "../../firebase_functions";
 import EncheresTable from "../admin-account/enchere_table.tsx";
 
 interface AccountProps {

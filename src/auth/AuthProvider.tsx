@@ -1,6 +1,6 @@
 import {onAuthStateChanged, User} from "firebase/auth";
 import React, {useContext, useEffect, useState} from "react";
-import {auth, db} from "../firebase_config";
+import { auth, db } from "../firebase_config";
 import {collection, doc, getDoc} from 'firebase/firestore';
 
 interface AuthProviderProps {

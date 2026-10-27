@@ -27,7 +27,7 @@ Deploy the functions, rules and frontend together:
 
 ```sh
 npm run build
-functions/node_modules/.bin/firebase deploy --only functions,firestore:rules,storage,hosting
+functions/node_modules/.bin/firebase deploy --only functions,firestore,storage,hosting
 ```
 
 This deployment is intentionally a separate step from local development and commits.

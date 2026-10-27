@@ -4,7 +4,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { sendPasswordResetEmail, signInWithEmailAndPassword } from 'firebase/auth';
 import LoginView from '../../src/sections/login/login-view';
-import { auth } from '../../src/firebase_config';
+import { auth } from "../../src/firebase_config";
 
 vi.mock('firebase/auth', () => ({
   signInWithEmailAndPassword: vi.fn(),

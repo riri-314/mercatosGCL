@@ -3,7 +3,8 @@ import { collection, onSnapshot, query, where } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import { Alert, Box } from "@mui/material";
 import { LoadingButton } from "@mui/lab";
-import { db, functions } from "../../firebase_config";
+import { db } from "../../firebase_config";
+import { functions } from "../../firebase_functions";
 import { requireMutationSuccess } from "../../utils/callable-result";
 
 type Pending = { id: string; phase: string; lastError?: string; leaseUntil: number };

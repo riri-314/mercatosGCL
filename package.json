@@ -14,7 +14,11 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:backend": "npm test --prefix functions",
-    "test:dev-security": "node --test test/vite-security.test.mjs"
+    "test:dev-security": "node --test test/vite-security.test.mjs",
+    "analyze:bundle": "node tooling/bundle-report.mjs",
+    "test:bundle": "npm run build && node --test test/bundle-performance.test.mjs",
+    "benchmark:browser": "node tooling/browser-performance.cjs",
+    "test:browser": "node tooling/browser-smoke.cjs"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
