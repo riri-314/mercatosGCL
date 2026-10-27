@@ -22,6 +22,7 @@ import { v4 as uuidv4 } from "uuid";
 import { DocumentData } from "@firebase/firestore";
 import { useAuth } from "../../auth/AuthProvider";
 import { httpsCallable } from "@firebase/functions";
+import { requireMutationSuccess } from "../../utils/callable-result";
 
 interface EditComitardProps {
   ComitardData: DocumentData;
@@ -279,6 +280,7 @@ export default function EditComitard({
                 const addMessage = httpsCallable(functions, "editcomitard");
                 addMessage(data1)
                   .then((result) => {
+                    requireMutationSuccess(result.data);
                     const ComitardData: any = result.data;
                     // reload ComitardData
                     refetchData();
@@ -335,6 +337,7 @@ export default function EditComitard({
         const addMessage = httpsCallable(functions, "editcomitard");
         addMessage(data1)
           .then((result) => {
+            requireMutationSuccess(result.data);
             const ComitardData: any = result.data;
             // reload ComitardData
             refetchData();

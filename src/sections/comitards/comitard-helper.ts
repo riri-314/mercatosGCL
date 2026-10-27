@@ -3,6 +3,7 @@ import { httpsCallable } from "@firebase/functions";
 
 import { functions } from "../../firebase_config";
 import { useAuth } from "../../auth/AuthProvider";
+import { requireMutationSuccess } from "../../utils/callable-result";
 
 import type React from "react";
 import type { CerclesData, ComitardModalProps } from "./comitard-modal";
@@ -214,9 +215,10 @@ export function useComitardAuction({
       vote,
       comitardId,
       editionId,
-      clientTime: new Date(),
+      clientTime: new Date().toISOString(),
     })
-      .then(() => {
+      .then((result) => {
+        requireMutationSuccess(result.data);
         setTimeout(() => refetchData(), 2000);
         setVoteErrorSeverity("success");
         setVoteError("Vote enregistré");
