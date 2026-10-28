@@ -175,14 +175,18 @@ export default function Nav({ openNav, onCloseNav }: any) {
           sx={{
             ...paper,
             position: "fixed",
-            inset: "0 auto 0 0",
-            height: "100dvh",
+            inset: "var(--cercle-session-banner-height, 0px) auto 0 0",
+            height: "calc(100dvh - var(--cercle-session-banner-height, 0px))",
           }}
         >
           {content}
         </Box>
       ) : (
-        <Drawer open={openNav} onClose={onCloseNav} PaperProps={{ sx: paper }}>
+        <Drawer open={openNav} onClose={onCloseNav} PaperProps={{ sx: {
+          ...paper,
+          top: "var(--cercle-session-banner-height, 0px)",
+          height: "calc(100% - var(--cercle-session-banner-height, 0px))",
+        } }}>
           {content}
         </Drawer>
       )}

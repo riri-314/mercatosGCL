@@ -91,7 +91,7 @@ export default function ComitardModal({
   ];
 
   return (
-    <Modal open={open} onClose={onClose} aria-labelledby="comitard-profile-title">
+    <Modal open={open} onClose={onClose} aria-labelledby="comitard-profile-title" sx={{ top: "var(--cercle-session-banner-height, 0px)" }}>
       <Card
         role="dialog"
         aria-modal="true"
@@ -103,7 +103,7 @@ export default function ComitardModal({
           left: "50%",
           transform: "translate(-50%, -50%)",
           width: { xs: "calc(100% - 24px)", md: "min(720px, 90%)" },
-          maxHeight: "calc(100dvh - 24px)",
+          maxHeight: "calc(100dvh - var(--cercle-session-banner-height, 0px) - 24px)",
           display: "flex",
           flexDirection: "column",
           boxShadow: "none",

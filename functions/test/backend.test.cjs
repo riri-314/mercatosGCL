@@ -571,6 +571,114 @@ async function seedCircleUsers() {
   }
 }
 
+async function circleLogin(customToken) {
+  const response = await fetch(`http://${authHost}/identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key=demo-key`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token: customToken, returnSecureToken: true }),
+  });
+  assert.equal(response.status, 200);
+  return response.json();
+}
+
+test("become cercle rejects anonymous and member callers before issuing a token", async () => {
+  await seedCircleUsers();
+  const sign = mock.method(getAuth(), "createCustomToken", async () => { throw new Error("must not sign"); });
+  const data = { uid: "buyer", editionId: editionRef.id };
+  await assert.rejects(handlers.becomecercle.run({ data }), { code: "unauthenticated" });
+  await assert.rejects(handlers.becomecercle.run({ auth: { uid: "loser" }, data }), { code: "permission-denied" });
+  assert.equal(sign.mock.calls.length, 0);
+});
+
+test("become cercle rejects missing, disabled, non-member and administrator accounts", async () => {
+  await seedCircleUsers();
+  const sign = mock.method(getAuth(), "createCustomToken", async () => { throw new Error("must not sign"); });
+  const request = (uid, editionId = editionRef.id) => ({ ...adminRequest, data: { uid, editionId } });
+  await assert.rejects(handlers.becomecercle.run(request("buyer", "missing")), { code: "not-found" });
+  await assert.rejects(handlers.becomecercle.run(request("outsider")), { code: "not-found" });
+  await assert.rejects(handlers.becomecercle.run(request("admin")), { code: "permission-denied" });
+  await getAuth().deleteUser("buyer");
+  await assert.rejects(handlers.becomecercle.run(request("buyer")), { code: "not-found" });
+  assert.equal((await getAuth().listUsers()).users.length, 2, "A missing account must not be recreated");
+  await getAuth().updateUser("loser", { disabled: true });
+  await assert.rejects(handlers.becomecercle.run(request("loser")), { code: "failed-precondition" });
+  await assert.rejects(handlers.becomecercle.run({
+    auth: { uid: "admin", token: { cercleSession: true } }, data: request("seller").data,
+  }), { code: "permission-denied" });
+  assert.equal(sign.mock.calls.length, 0);
+});
+
+test("become cercle validates identifiers before requesting a token", async () => {
+  await seedCircleUsers();
+  const sign = mock.method(getAuth(), "createCustomToken", async () => { throw new Error("must not sign"); });
+  for (const data of [null, {}, { uid: "../buyer", editionId: editionRef.id },
+    { uid: "buyer", editionId: "__proto__" }, { uid: 5, editionId: editionRef.id }]) {
+    await assert.rejects(handlers.becomecercle.run({ ...adminRequest, data }), { code: "invalid-argument" });
+  }
+  assert.equal(sign.mock.calls.length, 0);
+});
+
+test("become cercle signs in as the real cercle without altering its account or normal sessions", async () => {
+  await seedCircleUsers();
+  await editionRef.update({ "cercles.buyer.name": "Cercle Beta" });
+  await getAuth().setCustomUserClaims("buyer", { existingClaim: true });
+  const before = (await editionRef.get()).data();
+  const result = await handlers.becomecercle.run({ ...adminRequest, data: { uid: "buyer", editionId: editionRef.id } });
+  assert.equal(result.success, true);
+  const login = await circleLogin(result.token);
+  const claims = await getAuth().verifyIdToken(login.idToken);
+  assert.equal(claims.uid, "buyer");
+  assert.equal(claims.cercleSession, true);
+  assert.equal(claims.cercleSessionName, "Cercle Beta");
+  assert.equal(claims.existingClaim, true);
+  const account = await getAuth().getUser("buyer");
+  assert.deepEqual(account.customClaims, { existingClaim: true });
+  assert.equal(account.disabled, false);
+  assert.deepEqual((await editionRef.get()).data(), before);
+
+  const refreshed = await fetch(`http://${authHost}/securetoken.googleapis.com/v1/token?key=demo-key`, {
+    method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ grant_type: "refresh_token", refresh_token: login.refreshToken }),
+  });
+  assert.equal(refreshed.status, 200);
+  const refreshedClaims = await getAuth().verifyIdToken((await refreshed.json()).id_token);
+  assert.equal(refreshedClaims.cercleSession, true, "The banner must survive ID token renewal");
+
+  const ordinary = await fetch(`http://${authHost}/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=demo-key`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email: "buyer@example.test", password: "test-password", returnSecureToken: true }),
+  });
+  assert.equal(ordinary.status, 200);
+  const ordinaryClaims = await getAuth().verifyIdToken((await ordinary.json()).idToken);
+  assert.equal(ordinaryClaims.cercleSession, undefined, "The cercle's own login must not acquire the banner");
+});
+
+test("become cercle uses ordinary bidding permissions and never grants administrator access", async () => {
+  await seedCircleUsers();
+  await editionRef.update({ "cercles.seller.comitards.target": { firstname: "Demo" } });
+  const result = await handlers.becomecercle.run({ ...adminRequest, data: { uid: "buyer", editionId: editionRef.id } });
+  const login = await circleLogin(result.token);
+  const token = await getAuth().verifyIdToken(login.idToken);
+  const auth = { uid: token.uid, token };
+  await assert.rejects(handlers.getdisabledstatus.run({ auth, data: { editionId: editionRef.id } }), { code: "permission-denied" });
+  await assert.rejects(handlers.becomecercle.run({ auth, data: { uid: "seller", editionId: editionRef.id } }), { code: "permission-denied" });
+  await handlers.vote.run({ auth, data: { editionId: editionRef.id, comitardId: "target", vote: 5, clientTime: new Date(now).toISOString() } });
+  const edition = (await editionRef.get()).data();
+  assert.equal(edition.cercles.buyer.nbFut, 95);
+  const bids = Object.values(edition.cercles.seller.comitards.target.encheres);
+  assert.equal(bids.length, 1);
+  assert.equal(bids[0].sender, "buyer");
+  assert.equal(bids[0].vote, 5);
+});
+
+test("failed custom token signing cannot report success or modify the target account", async () => {
+  await seedCircleUsers();
+  const before = (await editionRef.get()).data();
+  mock.method(getAuth(), "createCustomToken", async () => { throw new Error("signing unavailable"); });
+  await assert.rejects(handlers.becomecercle.run({ ...adminRequest, data: { uid: "buyer", editionId: editionRef.id } }), /signing unavailable/);
+  assert.deepEqual((await editionRef.get()).data(), before);
+  assert.equal((await getAuth().getUser("buyer")).disabled, false);
+});
+
 for (const operation of ["disableuser", "enableuser", "deleteuser", "resetpassworduser",
   "resetpasswords", "getdisabledstatus"]) {
   test(`${operation} rejects anonymous and ordinary callers without changing accounts`, async () => {

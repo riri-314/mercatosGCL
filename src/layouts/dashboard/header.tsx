@@ -19,6 +19,7 @@ export default function Header({ onOpenNav }: { onOpenNav: () => void }) {
     <AppBar
       sx={{
         boxShadow: "none",
+        top: "var(--cercle-session-banner-height, 0px)",
         height: { xs: HEADER.H_MOBILE, lg: HEADER.H_DESKTOP },
         width: { lg: `calc(100% - ${NAV.WIDTH}px)` },
         bgcolor: "rgba(249,250,251,.94)",

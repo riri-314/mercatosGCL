@@ -1,6 +1,6 @@
 import { ResponsiveRecords } from "../../components/account/mobile-record-list";
 import RecordCard from "../../components/account/record-card";
-import { Button, Chip, Typography } from "@mui/material";
+import { Alert, Button, Chip, Typography } from "@mui/material";
 import { getEditionData } from "../../data/edition-data";
 import { useEffect } from "react";
 import Box from "@mui/material/Box";
@@ -20,6 +20,8 @@ import { useMemo, useState } from "react";
 import { httpsCallable } from "firebase/functions";
 import { functions } from "../../firebase_functions";
 import WarningModal from "../../components/modal/warning_modal";
+import { useNavigate } from "react-router-dom";
+import { becomeCercle } from "../../auth/become-cercle";
 
 interface CercleTableProps {
   data: DocumentData;
@@ -41,6 +43,7 @@ export default function CercleTable({
   handleOpenModalCercle,
   handleOpenModalMDP,
 }: CercleTableProps) {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState<boolean>(false);
   const [openModal, setOpenModal] = useState<boolean>(false);
   const [modalData, setModalData] = useState<any | null>([]);
@@ -48,6 +51,35 @@ export default function CercleTable({
   const [statusDict, setStatusDict] = useState<StatusDict>({});
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<boolean>(false);
+  const [switchingId, setSwitchingId] = useState<string | null>(null);
+  const [switchError, setSwitchError] = useState("");
+
+  async function handleBecome(uid: string) {
+    if (switchingId) return;
+    setSwitchingId(uid);
+    setSwitchError("");
+    try {
+      await becomeCercle(uid, data.id);
+      navigate("/account", { replace: true });
+    } catch (error: unknown) {
+      setSwitchError(error instanceof Error ? error.message : "La connexion au cercle a échoué. Réessayez.");
+    } finally {
+      setSwitchingId(null);
+    }
+  }
+
+  const becomeButton = (row: DocumentData) => (
+    <LoadingButton
+      variant="outlined"
+      color="inherit"
+      loading={switchingId === row.id}
+      disabled={loadingStatus || isDisabled(row.id) || switchingId !== null}
+      aria-label={`Se connecter en tant que ${row.name}`}
+      onClick={() => void handleBecome(row.id)}
+    >
+      Se connecter
+    </LoadingButton>
+  );
 
   const fetchData = async () => {
     try {
@@ -164,6 +196,14 @@ export default function CercleTable({
       },
     },
     {
+      field: "become",
+      headerName: "Connexion",
+      minWidth: 175,
+      sortable: false,
+      filterable: false,
+      renderCell: (params) => becomeButton(params.row),
+    },
+    {
       field: "deactivate",
       headerName: "Desactiver",
       minWidth: 150,
@@ -242,6 +282,7 @@ export default function CercleTable({
 
   return (
     <>
+      {switchError && <Alert severity="error" sx={{ mb: 2 }}>{switchError}</Alert>}
       <ResponsiveRecords
         rows={cercleDataArray}
         label="les cercles"
@@ -291,12 +332,15 @@ export default function CercleTable({
               </Box>
             }
             actions={
-              <Button
-                variant="outlined"
-                onClick={() => handleOpenModalCercle(row)}
-              >
-                Modifier
-              </Button>
+              <>
+                <Button
+                  variant="outlined"
+                  onClick={() => handleOpenModalCercle(row)}
+                >
+                  Modifier
+                </Button>
+                {becomeButton(row)}
+              </>
             }
             moreActions={[
               {

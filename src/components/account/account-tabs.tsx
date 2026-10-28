@@ -25,7 +25,10 @@ export default function AccountTabs({
       <Box
         sx={{
           position: "sticky",
-          top: { xs: 64, lg: 76 },
+          top: {
+            xs: "calc(64px + var(--cercle-session-banner-height, 0px))",
+            lg: "calc(76px + var(--cercle-session-banner-height, 0px))",
+          },
           zIndex: 10,
           bgcolor: "background.default",
           pt: 1,

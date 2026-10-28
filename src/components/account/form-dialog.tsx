@@ -34,7 +34,10 @@ export default function FormDialog({
       scroll="paper"
       aria-labelledby={id}
       PaperProps={{
-        sx: { ...(fullScreen && { height: "100dvh", maxHeight: "100dvh" }) },
+        sx: { ...(fullScreen && {
+          height: "calc(100dvh - var(--cercle-session-banner-height, 0px))",
+          maxHeight: "calc(100dvh - var(--cercle-session-banner-height, 0px))",
+        }) },
       }}
     >
       <DialogTitle

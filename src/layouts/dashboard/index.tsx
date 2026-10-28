@@ -27,7 +27,7 @@ export default function DashboardLayout({ children }: any) {
           bgcolor: "primary.lighter",
           color: "text.primary",
           borderRadius: 1,
-          "&:focus": { top: 12 },
+          "&:focus": { top: "calc(var(--cercle-session-banner-height, 0px) + 12px)" },
         }}
       >
         Aller au contenu

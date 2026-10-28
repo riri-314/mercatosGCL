@@ -97,6 +97,11 @@ See [measurements, bundle checks and the local load probe](docs/performance.md).
 Edition creation, activation and bulk password resets are resumable server operations.
 See [operation lifecycle, recovery and deployment](docs/edition-operations.md).
 
+## Cercle account switching
+
+Administrators can sign in as a cercle from the Cercles section. See
+[session behavior, warning banner and deployment](docs/become-cercle.md).
+
 ## Dependency maintenance
 
 React 18, Material UI 5 / MUI X 6, TypeScript 5, and ESLint 8 stay on their latest

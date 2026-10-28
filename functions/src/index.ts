@@ -54,6 +54,37 @@ async function assertAdmin(request: any): Promise<void> {
   }
 }
 
+exports.becomecercle = onCall(async (request) => {
+  await assertAdmin(request);
+  if (request.auth?.token?.cercleSession === true) {
+    throw new HttpsError("permission-denied", "Reconnectez-vous avec votre compte administrateur.");
+  }
+  const uid = identifier(request.data?.uid, "uid");
+  const editionId = identifier(request.data?.editionId, "editionId");
+  if (await getAdminUid(uid)) {
+    throw new HttpsError("permission-denied", "Vous ne pouvez pas vous connecter à un compte administrateur.");
+  }
+  const edition = (await getFirestore().collection("editions").doc(editionId).get()).data();
+  if (!edition || !Object.prototype.hasOwnProperty.call(edition.cercles ?? {}, uid)) {
+    throw new HttpsError("not-found", "Ce cercle ne fait pas partie de cette édition.");
+  }
+  const target = await getAuth().getUser(uid).catch((error: { code?: string }) => {
+    if (error.code === "auth/user-not-found") {
+      throw new HttpsError("not-found", "Le compte de ce cercle n’existe plus.");
+    }
+    throw error;
+  });
+  if (target.disabled) {
+    throw new HttpsError("failed-precondition", "Le compte de ce cercle est désactivé.");
+  }
+  const name = edition.cercles[uid]?.name;
+  const cercleSessionName = (typeof name === "string" && name.trim() ? name : target.displayName || uid).slice(0, 160);
+  // Session claims identify the warning banner without changing the user's own
+  // claims, password, permissions, or other existing sessions.
+  const token = await getAuth().createCustomToken(uid, { cercleSession: true, cercleSessionName });
+  return { success: true, token };
+});
+
 // Revoke the public picture URLs of a past edition (admin only).
 exports.lockeditionpictures = onCall(async (request) => {
   await assertAdmin(request);

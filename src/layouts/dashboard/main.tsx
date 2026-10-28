@@ -10,7 +10,7 @@ export default function Main({ children, sx, ...other }: any) {
       sx={{
         flexGrow: 1,
         minWidth: 0,
-        minHeight: "100vh",
+        minHeight: "calc(100dvh - var(--cercle-session-banner-height, 0px))",
         display: "flex",
         flexDirection: "column",
         pt: {

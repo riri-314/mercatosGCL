@@ -13,7 +13,7 @@ export default function Loading({ fullScreen = false }: { fullScreen?: boolean }
       aria-label="Chargement du mercato"
       sx={{
         display: 'flex',
-        minHeight: fullScreen ? '100dvh' : 240,
+        minHeight: fullScreen ? 'calc(100dvh - var(--cercle-session-banner-height, 0px))' : 240,
         p: 3,
         alignItems: 'center',
         justifyContent: 'center',

@@ -5,6 +5,8 @@ import { useScrollToTop } from "./hooks/use-scroll-to-top";
 import ThemeProvider from "./theme";
 import { DataProvider } from "./data/DataProvider";
 import Loading from "./sections/loading/loading";
+import Box from "@mui/material/Box";
+import CercleSessionBanner from "./auth/cercle-session-banner";
 import "./App.css";
 
 // ----------------------------------------------------------------------
@@ -13,18 +15,23 @@ export default function App() {
   useScrollToTop();
 
   const AppContent = () => {
-    const { loading } = useAuth();
+    const { user, loading } = useAuth();
 
     if (loading) {
       return <Loading fullScreen />;
     }
 
     return (
-      <DataProvider>
-        <Suspense fallback={<Loading fullScreen />}>
-          <Router />
-        </Suspense>
-      </DataProvider>
+      <>
+        <CercleSessionBanner />
+        <Box sx={{ pt: "var(--cercle-session-banner-height, 0px)" }}>
+          <DataProvider key={user?.uid ?? "visitor"}>
+            <Suspense fallback={<Loading fullScreen />}>
+              <Router />
+            </Suspense>
+          </DataProvider>
+        </Box>
+      </>
     );
   };
 
