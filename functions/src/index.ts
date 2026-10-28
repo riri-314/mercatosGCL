@@ -128,6 +128,7 @@ export const beforecreated = beforeUserCreated((_event) => {
 });
 
 exports.vote = onCall(async (request) => {
+  // Receipt time determines deadline eligibility, even if a transaction waits.
   const now = test.Timestamp.now();
   const auth = request.auth;
   if (!auth) {
@@ -179,7 +180,11 @@ exports.vote = onCall(async (request) => {
 
     const path = `cercles.${cercleId}.comitards.${data.comitardId}`;
     const updates: Record<string, any> = {
-      [`${path}.encheres.${uuidv4()}`]: { vote: data.vote, sender: senderId, date: now },
+      // Timestamp acceptance in Firestore so overlapping requests are displayed
+      // in commit order, including when an earlier request commits later.
+      [`${path}.encheres.${uuidv4()}`]: {
+        vote: data.vote, sender: senderId, date: test.FieldValue.serverTimestamp(),
+      },
       [`cercles.${senderId}.nbFut`]: test.FieldValue.increment(-data.vote),
     };
     if (!comitard.enchereStart || !comitard.enchereStop) {

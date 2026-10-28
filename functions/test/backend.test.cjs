@@ -197,6 +197,66 @@ test("counterbids use the latest highest bid and debit the committed amount", as
   assert.equal(Object.keys(current.cercles.seller.comitards.target.encheres).length, 2);
 });
 
+for (const delayedAmount of [25, 24]) {
+  test(`overlapping 24 and 25 bids stay consistent when ${delayedAmount} waits to commit`, async () => {
+    const edition = await seed();
+    edition.cercles.seller.comitards.target = auction({
+      enchereStop: Timestamp.fromMillis(now + 10000),
+      encheres: {
+        previous: { sender: "buyer", vote: 23, date: Timestamp.fromMillis(now - 1000) },
+      },
+    });
+    await editionRef.set(edition);
+
+    let receivedAt = now - 109;
+    mock.method(Timestamp, "now", () => Timestamp.fromMillis(receivedAt));
+    const started = defer();
+    const release = defer();
+    const run = db.runTransaction.bind(db);
+    let first = true;
+    mock.method(db, "runTransaction", async callback => {
+      if (first) {
+        first = false;
+        started.resolve();
+        await release.promise;
+      }
+      return run(callback);
+    });
+
+    const pending = bid("buyer", delayedAmount).then(
+      result => ({ result }), error => ({ error })
+    );
+    let committed;
+    try {
+      await started.promise;
+      receivedAt = now;
+      await bid("loser", delayedAmount === 25 ? 24 : 25);
+      committed = await editionRef.get();
+    } finally {
+      release.resolve();
+    }
+    const outcome = await pending;
+    const snapshot = await editionRef.get();
+    const current = snapshot.data();
+
+    if (delayedAmount === 24) {
+      assert.equal(outcome.error?.code, "failed-precondition");
+      assert.deepEqual(current, committed.data());
+    } else {
+      assert.equal(outcome.result?.success, true);
+      const bids = Object.values(current.cercles.seller.comitards.target.encheres)
+        .filter(bid => bid.vote > 23)
+        .sort((a, b) => b.date.seconds - a.date.seconds || b.date.nanoseconds - a.date.nanoseconds);
+      assert.deepEqual(bids.map(bid => bid.vote), [25, 24]);
+      assert.ok(bids[0].date.toMillis() >= Math.floor(committed.readTime.toMillis()));
+      assert.ok(bids[0].date.toMillis() <= snapshot.readTime.toMillis());
+      assert.ok(bids[1].date.toMillis() <= committed.readTime.toMillis());
+      assert.equal(current.cercles.buyer.nbFut, 75);
+      assert.equal(current.cercles.loser.nbFut, 76);
+    }
+  });
+}
+
 test("bids reject missing membership, own profiles, inactive and settled auctions", async () => {
   await seedUnstartedAuctions();
   await assert.rejects(bid("outsider", 10), { code: "permission-denied" });
@@ -494,8 +554,10 @@ for (const [label, updates, vote, code] of [
 
 test("the first bid sets the auction duration and accepts an exact-balance bid", async () => {
   await seedUnstartedAuctions();
+  const before = await editionRef.get();
   await bid("buyer", 100);
-  const current = (await editionRef.get()).data();
+  const snapshot = await editionRef.get();
+  const current = snapshot.data();
   const target = current.cercles.seller.comitards.target;
   assert.equal(current.cercles.buyer.nbFut, 0);
   assert.equal(current.jobs, 1);
@@ -505,7 +567,8 @@ test("the first bid sets the auction duration and accepts an exact-balance bid",
   const votes = Object.values(target.encheres);
   assert.equal(votes.length, 1);
   assert.equal(votes[0].sender, "buyer");
-  assert.equal(votes[0].date.toMillis(), now);
+  assert.ok(votes[0].date.toMillis() >= Math.floor(before.readTime.toMillis()));
+  assert.ok(votes[0].date.toMillis() <= snapshot.readTime.toMillis());
 });
 
 for (const [label, delay, clientOffset, accepted] of [
