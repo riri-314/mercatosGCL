@@ -5,7 +5,7 @@ The browser persists an operation ID before making a request; retries of that ID
 resume the same operation. The backend serializes edition operations, records each
 stage in `editionOperations`, and leases execution to one worker for ten minutes.
 Functions time out after nine minutes, allowing a crashed worker's lease to expire.
-A scheduled function checks pending work every minute, with exponential retry delay
+A scheduled function checks pending work every five minutes, with exponential retry delay
 up to 32 minutes. Administrators can inspect progress and retry from their account.
 
 Transitions freeze affected editions, including uploads and auction/account/profile

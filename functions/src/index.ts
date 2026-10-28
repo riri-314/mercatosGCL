@@ -421,7 +421,7 @@ exports.retryeditionoperation = onCall({ timeoutSeconds: 540 }, async (request) 
   return resumeEditionOperation(identifier(request.data?.operationId, "operationId"));
 });
 
-exports.retryeditionoperations = onSchedule({ schedule: "every 1 minutes", timeoutSeconds: 540 }, retryEditionOperations);
+exports.retryeditionoperations = onSchedule({ schedule: "every 5 minutes", timeoutSeconds: 540 }, retryEditionOperations);
 
 /**
  * Generate a random password.
