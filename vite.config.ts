@@ -1,27 +1,21 @@
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react-swc'
 
-// https://vitejs.dev/config/
+const bundleModuleMap: Plugin = {
+  name: 'bundle-module-map',
+  generateBundle(_options, bundle) {
+    const modules = Object.fromEntries(Object.values(bundle)
+      .filter(chunk => chunk.type === 'chunk')
+      .map(chunk => [chunk.fileName, Object.keys(chunk.modules)
+        .map(id => id.replaceAll('\\', '/').replace(`${process.cwd()}/`, ''))]));
+    this.emitFile({ type: 'asset', fileName: '.vite/chunk-modules.json', source: JSON.stringify(modules) });
+  },
+}
+
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), bundleModuleMap],
   server: { host: '127.0.0.1' },
   preview: { host: '127.0.0.1' },
-  build: {
-    chunkSizeWarningLimit: 700,
-    rolldownOptions: {
-      output: {
-        // Only group libraries that are either needed on every page (react,
-        // firebase) or already lazy-loaded (recharts). MUI is intentionally
-        // left to automatic splitting so admin-only components stay
-        // in the admin route chunk instead of loading on the home page.
-        codeSplitting: {
-          groups: [
-            { name: 'firebase', test: /node_modules\/(?:@firebase|firebase)\// },
-            { name: 'charts', test: /node_modules\/(?:recharts|d3-[^/]+|victory-vendor)\// },
-            { name: 'react-vendor', test: /node_modules\/(?:react|react-dom|react-router[^/]*|scheduler)\// },
-          ],
-        },
-      },
-    },
-  },
+  // Route-only dependencies must not enter shared eager vendor chunks.
+  build: { manifest: true, chunkSizeWarningLimit: 700 },
 })

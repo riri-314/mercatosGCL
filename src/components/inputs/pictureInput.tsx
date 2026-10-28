@@ -1,25 +1,47 @@
 import { Button, FormHelperText } from "@mui/material";
 import imageCompression from "browser-image-compression";
-import { Fragment, useState } from "react";
-import ImageUploading, {
+import { Fragment, useEffect, useState } from "react";
+import ImageUploadingImport, {
   ImageListType,
   ImageType,
 } from "react-images-uploading";
+
+// This CommonJS package can expose its component directly or under `default`
+// depending on development optimization versus production bundling.
+const ImageUploading =
+  typeof ImageUploadingImport === "function"
+    ? ImageUploadingImport
+    : (
+        ImageUploadingImport as unknown as {
+          default: typeof ImageUploadingImport;
+        }
+      ).default;
 
 interface PictureInputProps {
   change: (images: ImageType[]) => void;
   error: boolean;
   upload: number | undefined;
-
 }
 
-export default function PictureInput({ change, error, upload }: PictureInputProps) {
+export default function PictureInput({
+  change,
+  error,
+  upload,
+}: PictureInputProps) {
   const [images, setImages] = useState<ImageType[]>([]);
   const [progress, setProgress] = useState(0);
+  useEffect(
+    () => () => {
+      images.forEach((image) => {
+        if (image.dataURL?.startsWith("blob:"))
+          URL.revokeObjectURL?.(image.dataURL);
+      });
+    },
+    [images],
+  );
   const maxNumber = 1;
   const maxFileSize = 5500000; // Bytes
   const maxFileSizeCompressed = 0.1; // MBytes
-
 
   const onChange = async (imageList: ImageListType) => {
     // data for submit
@@ -39,18 +61,25 @@ export default function PictureInput({ change, error, upload }: PictureInputProp
         try {
           if (image.file) {
             const compressedFile = await imageCompression(image.file, options);
-            // Rest of the code...
+            const thumbnailFile = await imageCompression(compressedFile, {
+              maxSizeMB: 0.015,
+              maxWidthOrHeight: 160,
+              useWebWorker: true,
+              fileType: "image/webp",
+              initialQuality: 0.8,
+            }).catch(() => undefined);
             return {
               ...image,
               dataURL: URL.createObjectURL(compressedFile),
               file: compressedFile,
+              thumbnailFile,
             };
           }
         } catch (error) {
           console.log(error);
           return image; // If compression fails, use the original image
         }
-      })
+      }),
     );
     console.log("onchange: ", compressedImages);
     if (compressedImages[0]) {
@@ -75,7 +104,7 @@ export default function PictureInput({ change, error, upload }: PictureInputProp
       {({ onImageUpload, onImageRemove, isDragging, dragProps, errors }) => (
         // write your building UI
         <div className="upload__image-wrapper">
-          {(images.length == 0 && progress == 0) && (
+          {images.length == 0 && progress == 0 && (
             <>
               <Button
                 variant="outlined"
@@ -98,7 +127,6 @@ export default function PictureInput({ change, error, upload }: PictureInputProp
             <div className="progress" style={{ textAlign: "center" }}>
               Compression de l'image: {progress}%
             </div>
-            
           )}
           {images.map((image, index) => (
             <Fragment key={index}>
@@ -108,7 +136,11 @@ export default function PictureInput({ change, error, upload }: PictureInputProp
                   src={image.dataURL}
                   alt=""
                   width="100"
-                  style={{ width: "100%" }}
+                  style={{
+                    width: "100%",
+                    maxHeight: 240,
+                    objectFit: "contain",
+                  }}
                 />
                 <div className="image-item__btn-wrapper">
                   <Button
@@ -118,7 +150,9 @@ export default function PictureInput({ change, error, upload }: PictureInputProp
                     sx={{ width: "100%", mt: 2 }}
                     disabled={upload !== undefined}
                   >
-                    {upload !== undefined ? `En cours d'upload: ${upload.toFixed(2)}%` : "Supprimer image"}
+                    {upload !== undefined
+                      ? `En cours d'upload: ${upload.toFixed(2)}%`
+                      : "Supprimer image"}
                   </Button>
                 </div>
               </div>
@@ -128,18 +162,24 @@ export default function PictureInput({ change, error, upload }: PictureInputProp
           {errors && (
             <div>
               {errors?.maxNumber && (
-                <FormHelperText sx={{color: "red"}}>
+                <FormHelperText sx={{ color: "red" }}>
                   Nombre d'images selectionnées depasse le maximum autorisé
                 </FormHelperText>
               )}
               {errors?.acceptType && (
-                <FormHelperText sx={{color: "red"}}>Format de fichier non supporté</FormHelperText>
+                <FormHelperText sx={{ color: "red" }}>
+                  Format de fichier non supporté
+                </FormHelperText>
               )}
               {errors?.maxFileSize && (
-                <FormHelperText sx={{color: "red"}}>Taille de fichier trop grande</FormHelperText>
+                <FormHelperText sx={{ color: "red" }}>
+                  Taille de fichier trop grande
+                </FormHelperText>
               )}
               {errors?.resolution && (
-                <FormHelperText sx={{color: "red"}}>Résolution trop grande</FormHelperText>
+                <FormHelperText sx={{ color: "red" }}>
+                  Résolution trop grande
+                </FormHelperText>
               )}
             </div>
           )}

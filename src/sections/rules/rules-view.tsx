@@ -1,120 +1,168 @@
-import Stack from "@mui/material/Stack";
+import { getEditionData } from "../../data/edition-data";
 import Typography from "@mui/material/Typography";
 import Card from "@mui/material/Card";
-import {CardContent} from "@mui/material";
+import { CardContent } from "@mui/material";
 import Loading from "../loading/loading.tsx";
-import {useData} from "../../data/DataProvider.tsx";
-import Markdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
-import rehypeRaw from 'rehype-raw'
+import { useData } from "../../data/data-context";
+import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import rehypeRaw from "rehype-raw";
 import Iconify from "../../components/iconify/iconify.tsx";
 import Box from "@mui/material/Box";
 
 export default function Rules() {
+  const { data } = useData();
+  const edition = getEditionData(data) ?? {};
+  let rules = edition.rules;
+  if (data != null) {
+    // Remove escape characters from the rules
+    rules = (edition.rules ?? "").replace(/\\/g, "");
+  }
 
-    const {data} = useData();
-    let rules = data?.data().rules;
-    if (data != null) {
-        // Remove escape characters from the rules
-        rules = data.data().rules.replace(/\\/g, "");
-    }
+  return (
+    <>
+      <Typography component="h1" variant="h4" sx={{ mb: 3 }}>
+        Règlement
+      </Typography>
+      <Card sx={{ width: "100%", mb: 4 }}>
+        <CardContent
+          className="club-rules"
+          sx={{
+            p: { xs: 2.5, sm: 4 },
+            overflowX: "auto",
+            "&:last-child": { pb: 4 },
+          }}
+        >
+          {data ? (
+            <>
+              <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+                {rules}
+              </Markdown>
 
-    return (<>
-            <Stack
-                direction="row"
-                alignItems="center"
-                justifyContent="space-between"
-                mb={5}
-            >
-                <Typography variant="h4" sx={{mb: 1}}>
-                    Le Règlement
+              <hr />
+
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  mt: 2,
+                  gap: (theme) => theme.spacing(1),
+                }}
+              >
+                <Iconify
+                  sx={{ color: (theme) => theme.palette.primary.main }}
+                  icon="solar:playback-speed-bold-duotone"
+                />
+                <Typography variant="h5">Contexte initial</Typography>
+              </Box>
+              <ul>
+                <li>
+                  <strong>Nombre initial de fûts : </strong>
+                  {edition.nbFut} fûts
+                </li>
+                <li>
+                  <strong>Nombre maximum de comitards par cercle : </strong>
+                  {edition.nbComitard} comitards
+                </li>
+              </ul>
+
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  mt: 2,
+                  gap: (theme) => theme.spacing(1),
+                }}
+              >
+                <Iconify
+                  sx={{ color: (theme) => theme.palette.primary.main }}
+                  icon="solar:clock-circle-line-duotone"
+                />
+                <Typography variant="h5">Durée des enchères</Typography>
+              </Box>
+
+              <ul>
+                <li>
+                  <strong>Début des enchères : </strong>
+                  {new Date(edition.start.seconds * 1000).toLocaleString()}
+                </li>
+                <li>
+                  <strong>Fin des enchères : </strong>
+                  {new Date(edition.stop.seconds * 1000).toLocaleString()}
+                </li>
+              </ul>
+
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  mt: 2,
+                  gap: (theme) => theme.spacing(1),
+                }}
+              >
+                <Iconify
+                  sx={{ color: (theme) => theme.palette.primary.main }}
+                  icon="solar:user-hand-up-bold-duotone"
+                />
+                <Typography variant="h5">Enchères</Typography>
+              </Box>
+
+              <ul>
+                <li>
+                  <strong>Durée d'une enchères : </strong>
+                  {edition.duration}h
+                </li>
+                <li>
+                  <strong>Enchère minimum : </strong>
+                  {edition.enchereMin} fûts
+                </li>
+                <li>
+                  <strong>Enchère maximum : </strong>
+                  {edition.enchereMax} fûts
+                </li>
+              </ul>
+
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  mt: 2,
+                  gap: (theme) => theme.spacing(1),
+                }}
+              >
+                <Iconify
+                  sx={{ color: (theme) => theme.palette.primary.main }}
+                  icon="solar:chart-2-bold-duotone"
+                />
+                <Typography variant="h5">
+                  Gains/remboursements par enchère
                 </Typography>
-            </Stack>
+              </Box>
 
-            <Card sx={{width: "100%", mb: 4}}>
-                <CardContent sx={{ml: 2}}>
-                    {data ? (<>
-                            <Markdown remarkPlugins={[remarkGfm]}
-                                      rehypePlugins={[rehypeRaw]}>{rules}</Markdown>
-
-                            <hr/>
-
-                            <Box sx={{display: "flex", alignItems: "center", mt: 2, gap: (theme) => theme.spacing(1)}}>
-                                <Iconify sx={{color: (theme: any) => theme.palette.primary.main}}
-                                         icon="solar:playback-speed-bold-duotone"/>
-                                <Typography variant="h5">Contexte initial</Typography>
-                            </Box>
-                            <ul>
-                                <li>
-                                    <strong>Nombre initial de fûts : </strong>
-                                    {data?.data().nbFut} fûts
-                                </li>
-                                <li>
-                                    <strong>Nombre maximum de comitards par cercle : </strong>
-                                    {data?.data().nbComitard} comitards
-                                </li>
-                            </ul>
-
-                            <Box sx={{display: "flex", alignItems: "center", mt: 2, gap: (theme) => theme.spacing(1)}}>
-                                <Iconify sx={{color: (theme: any) => theme.palette.primary.main}}
-                                         icon="solar:clock-circle-line-duotone"/>
-                                <Typography variant="h5">Durée des enchères</Typography>
-                            </Box>
-
-                            <ul>
-                                <li><strong>Début des enchères : </strong>
-                                    {new Date(data?.data().start.seconds * 1000).toLocaleString()}</li>
-                                <li>
-                                    <strong>Fin des enchères : </strong>
-                                    {new Date(data?.data().stop.seconds * 1000).toLocaleString()}
-                                </li>
-                            </ul>
-
-
-                            <Box sx={{display: "flex", alignItems: "center", mt: 2, gap: (theme) => theme.spacing(1)}}>
-                                <Iconify sx={{color: (theme: any) => theme.palette.primary.main}}
-                                         icon="solar:user-hand-up-bold-duotone"/>
-                                <Typography variant="h5">Enchères</Typography>
-                            </Box>
-
-                            <ul>
-                                <li>
-                                    <strong>Durée d'une enchères : </strong>
-                                    {data?.data().duration}h
-                                </li>
-                                <li>
-                                    <strong>Enchère minimum : </strong>
-                                    {data?.data().enchereMin} fûts
-                                </li>
-                                <li>
-                                    <strong>Enchère maximum : </strong>
-                                    {data?.data().enchereMax} fûts
-                                </li>
-                            </ul>
-
-                            <Box sx={{display: "flex", alignItems: "center", mt: 2, gap: (theme) => theme.spacing(1)}}>
-                                <Iconify sx={{color: (theme: any) => theme.palette.primary.main}}
-                                         icon="solar:chart-2-bold-duotone"/>
-                                <Typography variant="h5">Gains/remboursements par enchère</Typography>
-                            </Box>
-
-                            <ul>
-                                <li>
-                                    <strong>Bénéfice lors de la vente d'un comitard : </strong>
-                                    {data?.data().remboursementVendeur * 100}% du prix d'achat
-                                </li>
-                                <li>
-                                    <strong>Remboursement pour le perdant d'une enchère : </strong>
-                                    {data?.data().remboursementPerdant * 100}% du prix d'achat
-                                </li>
-                                <li>
-                                    <strong>Remboursement pour le gagnant d'une enchère : </strong>
-                                    {data?.data().remboursementGagnant * 100}% du prix d'achat
-                                </li>
-                            </ul>
-                        </>) : (<Loading/>)}
-                </CardContent>
-
-            </Card>
-        </>);
+              <ul>
+                <li>
+                  <strong>Bénéfice lors de la vente d'un comitard : </strong>
+                  {edition.remboursementVendeur * 100}% du prix d'achat
+                </li>
+                <li>
+                  <strong>
+                    Remboursement pour le perdant d'une enchère :{" "}
+                  </strong>
+                  {edition.remboursementPerdant * 100}% du prix d'achat
+                </li>
+                <li>
+                  <strong>
+                    Remboursement pour le gagnant d'une enchère :{" "}
+                  </strong>
+                  {edition.remboursementGagnant * 100}% du prix d'achat
+                </li>
+              </ul>
+            </>
+          ) : (
+            <Loading />
+          )}
+        </CardContent>
+      </Card>
+    </>
+  );
 }

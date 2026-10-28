@@ -9,7 +9,7 @@ if (!emulatorHost || !/^(127\.0\.0\.1|localhost):\d+$/.test(emulatorHost) ||
 }
 
 const handlers = require("../lib/index.js");
-const { getFirestore, Timestamp, DocumentReference } = require("firebase-admin/firestore");
+const { getFirestore, Timestamp } = require("firebase-admin/firestore");
 const { getApp, deleteApp } = require("firebase-admin/app");
 const { getAuth } = require("firebase-admin/auth");
 const authHost = process.env.FIREBASE_AUTH_EMULATOR_HOST;
@@ -197,6 +197,66 @@ test("counterbids use the latest highest bid and debit the committed amount", as
   assert.equal(Object.keys(current.cercles.seller.comitards.target.encheres).length, 2);
 });
 
+for (const delayedAmount of [25, 24]) {
+  test(`overlapping 24 and 25 bids stay consistent when ${delayedAmount} waits to commit`, async () => {
+    const edition = await seed();
+    edition.cercles.seller.comitards.target = auction({
+      enchereStop: Timestamp.fromMillis(now + 10000),
+      encheres: {
+        previous: { sender: "buyer", vote: 23, date: Timestamp.fromMillis(now - 1000) },
+      },
+    });
+    await editionRef.set(edition);
+
+    let receivedAt = now - 109;
+    mock.method(Timestamp, "now", () => Timestamp.fromMillis(receivedAt));
+    const started = defer();
+    const release = defer();
+    const run = db.runTransaction.bind(db);
+    let first = true;
+    mock.method(db, "runTransaction", async callback => {
+      if (first) {
+        first = false;
+        started.resolve();
+        await release.promise;
+      }
+      return run(callback);
+    });
+
+    const pending = bid("buyer", delayedAmount).then(
+      result => ({ result }), error => ({ error })
+    );
+    let committed;
+    try {
+      await started.promise;
+      receivedAt = now;
+      await bid("loser", delayedAmount === 25 ? 24 : 25);
+      committed = await editionRef.get();
+    } finally {
+      release.resolve();
+    }
+    const outcome = await pending;
+    const snapshot = await editionRef.get();
+    const current = snapshot.data();
+
+    if (delayedAmount === 24) {
+      assert.equal(outcome.error?.code, "failed-precondition");
+      assert.deepEqual(current, committed.data());
+    } else {
+      assert.equal(outcome.result?.success, true);
+      const bids = Object.values(current.cercles.seller.comitards.target.encheres)
+        .filter(bid => bid.vote > 23)
+        .sort((a, b) => b.date.seconds - a.date.seconds || b.date.nanoseconds - a.date.nanoseconds);
+      assert.deepEqual(bids.map(bid => bid.vote), [25, 24]);
+      assert.ok(bids[0].date.toMillis() >= Math.floor(committed.readTime.toMillis()));
+      assert.ok(bids[0].date.toMillis() <= snapshot.readTime.toMillis());
+      assert.ok(bids[1].date.toMillis() <= committed.readTime.toMillis());
+      assert.equal(current.cercles.buyer.nbFut, 75);
+      assert.equal(current.cercles.loser.nbFut, 76);
+    }
+  });
+}
+
 test("bids reject missing membership, own profiles, inactive and settled auctions", async () => {
   await seedUnstartedAuctions();
   await assert.rejects(bid("outsider", 10), { code: "permission-denied" });
@@ -264,6 +324,7 @@ test("profile creation and editing reject malformed fields without storing them"
     { age: -1000 }, { age: 100 }, { age: "20" }, { age: null }, { age: 1.5 },
     { teneurTaule: -1 }, { teneurTaule: 11 }, { nbEtoiles: 16 }, { nbEtoiles: NaN },
     { campus: 0 }, { campus: 5 }, { campus: "1" },
+    { pictureThumbnail: {} }, { pictureThumbnail: "javascript:alert(1)" }, { pictureThumbnail: "x".repeat(2049) },
     { picture: {} }, { picture: "javascript:alert(1)" }, { picture: "x".repeat(2049) },
     { nbFut: 999 }, { encheres: {} },
   ];
@@ -297,6 +358,26 @@ test("valid profiles persist and partial edits can save numeric zero", async () 
   assert.equal(updated.name, "Test");
 });
 
+test("thumbnail URLs persist and legacy picture replacement cannot retain a stale thumbnail", async () => {
+  await seedUnstartedAuctions();
+  await handlers.addcomitard.run({ auth: { uid: "buyer" }, data: profileData({
+    pictureThumbnail: "https://example.test/thumbnail.webp",
+  }) });
+  const profiles = (await editionRef.get()).data().cercles.buyer.comitards;
+  const id = Object.keys(profiles)[0];
+  assert.equal(profiles[id].pictureThumbnail, "https://example.test/thumbnail.webp");
+  await handlers.editcomitard.run({ auth: { uid: "buyer" }, data: {
+    editionId: editionRef.id, comitardId: id, name: "Updated",
+  } });
+  assert.equal((await editionRef.get()).data().cercles.buyer.comitards[id].pictureThumbnail,
+    "https://example.test/thumbnail.webp");
+  await handlers.editcomitard.run({ auth: { uid: "buyer" }, data: {
+    editionId: editionRef.id, comitardId: id, picture: "https://example.test/replacement.jpg",
+  } });
+  assert.equal((await editionRef.get()).data().cercles.buyer.comitards[id].pictureThumbnail,
+    "https://example.test/replacement.jpg");
+});
+
 test("profile validation preserves server-side ownership and admin selection", async () => {
   await seedUnstartedAuctions();
   await assert.rejects(handlers.editcomitard.run({ auth: { uid: "buyer" }, data: {
@@ -324,12 +405,13 @@ for (const operation of ["addcomitard", "editcomitard"]) {
     await editionRef.update({ "cercles.buyer.comitards.own": { name: "Own" } });
     const started = defer();
     const release = defer();
-    const update = DocumentReference.prototype.update;
-    mock.method(DocumentReference.prototype, "update", async function (...args) {
+    const run = db.runTransaction.bind(db);
+    mock.method(db, "runTransaction", callback => run(async tx => {
+      const result = await callback(tx);
       started.resolve();
       await release.promise;
-      return update.apply(this, args);
-    });
+      return result;
+    }));
     let finished = false;
     const pending = handlers[operation].run({ auth: { uid: "buyer" },
       data: operation === "addcomitard" ? profileData() : {
@@ -349,9 +431,11 @@ for (const operation of ["addcomitard", "editcomitard"]) {
     await seedUnstartedAuctions();
     await editionRef.update({ "cercles.buyer.comitards.own": { name: "Own" } });
     const before = (await editionRef.get()).data();
-    mock.method(DocumentReference.prototype, "update", async () => {
+    const run = db.runTransaction.bind(db);
+    mock.method(db, "runTransaction", callback => run(async tx => {
+      await callback(tx);
       throw new Error("simulated profile write failure");
-    });
+    }));
     await assert.rejects(handlers[operation].run({ auth: { uid: "buyer" },
       data: operation === "addcomitard" ? profileData() : {
         editionId: editionRef.id, comitardId: "own", name: "Updated",
@@ -371,11 +455,11 @@ test("account creation waits until Authentication and Firestore both finish", as
   await seed();
   const started = defer();
   const release = defer();
-  const update = DocumentReference.prototype.update;
-  mock.method(DocumentReference.prototype, "update", async function (...args) {
+  const run = db.runTransaction.bind(db);
+  mock.method(db, "runTransaction", async callback => {
     started.resolve();
     await release.promise;
-    return update.apply(this, args);
+    return run(callback);
   });
   let finished = false;
   const pending = signup().then((result) => { finished = true; return result; });
@@ -397,7 +481,7 @@ test("account creation waits until Authentication and Firestore both finish", as
 test("failed account database writes roll back the new Authentication account", async () => {
   await seed();
   const before = (await editionRef.get()).data();
-  mock.method(DocumentReference.prototype, "update", async () => {
+  mock.method(db, "runTransaction", async () => {
     throw new Error("simulated account write failure");
   });
   await assert.rejects(signup(), { code: "unavailable" });
@@ -407,9 +491,9 @@ test("failed account database writes roll back the new Authentication account", 
 
 test("a lost database acknowledgement preserves an account that was linked", async () => {
   await seed();
-  const update = DocumentReference.prototype.update;
-  mock.method(DocumentReference.prototype, "update", async function (...args) {
-    await update.apply(this, args);
+  const run = db.runTransaction.bind(db);
+  mock.method(db, "runTransaction", async callback => {
+    await run(callback);
     throw new Error("simulated lost acknowledgement");
   });
   assert.equal((await signup()).success, true);
@@ -470,8 +554,10 @@ for (const [label, updates, vote, code] of [
 
 test("the first bid sets the auction duration and accepts an exact-balance bid", async () => {
   await seedUnstartedAuctions();
+  const before = await editionRef.get();
   await bid("buyer", 100);
-  const current = (await editionRef.get()).data();
+  const snapshot = await editionRef.get();
+  const current = snapshot.data();
   const target = current.cercles.seller.comitards.target;
   assert.equal(current.cercles.buyer.nbFut, 0);
   assert.equal(current.jobs, 1);
@@ -481,7 +567,8 @@ test("the first bid sets the auction duration and accepts an exact-balance bid",
   const votes = Object.values(target.encheres);
   assert.equal(votes.length, 1);
   assert.equal(votes[0].sender, "buyer");
-  assert.equal(votes[0].date.toMillis(), now);
+  assert.ok(votes[0].date.toMillis() >= Math.floor(before.readTime.toMillis()));
+  assert.ok(votes[0].date.toMillis() <= snapshot.readTime.toMillis());
 });
 
 for (const [label, delay, clientOffset, accepted] of [
@@ -547,6 +634,114 @@ async function seedCircleUsers() {
   }
 }
 
+async function circleLogin(customToken) {
+  const response = await fetch(`http://${authHost}/identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key=demo-key`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token: customToken, returnSecureToken: true }),
+  });
+  assert.equal(response.status, 200);
+  return response.json();
+}
+
+test("become cercle rejects anonymous and member callers before issuing a token", async () => {
+  await seedCircleUsers();
+  const sign = mock.method(getAuth(), "createCustomToken", async () => { throw new Error("must not sign"); });
+  const data = { uid: "buyer", editionId: editionRef.id };
+  await assert.rejects(handlers.becomecercle.run({ data }), { code: "unauthenticated" });
+  await assert.rejects(handlers.becomecercle.run({ auth: { uid: "loser" }, data }), { code: "permission-denied" });
+  assert.equal(sign.mock.calls.length, 0);
+});
+
+test("become cercle rejects missing, disabled, non-member and administrator accounts", async () => {
+  await seedCircleUsers();
+  const sign = mock.method(getAuth(), "createCustomToken", async () => { throw new Error("must not sign"); });
+  const request = (uid, editionId = editionRef.id) => ({ ...adminRequest, data: { uid, editionId } });
+  await assert.rejects(handlers.becomecercle.run(request("buyer", "missing")), { code: "not-found" });
+  await assert.rejects(handlers.becomecercle.run(request("outsider")), { code: "not-found" });
+  await assert.rejects(handlers.becomecercle.run(request("admin")), { code: "permission-denied" });
+  await getAuth().deleteUser("buyer");
+  await assert.rejects(handlers.becomecercle.run(request("buyer")), { code: "not-found" });
+  assert.equal((await getAuth().listUsers()).users.length, 2, "A missing account must not be recreated");
+  await getAuth().updateUser("loser", { disabled: true });
+  await assert.rejects(handlers.becomecercle.run(request("loser")), { code: "failed-precondition" });
+  await assert.rejects(handlers.becomecercle.run({
+    auth: { uid: "admin", token: { cercleSession: true } }, data: request("seller").data,
+  }), { code: "permission-denied" });
+  assert.equal(sign.mock.calls.length, 0);
+});
+
+test("become cercle validates identifiers before requesting a token", async () => {
+  await seedCircleUsers();
+  const sign = mock.method(getAuth(), "createCustomToken", async () => { throw new Error("must not sign"); });
+  for (const data of [null, {}, { uid: "../buyer", editionId: editionRef.id },
+    { uid: "buyer", editionId: "__proto__" }, { uid: 5, editionId: editionRef.id }]) {
+    await assert.rejects(handlers.becomecercle.run({ ...adminRequest, data }), { code: "invalid-argument" });
+  }
+  assert.equal(sign.mock.calls.length, 0);
+});
+
+test("become cercle signs in as the real cercle without altering its account or normal sessions", async () => {
+  await seedCircleUsers();
+  await editionRef.update({ "cercles.buyer.name": "Cercle Beta" });
+  await getAuth().setCustomUserClaims("buyer", { existingClaim: true });
+  const before = (await editionRef.get()).data();
+  const result = await handlers.becomecercle.run({ ...adminRequest, data: { uid: "buyer", editionId: editionRef.id } });
+  assert.equal(result.success, true);
+  const login = await circleLogin(result.token);
+  const claims = await getAuth().verifyIdToken(login.idToken);
+  assert.equal(claims.uid, "buyer");
+  assert.equal(claims.cercleSession, true);
+  assert.equal(claims.cercleSessionName, "Cercle Beta");
+  assert.equal(claims.existingClaim, true);
+  const account = await getAuth().getUser("buyer");
+  assert.deepEqual(account.customClaims, { existingClaim: true });
+  assert.equal(account.disabled, false);
+  assert.deepEqual((await editionRef.get()).data(), before);
+
+  const refreshed = await fetch(`http://${authHost}/securetoken.googleapis.com/v1/token?key=demo-key`, {
+    method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ grant_type: "refresh_token", refresh_token: login.refreshToken }),
+  });
+  assert.equal(refreshed.status, 200);
+  const refreshedClaims = await getAuth().verifyIdToken((await refreshed.json()).id_token);
+  assert.equal(refreshedClaims.cercleSession, true, "The banner must survive ID token renewal");
+
+  const ordinary = await fetch(`http://${authHost}/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=demo-key`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email: "buyer@example.test", password: "test-password", returnSecureToken: true }),
+  });
+  assert.equal(ordinary.status, 200);
+  const ordinaryClaims = await getAuth().verifyIdToken((await ordinary.json()).idToken);
+  assert.equal(ordinaryClaims.cercleSession, undefined, "The cercle's own login must not acquire the banner");
+});
+
+test("become cercle uses ordinary bidding permissions and never grants administrator access", async () => {
+  await seedCircleUsers();
+  await editionRef.update({ "cercles.seller.comitards.target": { firstname: "Demo" } });
+  const result = await handlers.becomecercle.run({ ...adminRequest, data: { uid: "buyer", editionId: editionRef.id } });
+  const login = await circleLogin(result.token);
+  const token = await getAuth().verifyIdToken(login.idToken);
+  const auth = { uid: token.uid, token };
+  await assert.rejects(handlers.getdisabledstatus.run({ auth, data: { editionId: editionRef.id } }), { code: "permission-denied" });
+  await assert.rejects(handlers.becomecercle.run({ auth, data: { uid: "seller", editionId: editionRef.id } }), { code: "permission-denied" });
+  await handlers.vote.run({ auth, data: { editionId: editionRef.id, comitardId: "target", vote: 5, clientTime: new Date(now).toISOString() } });
+  const edition = (await editionRef.get()).data();
+  assert.equal(edition.cercles.buyer.nbFut, 95);
+  const bids = Object.values(edition.cercles.seller.comitards.target.encheres);
+  assert.equal(bids.length, 1);
+  assert.equal(bids[0].sender, "buyer");
+  assert.equal(bids[0].vote, 5);
+});
+
+test("failed custom token signing cannot report success or modify the target account", async () => {
+  await seedCircleUsers();
+  const before = (await editionRef.get()).data();
+  mock.method(getAuth(), "createCustomToken", async () => { throw new Error("signing unavailable"); });
+  await assert.rejects(handlers.becomecercle.run({ ...adminRequest, data: { uid: "buyer", editionId: editionRef.id } }), /signing unavailable/);
+  assert.deepEqual((await editionRef.get()).data(), before);
+  assert.equal((await getAuth().getUser("buyer")).disabled, false);
+});
+
 for (const operation of ["disableuser", "enableuser", "deleteuser", "resetpassworduser",
   "resetpasswords", "getdisabledstatus"]) {
   test(`${operation} rejects anonymous and ordinary callers without changing accounts`, async () => {
@@ -576,6 +771,7 @@ test("admins can disable and re-enable accounts and read their status", async ()
 
 test("admin deletion removes the selected circle and authentication account only", async () => {
   await seedCircleUsers();
+  await editionRef.update({ "cercles.seller.comitards.target.enchereProcessed": true });
   const before = (await editionRef.get()).data();
   await handlers.deleteuser.run({ auth: { uid: "admin" },
     data: { uid: "buyer", editionId: editionRef.id } });
@@ -610,4 +806,147 @@ test("password reset confirms success without logging passwords or account recor
   assert.equal(output.includes("passwordHash"), false);
   assert.equal(output.includes("passwordSalt"), false);
   assert.equal(output.includes("buyer@example.test"), false);
+});
+
+function correctionData(overrides = {}) {
+  return { editionId: editionRef.id, bidId: "second", expectedAmount: 10, amount: 15, refund: true, ...overrides };
+}
+
+test("bid edits atomically debit or refund the current sender balance", async () => {
+  await seed();
+  await handlers.editbid.run({ ...adminRequest, data: correctionData() });
+  let current = (await editionRef.get()).data();
+  assert.equal(current.cercles.buyer.nbFut, 95);
+  assert.equal(current.cercles.seller.comitards.target.encheres.second.vote, 15);
+  await handlers.editbid.run({ ...adminRequest, data: correctionData({ expectedAmount: 15, amount: 5 }) });
+  current = (await editionRef.get()).data();
+  assert.equal(current.cercles.buyer.nbFut, 105);
+  assert.equal(current.cercles.seller.comitards.target.encheres.second.vote, 5);
+});
+
+test("invalid, stale and settled bid edits leave bids and balances unchanged", async () => {
+  await seed();
+  const before = (await editionRef.get()).data();
+  for (const updates of [{ amount: 0 }, { amount: 1.5 }, { amount: 101 }, { expectedAmount: 9 }, { refund: 1 }]) {
+    await assert.rejects(handlers.editbid.run({ ...adminRequest, data: correctionData(updates) }));
+    assert.deepEqual((await editionRef.get()).data(), before);
+  }
+  await editionRef.update({ "cercles.seller.comitards.target.enchereProcessed": true });
+  for (const operation of ["editbid", "deletebid"]) {
+    await assert.rejects(handlers[operation].run({ ...adminRequest, data: correctionData() }), { code: "failed-precondition" });
+    await assert.rejects(handlers[operation].run({ auth: { uid: "buyer" }, data: correctionData() }), { code: "permission-denied" });
+  }
+});
+
+test("failed bid edit commits leave both the bid and balance unchanged", async () => {
+  await seed();
+  const before = (await editionRef.get()).data();
+  const run = db.runTransaction.bind(db);
+  mock.method(db, "runTransaction", (callback) => run(async tx => {
+    await callback(tx);
+    throw new Error("failed correction commit");
+  }));
+  await assert.rejects(handlers.editbid.run({ ...adminRequest, data: correctionData() }), /failed correction commit/);
+  assert.deepEqual((await editionRef.get()).data(), before);
+});
+
+test("parallel bid edits cannot spend twice or overwrite a committed correction", async () => {
+  await seed();
+  await editionRef.update({ "cercles.buyer.nbFut": 5 });
+  const results = await Promise.allSettled([
+    handlers.editbid.run({ ...adminRequest, data: correctionData({ amount: 15 }) }),
+    handlers.editbid.run({ ...adminRequest, data: correctionData({ amount: 14 }) }),
+  ]);
+  assert.equal(results.filter(result => result.status === "fulfilled").length, 1);
+  const current = (await editionRef.get()).data();
+  const amount = current.cercles.seller.comitards.target.encheres.second.vote;
+  assert.equal(current.cercles.buyer.nbFut, 5 + 10 - amount);
+  assert.ok(current.cercles.buyer.nbFut >= 0);
+});
+
+test("bid deletion refunds once, resets the last auction and recomputes jobs", async () => {
+  await seed();
+  await handlers.deletebid.run({ ...adminRequest, data: correctionData({ bidId: "first", expectedAmount: 6 }) });
+  await handlers.deletebid.run({ ...adminRequest, data: correctionData() });
+  const current = (await editionRef.get()).data();
+  assert.equal(current.cercles.buyer.nbFut, 110);
+  assert.equal(current.cercles.loser.nbFut, 106);
+  assert.equal(current.jobs, 0);
+  assert.equal(current.cercles.seller.comitards.target.encheres, undefined);
+  assert.equal(current.cercles.seller.comitards.target.enchereStop, undefined);
+  await assert.rejects(handlers.deletebid.run({ ...adminRequest, data: correctionData() }), { code: "not-found" });
+  assert.deepEqual((await editionRef.get()).data(), current);
+});
+
+test("account deletion preserves concurrent balances and can resume failed Auth cleanup", async () => {
+  await seedCircleUsers();
+  await getAuth().createUser({ uid: "idle", email: "idle@example.test", password: "test-password" });
+  await editionRef.update({ "cercles.idle": { nbFut: 100, comitards: {} } });
+  const remove = { ...adminRequest, data: { editionId: editionRef.id, uid: "idle" } };
+  const fail = mock.method(getAuth(), "deleteUser", async () => { throw new Error("Auth offline"); });
+  await Promise.all([
+    assert.rejects(handlers.deleteuser.run(remove), { code: "unavailable" }),
+    editionRef.update({ "cercles.buyer.nbFut": 77 }),
+  ]);
+  assert.equal((await editionRef.get()).data().cercles.buyer.nbFut, 77);
+  assert.equal((await db.doc(`accountDeletions/${editionRef.id}/users/idle`).get()).data().state, "pending");
+  fail.mock.restore();
+  await handlers.deleteuser.run(remove);
+  await assert.rejects(getAuth().getUser("idle"), { code: "auth/user-not-found" });
+  await handlers.deleteuser.run(remove);
+  assert.equal((await editionRef.get()).data().cercles.buyer.nbFut, 77);
+});
+
+test("account deletion refuses unsettled auction participants", async () => {
+  await seedCircleUsers();
+  const before = (await editionRef.get()).data();
+  for (const uid of ["buyer", "seller"]) {
+    await assert.rejects(handlers.deleteuser.run({ ...adminRequest, data: { editionId: editionRef.id, uid } }), { code: "failed-precondition" });
+  }
+  assert.deepEqual((await editionRef.get()).data(), before);
+  assert.equal((await getAuth().listUsers()).users.length, 3);
+});
+
+test("parallel profile creation cannot exceed the per-circle limit", async () => {
+  await seed({ nbComitard: 1 });
+  const results = await Promise.allSettled([
+    handlers.addcomitard.run({ auth: { uid: "buyer" }, data: profileData() }),
+    handlers.addcomitard.run({ auth: { uid: "buyer" }, data: profileData() }),
+  ]);
+  assert.equal(results.filter(result => result.status === "fulfilled").length, 1);
+  assert.equal(Object.keys((await editionRef.get()).data().cercles.buyer.comitards).length, 1);
+});
+
+for (const overrides of [{ active: false }, { stop: Timestamp.fromMillis(now - 1) }, { transitioning: true }]) {
+  test(`members cannot create or edit profiles in a closed edition: ${Object.keys(overrides)[0]}`, async () => {
+    await seed(overrides);
+    await editionRef.update({ "cercles.buyer.comitards.own": { name: "Original" } });
+    const before = (await editionRef.get()).data();
+    await assert.rejects(handlers.addcomitard.run({ auth: { uid: "buyer" }, data: profileData() }), { code: "failed-precondition" });
+    await assert.rejects(handlers.editcomitard.run({ auth: { uid: "buyer" }, data: {
+      editionId: editionRef.id, comitardId: "own", name: "Changed archive",
+    } }), { code: "failed-precondition" });
+    assert.deepEqual((await editionRef.get()).data(), before);
+  });
+}
+
+test("administrators can maintain archived profiles and override member limits", async () => {
+  await seed({ active: false, nbComitard: 1, stop: Timestamp.fromMillis(now - 1) });
+  for (let i = 0; i < 2; i++) {
+    await handlers.addcomitard.run({ ...adminRequest, data: profileData({ cercle: "buyer" }) });
+  }
+  const ids = Object.keys((await editionRef.get()).data().cercles.buyer.comitards);
+  assert.equal(ids.length, 2);
+  await handlers.editcomitard.run({ ...adminRequest, data: {
+    editionId: editionRef.id, cercleId: "buyer", comitardId: ids[0], name: "Archive correction",
+  } });
+  assert.equal((await editionRef.get()).data().cercles.buyer.comitards[ids[0]].name, "Archive correction");
+});
+
+test("transitions freeze account membership mutations", async () => {
+  await seedCircleUsers();
+  await editionRef.update({ transitioning: true });
+  await assert.rejects(signup(), { code: "failed-precondition" });
+  await assert.rejects(handlers.deleteuser.run({ ...adminRequest, data: { editionId: editionRef.id, uid: "buyer" } }), { code: "failed-precondition" });
+  assert.equal((await getAuth().listUsers()).users.length, 3);
 });

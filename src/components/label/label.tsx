@@ -1,14 +1,21 @@
-import { forwardRef } from 'react';
+import { forwardRef, type ReactNode } from 'react';
 
-import Box from '@mui/material/Box';
+import Box, { type BoxProps } from '@mui/material/Box';
 import { useTheme } from '@mui/material/styles';
-import { StyledLabel } from './styles';
+import { StyledLabel, type LabelState } from './styles';
 
 
 // ----------------------------------------------------------------------
 
-const Label = forwardRef(
-  ({ children, color = 'default', variant = 'soft', startIcon, endIcon, sx, ...other }: any, ref) => {
+interface LabelProps extends Omit<BoxProps<'span'>, 'color'> {
+  color?: LabelState['color'];
+  variant?: LabelState['variant'];
+  startIcon?: ReactNode;
+  endIcon?: ReactNode;
+}
+
+const Label = forwardRef<HTMLSpanElement, LabelProps>(
+  ({ children, color = 'default', variant = 'soft', startIcon, endIcon, sx, ...other }, ref) => {
     const theme = useTheme();
 
     const iconStyles = {
@@ -22,7 +29,6 @@ const Label = forwardRef(
         ref={ref}
         component="span"
         ownerState={{ color, variant }}
-        elevation={1}
         sx={{
           ...(startIcon && { pl: 0.75 }),
           ...(endIcon && { pr: 0.75 }),

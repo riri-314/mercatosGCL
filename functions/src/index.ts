@@ -11,7 +11,8 @@ import { initializeApp } from "firebase-admin/app";
 import * as test from "firebase-admin/firestore";
 import { getFirestore } from "firebase-admin/firestore";
 import { getAuth } from "firebase-admin/auth";
-import { getStorage } from "firebase-admin/storage";
+import { lockEditionFiles, unlockEditionFiles } from "./edition-pictures";
+import { beginEditionOperation, resumeEditionOperation, retryEditionOperations } from "./edition-workflow";
 import { beforeUserCreated } from "firebase-functions/v2/identity";
 import { randomInt, randomUUID as uuidv4 } from "node:crypto";
 import { onSchedule } from "firebase-functions/scheduler";
@@ -53,55 +54,36 @@ async function assertAdmin(request: any): Promise<void> {
   }
 }
 
-/**
- * Revoke the public download tokens of every file under an edition prefix.
- * The current token is stashed in `lockedToken` custom metadata so the exact
- * same public URL can be restored later (see unlockEditionFiles). Idempotent:
- * files already locked (no live token) are skipped so the stash is never lost.
- * @param {string} editionId - Firestore doc id used as the storage prefix.
- * @returns {Promise<number>} - Number of files locked.
- */
-async function lockEditionFiles(editionId: string): Promise<number> {
-  const bucket = getStorage().bucket();
-  const [files] = await bucket.getFiles({ prefix: `${editionId}/` });
-  let locked = 0;
-  for (const file of files) {
-    const [meta] = await file.getMetadata();
-    const custom = (meta.metadata || {}) as Record<string, any>;
-    const current = custom.firebaseStorageDownloadTokens;
-    if (current) {
-      await file.setMetadata({
-        metadata: { firebaseStorageDownloadTokens: "", lockedToken: current },
-      });
-      locked++;
-    }
+exports.becomecercle = onCall(async (request) => {
+  await assertAdmin(request);
+  if (request.auth?.token?.cercleSession === true) {
+    throw new HttpsError("permission-denied", "Reconnectez-vous avec votre compte administrateur.");
   }
-  return locked;
-}
-
-/**
- * Restore the previously stashed download token of every file under an edition
- * prefix, re-enabling the original public URLs. Idempotent.
- * @param {string} editionId - Firestore doc id used as the storage prefix.
- * @returns {Promise<number>} - Number of files unlocked.
- */
-async function unlockEditionFiles(editionId: string): Promise<number> {
-  const bucket = getStorage().bucket();
-  const [files] = await bucket.getFiles({ prefix: `${editionId}/` });
-  let unlocked = 0;
-  for (const file of files) {
-    const [meta] = await file.getMetadata();
-    const custom = (meta.metadata || {}) as Record<string, any>;
-    const saved = custom.lockedToken;
-    if (saved) {
-      await file.setMetadata({
-        metadata: { firebaseStorageDownloadTokens: saved, lockedToken: null },
-      });
-      unlocked++;
-    }
+  const uid = identifier(request.data?.uid, "uid");
+  const editionId = identifier(request.data?.editionId, "editionId");
+  if (await getAdminUid(uid)) {
+    throw new HttpsError("permission-denied", "Vous ne pouvez pas vous connecter à un compte administrateur.");
   }
-  return unlocked;
-}
+  const edition = (await getFirestore().collection("editions").doc(editionId).get()).data();
+  if (!edition || !Object.prototype.hasOwnProperty.call(edition.cercles ?? {}, uid)) {
+    throw new HttpsError("not-found", "Ce cercle ne fait pas partie de cette édition.");
+  }
+  const target = await getAuth().getUser(uid).catch((error: { code?: string }) => {
+    if (error.code === "auth/user-not-found") {
+      throw new HttpsError("not-found", "Le compte de ce cercle n’existe plus.");
+    }
+    throw error;
+  });
+  if (target.disabled) {
+    throw new HttpsError("failed-precondition", "Le compte de ce cercle est désactivé.");
+  }
+  const name = edition.cercles[uid]?.name;
+  const cercleSessionName = (typeof name === "string" && name.trim() ? name : target.displayName || uid).slice(0, 160);
+  // Session claims identify the warning banner without changing the user's own
+  // claims, password, permissions, or other existing sessions.
+  const token = await getAuth().createCustomToken(uid, { cercleSession: true, cercleSessionName });
+  return { success: true, token };
+});
 
 // Revoke the public picture URLs of a past edition (admin only).
 exports.lockeditionpictures = onCall(async (request) => {
@@ -146,6 +128,7 @@ export const beforecreated = beforeUserCreated((_event) => {
 });
 
 exports.vote = onCall(async (request) => {
+  // Receipt time determines deadline eligibility, even if a transaction waits.
   const now = test.Timestamp.now();
   const auth = request.auth;
   if (!auth) {
@@ -167,7 +150,7 @@ exports.vote = onCall(async (request) => {
     if (!Object.prototype.hasOwnProperty.call(cercles, senderId)) {
       throw new HttpsError("permission-denied", "Unauthorized request!");
     }
-    if (!edition.active || !(edition.start instanceof test.Timestamp) ||
+    if (!edition.active || edition.transitioning === true || !(edition.start instanceof test.Timestamp) ||
         !(edition.stop instanceof test.Timestamp) || now < edition.start || now > edition.stop) {
       throw new HttpsError("failed-precondition", "Pas dans le temps imparti pour les enchères");
     }
@@ -197,7 +180,11 @@ exports.vote = onCall(async (request) => {
 
     const path = `cercles.${cercleId}.comitards.${data.comitardId}`;
     const updates: Record<string, any> = {
-      [`${path}.encheres.${uuidv4()}`]: { vote: data.vote, sender: senderId, date: now },
+      // Timestamp acceptance in Firestore so overlapping requests are displayed
+      // in commit order, including when an earlier request commits later.
+      [`${path}.encheres.${uuidv4()}`]: {
+        vote: data.vote, sender: senderId, date: test.FieldValue.serverTimestamp(),
+      },
       [`cercles.${senderId}.nbFut`]: test.FieldValue.increment(-data.vote),
     };
     if (!comitard.enchereStart || !comitard.enchereStop) {
@@ -243,7 +230,7 @@ async function remboursement(): Promise<void> {
   await getFirestore().runTransaction(async (transaction) => {
     const snapshot = await transaction.get(editionRef);
     const edition = snapshot.data();
-    if (!edition || !edition.active) return;
+    if (!edition || !edition.active || edition.transitioning === true) return;
 
     const now = test.Timestamp.now().toMillis();
     const cercles = edition.cercles || {};
@@ -337,24 +324,40 @@ function getCercleId(comitardId: string, cercles: any): string | null {
   return null;
 }
 
+function assertMemberEdition(edition: FirebaseFirestore.DocumentData, isAdmin: boolean) {
+  if (edition.transitioning === true) {
+    throw new HttpsError("failed-precondition", "Edition transition in progress");
+  }
+  if (!isAdmin && (!edition.active || !(edition.stop instanceof test.Timestamp) ||
+      test.Timestamp.now() > edition.stop)) {
+    throw new HttpsError("failed-precondition", "This edition is closed");
+  }
+}
+
 exports.editcomitard = onCall(async (request) => {
   if (!request.auth) throw new HttpsError("unauthenticated", "Unauthorized request!");
   const data = parseProfile(request.data, true);
   const isAdmin = await getAdminUid(request.auth.uid);
   const cercleId = isAdmin ? data.cercleId : request.auth.uid;
   if (!cercleId) throw new HttpsError("invalid-argument", "Missing cercleId");
-
   const editionRef = await getEdition(data.editionId);
-  const edition = (await editionRef.get()).data();
-  const profiles = edition?.cercles?.[cercleId]?.comitards;
-  if (!profiles || !Object.prototype.hasOwnProperty.call(profiles, data.comitardId!)) {
-    throw new HttpsError("permission-denied", "Unauthorized profile update");
-  }
-
-  const path = `cercles.${cercleId}.comitards.${data.comitardId}`;
-  const updates = Object.fromEntries(Object.entries(data.profile)
-    .map(([field, value]) => [`${path}.${field}`, value]));
-  await editionRef.update(updates);
+  await getFirestore().runTransaction(async (tx) => {
+    const edition = (await tx.get(editionRef)).data();
+    if (!edition) throw new HttpsError("not-found", "Edition not found");
+    const profiles = edition.cercles?.[cercleId]?.comitards;
+    if (!profiles || !Object.prototype.hasOwnProperty.call(profiles, data.comitardId!)) {
+      throw new HttpsError("permission-denied", "Unauthorized profile update");
+    }
+    assertMemberEdition(edition, isAdmin);
+    const path = `cercles.${cercleId}.comitards.${data.comitardId}`;
+    const fields = { ...data.profile };
+    // Legacy clients replacing a picture must not retain the previous thumbnail.
+    if (fields.picture && !fields.pictureThumbnail && fields.picture !== profiles[data.comitardId!].picture) {
+      fields.pictureThumbnail = fields.picture;
+    }
+    tx.update(editionRef, Object.fromEntries(Object.entries(fields)
+      .map(([field, value]) => [`${path}.${field}`, value])));
+  });
   return { success: true, message: "Comitard updated in edition map" };
 });
 
@@ -364,18 +367,19 @@ exports.addcomitard = onCall(async (request) => {
   const isAdmin = await getAdminUid(request.auth.uid);
   const cercleId = isAdmin ? data.cercleId : request.auth.uid;
   if (!cercleId) throw new HttpsError("invalid-argument", "Missing cercle");
-
   const editionRef = await getEdition(data.editionId);
-  const edition = (await editionRef.get()).data();
-  if (!edition?.cercles || !Object.prototype.hasOwnProperty.call(edition.cercles, cercleId)) {
-    throw new HttpsError("permission-denied", "Unauthorized profile creation");
-  }
-  if (edition.stop && test.Timestamp.now() > edition.stop && !isAdmin) {
-    throw new HttpsError("failed-precondition", "Edition is finished");
-  }
-
-  await editionRef.update({
-    [`cercles.${cercleId}.comitards.${uuidv4()}`]: data.profile,
+  const profileId = uuidv4();
+  await getFirestore().runTransaction(async (tx) => {
+    const edition = (await tx.get(editionRef)).data();
+    if (!edition?.cercles || !Object.prototype.hasOwnProperty.call(edition.cercles, cercleId)) {
+      throw new HttpsError("permission-denied", "Unauthorized profile creation");
+    }
+    assertMemberEdition(edition, isAdmin);
+    if (!isAdmin && (!Number.isSafeInteger(edition.nbComitard) || edition.nbComitard <= 0 ||
+        Object.keys(edition.cercles[cercleId].comitards || {}).length >= edition.nbComitard)) {
+      throw new HttpsError("failed-precondition", "Maximum number of profiles reached");
+    }
+    tx.update(editionRef, { [`cercles.${cercleId}.comitards.${profileId}`]: data.profile });
   });
   return { success: true, message: "Comitard added to edition map" };
 });
@@ -431,70 +435,29 @@ exports.resetpassworduser = onCall(async (request) => {
  * @throws {functions.https.HttpsError} - Throws an error if the request is unauthorized or if there is an internal error.
  */
 
-exports.resetpasswords = onCall(async (request) => {
-  const context_auth = request.auth;
-  const data = request.data;
-  //const auth = getAuth();
-
-  // Check if the request is made by an admin
-  if (!context_auth || !(await getAdminUid(context_auth.uid))) {
+exports.resetpasswords = onCall({ timeoutSeconds: 540 }, async (request) => {
+  if (!request.auth || !(await getAdminUid(request.auth.uid))) {
     throw new HttpsError("permission-denied", "Unauthorized request!");
   }
-
-  console.log("edition id:", data.editionId);
-  if (data.editionId === undefined) {
-    throw new HttpsError("invalid-argument", "Edition id is invalid");
-  }
-
-  const activeEdition = await getEdition(data.editionId);
-  const activeEditionData = await activeEdition.get();
-  const activeEditionCercle = activeEditionData.data()?.cercles || {};
-
-  console.log("activeEditionCercle: ", activeEditionCercle);
-
-  if (Object.keys(activeEditionCercle).length === 0) {
-    // No editions found
-    throw new HttpsError("unavailable", "No editions found!");
-  }
-
-  //
-
-  const userUIDs = Object.keys(activeEditionCercle);
-  const emailArray = [];
-
-  // Loop through user UIDs in the cercle
-  for (const uid of userUIDs) {
-    // Generate a random password
-    console.log("uid: ", uid);
-    const newPassword = data.password || generateRandomPassword();
-
-    // Reset password for each user
-    try {
-      await getAuth().updateUser(uid, { password: newPassword });
-      //console.log("Password reset for user: ", uid, newPassword); //FOR DEBUG
-    } catch (error: any) {
-      console.log("Error resetting password for user: ", uid);
-    }
-
-    const user = await getAuth().getUser(uid);
-    const email = user.email;
-
-    // Send reset password email
-    // admin sdk give us email, send password reset email with firebase auth sdk
-    // necessary to do that. Only way to track user eamil is with firebase admin sdk.
-    // Firebase auth sdk only give us uid.
-    if (email) {
-      emailArray.push(email);
-
-      console.log("email: ", email);
-    } else {
-      throw new Error("No email found for user!");
-    }
-  }
-
-  return { message: "Passwords reseted to all users.", emails: emailArray };
-  //return { message: "Passwords reset and reset email sent to all users." };
+  return beginEditionOperation("passwords", request.data, request.auth.uid);
 });
+
+exports.createedition = onCall({ timeoutSeconds: 540 }, async (request) => {
+  await assertAdmin(request);
+  return beginEditionOperation("create", request.data, request.auth!.uid);
+});
+
+exports.activateedition = onCall({ timeoutSeconds: 540 }, async (request) => {
+  await assertAdmin(request);
+  return beginEditionOperation("activate", request.data, request.auth!.uid);
+});
+
+exports.retryeditionoperation = onCall({ timeoutSeconds: 540 }, async (request) => {
+  await assertAdmin(request);
+  return resumeEditionOperation(identifier(request.data?.operationId, "operationId"));
+});
+
+exports.retryeditionoperations = onSchedule({ schedule: "every 5 minutes", timeoutSeconds: 540 }, retryEditionOperations);
 
 /**
  * Generate a random password.
@@ -580,47 +543,112 @@ exports.enableuser = onCall(async (request) => {
 });
 
 exports.deleteuser = onCall(async (request) => {
-  const auth = request.auth;
-  const data = request.data;
-  const uid = data.uid; //user uid
-  const editionId = data.editionId;
-
-  if (!auth || !(await getAdminUid(auth.uid))) {
+  if (!request.auth || !(await getAdminUid(request.auth.uid))) {
     throw new HttpsError("permission-denied", "Unauthorized request!");
   }
-
-  console.log("edition id:", editionId);
-  if (editionId === undefined) {
-    throw new HttpsError("invalid-argument", "Edition id is invalid");
-  }
-
-  if (!uid) {
-    throw new HttpsError("invalid-argument", "User id is invalid");
-  }
-
-  const activeEdition = await getEdition(editionId);
-  const activeEditionData = await activeEdition.get();
-  const activeEditionCercle = activeEditionData.data()?.cercles || {};
-
-  if (Object.keys(activeEditionCercle).length === 0) {
-    // No editions found
-    throw new HttpsError("unavailable", "No cercles found in edition!");
-  }
-
-  Object.keys(activeEditionCercle).forEach((cercleId) => {
-    if (cercleId === uid) {
-      delete activeEditionCercle[cercleId];
+  const uid = identifier(request.data?.uid, "uid");
+  const editionId = identifier(request.data?.editionId, "editionId");
+  if (await getAdminUid(uid)) throw new HttpsError("failed-precondition", "Cannot delete an administrator");
+  const db = getFirestore();
+  const editionRef = db.collection("editions").doc(editionId);
+  const deletionRef = db.doc(`accountDeletions/${editionId}/users/${uid}`);
+  const needsAuthDeletion = await db.runTransaction(async (tx) => {
+    const [snapshot, deletion] = await tx.getAll(editionRef, deletionRef);
+    if (deletion.data()?.state === "completed") return false;
+    if (snapshot.data()?.transitioning === true) throw new HttpsError("failed-precondition", "Edition transition in progress");
+    const cercles = snapshot.data()?.cercles || {};
+    if (!Object.prototype.hasOwnProperty.call(cercles, uid)) {
+      if (deletion.exists) return true; // Resume an interrupted Authentication deletion.
+      throw new HttpsError("not-found", "Circle not found");
     }
+    for (const [sellerId, circle] of Object.entries(cercles) as [string, any][]) {
+      for (const profile of Object.values(circle.comitards || {}) as any[]) {
+        const bids = Object.values(profile.encheres || {}) as any[];
+        if (profile.enchereProcessed !== true && bids.length &&
+            (sellerId === uid || bids.some((bid) => bid.sender === uid))) {
+          throw new HttpsError("failed-precondition", "Settle or cancel this circle's auctions before deleting it");
+        }
+      }
+    }
+    tx.update(editionRef, { [`cercles.${uid}`]: test.FieldValue.delete() });
+    tx.set(deletionRef, { uid, editionId, state: "pending", createdAt: test.Timestamp.now() });
+    return true;
   });
-
-  const editionRef = getFirestore().collection("editions").doc(editionId);
-
-  await editionRef.update({ cercles: activeEditionCercle });
-
-  await deleteUserAuth(uid);
-
-  return { message: "User deleted" };
+  if (needsAuthDeletion) {
+    await deleteUserAuth(uid);
+    await deletionRef.update({ state: "completed" });
+  }
+  return { success: true, message: "User deleted" };
 });
+
+// Bid corrections use the current transaction snapshot for both the bid and its
+// balance adjustment. The client supplies an expected amount, never a refund.
+async function changeBid(request: any, remove: boolean) {
+  await assertAdmin(request);
+  const data = request.data;
+  const editionId = identifier(data?.editionId, "editionId");
+  const bidId = identifier(data?.bidId, "bidId");
+  if (!Number.isSafeInteger(data.expectedAmount) || data.expectedAmount <= 0 ||
+      typeof data.refund !== "boolean" ||
+      (!remove && (!Number.isSafeInteger(data.amount) || data.amount <= 0))) {
+    throw new HttpsError("invalid-argument", "Invalid bid correction");
+  }
+  const editionRef = getFirestore().collection("editions").doc(editionId);
+  await getFirestore().runTransaction(async (tx) => {
+    const edition = (await tx.get(editionRef)).data();
+    if (!edition) throw new HttpsError("not-found", "Edition not found");
+    if (edition.transitioning === true) throw new HttpsError("failed-precondition", "Edition transition in progress");
+    const cercles = edition.cercles || {};
+    let selected: { sellerId: string; profileId: string; profile: any; bid: any } | undefined;
+    for (const [sellerId, circle] of Object.entries(cercles) as [string, any][]) {
+      for (const [profileId, profile] of Object.entries(circle.comitards || {}) as [string, any][]) {
+        if (Object.prototype.hasOwnProperty.call(profile.encheres || {}, bidId)) {
+          selected = { sellerId, profileId, profile, bid: profile.encheres[bidId] };
+        }
+      }
+    }
+    if (!selected) throw new HttpsError("not-found", "Bid not found");
+    const { sellerId, profileId, profile, bid } = selected;
+    if (profile.enchereProcessed === true) {
+      throw new HttpsError("failed-precondition", "Settled auctions cannot be corrected");
+    }
+    if (bid.vote !== data.expectedAmount) {
+      throw new HttpsError("aborted", "This bid changed. Refresh before retrying.");
+    }
+    if (!remove && (data.amount < edition.enchereMin || data.amount > edition.enchereMax)) {
+      throw new HttpsError("invalid-argument", "Bid amount is outside edition limits");
+    }
+    const balance = cercles[bid.sender]?.nbFut;
+    const delta = data.refund ? bid.vote - (remove ? 0 : data.amount) : 0;
+    if (!Number.isSafeInteger(balance) || !Number.isSafeInteger(balance + delta) || balance + delta < 0) {
+      throw new HttpsError("failed-precondition", "Insufficient or invalid balance");
+    }
+    const path = `cercles.${sellerId}.comitards.${profileId}`;
+    const updates: Record<string, unknown> = {};
+    if (remove && Object.keys(profile.encheres).length === 1) {
+      for (const field of ["encheres", "enchereStart", "enchereStop", "enchereProcessed"]) {
+        updates[`${path}.${field}`] = test.FieldValue.delete();
+      }
+      let jobs = 0;
+      for (const [circleId, circle] of Object.entries(cercles) as [string, any][]) {
+        for (const [id, candidate] of Object.entries(circle.comitards || {}) as [string, any][]) {
+          if (!(circleId === sellerId && id === profileId) && candidate.enchereProcessed === false) jobs++;
+        }
+      }
+      updates.jobs = jobs;
+    } else if (remove) {
+      updates[`${path}.encheres.${bidId}`] = test.FieldValue.delete();
+    } else {
+      updates[`${path}.encheres.${bidId}.vote`] = data.amount;
+    }
+    if (delta) updates[`cercles.${bid.sender}.nbFut`] = test.FieldValue.increment(delta);
+    tx.update(editionRef, updates);
+  });
+  return { success: true };
+}
+
+exports.editbid = onCall((request) => changeBid(request, false));
+exports.deletebid = onCall((request) => changeBid(request, true));
 
 exports.signupuser = onCall(async (request) => {
   await assertAdmin(request);
@@ -635,7 +663,7 @@ exports.signupuser = onCall(async (request) => {
 
   const editionRef = await getEdition(editionId);
   const edition = (await editionRef.get()).data();
-  if (!edition || !Number.isSafeInteger(edition.nbFut) || edition.nbFut < 0) {
+  if (!edition || edition.transitioning === true || !Number.isSafeInteger(edition.nbFut) || edition.nbFut < 0) {
     throw new HttpsError("failed-precondition", "Invalid edition starting balance");
   }
 
@@ -649,14 +677,15 @@ exports.signupuser = onCall(async (request) => {
   });
 
   try {
-    await editionRef.update({
-      [`cercles.${user.uid}`]: {
-        description: data.description ?? "",
-        nbFut: edition.nbFut,
-        name: data.displayName,
-        comitards: {},
-        admins: [],
-      },
+    await getFirestore().runTransaction(async tx => {
+      const current = (await tx.get(editionRef)).data();
+      if (!current || current.transitioning === true || !Number.isSafeInteger(current.nbFut) || current.nbFut < 0) {
+        throw new HttpsError("failed-precondition", "Edition cannot accept accounts");
+      }
+      tx.update(editionRef, { [`cercles.${user.uid}`]: {
+        description: data.description ?? "", nbFut: current.nbFut,
+        name: data.displayName, comitards: {}, admins: [],
+      } });
     });
   } catch {
     // A lost write acknowledgement can mean the document was actually updated.
@@ -728,7 +757,9 @@ async function deleteUserAuth(uid: string): Promise<void> {
   try {
     await admin_auth.deleteUser(uid);
   } catch (error: any) {
-    throw new HttpsError("internal", "Failed to delete user: " + error.message);
+    if (error.code !== "auth/user-not-found") {
+      throw new HttpsError("unavailable", "Account removal is pending. Retry the same deletion to finish it.");
+    }
   }
 
   return;

@@ -80,7 +80,10 @@ test("mapped admins can read archives, list all editions, and manage editions", 
   await assertSucceeds(getDoc(doc(db, "editions/unspecified")));
   const all = await assertSucceeds(getDocs(collection(db, "editions")));
   assert.equal(all.size, 3);
-  await assertSucceeds(updateDoc(doc(db, "editions/archive"), { edition: 10 }));
+  await assertSucceeds(updateDoc(doc(db, "editions/archive"), { rules: "Updated" }));
+  await assertFails(updateDoc(doc(db, "editions/archive"), { edition: 10 }));
+  await assertFails(updateDoc(doc(db, "editions/archive"), { active: true }));
+  await assertFails(setDoc(doc(db, "editions/injected"), { active: true, edition: 99 }));
 });
 
 test("admin access requires the matching UID and email", async () => {
@@ -100,8 +103,7 @@ test("admin access requires the matching UID and email", async () => {
 test("deactivating an edition immediately blocks subsequent public reads", async () => {
   const guest = client(null);
   await assertSucceeds(getDoc(doc(guest, "editions/active")));
-  await assertSucceeds(updateDoc(doc(client({ uid: "admin", email: adminEmail }),
-    "editions/active"), { active: false }));
+  await environment.withSecurityRulesDisabled(context => updateDoc(doc(context.firestore(), "editions/active"), { active: false }));
   await assertFails(getDoc(doc(guest, "editions/active")));
 });
 
@@ -111,4 +113,13 @@ test("the client role lookup stays readable but cannot be modified", async () =>
   await assertFails(updateDoc(doc(guest, "admin/admin"), { admins: {} }));
   await assertFails(updateDoc(doc(client({ uid: "admin", email: adminEmail }),
     "admin/admin"), { admins: {} }));
+});
+
+test("edition operation state is readable only by admins and cannot be written by clients", async () => {
+  await environment.withSecurityRulesDisabled(context => setDoc(doc(context.firestore(), "editionOperations/pending"), { state: "pending" }));
+  await assertFails(getDoc(doc(client(null), "editionOperations/pending")));
+  await assertFails(getDoc(doc(client(regularUser), "editionOperations/pending")));
+  const admin = client({ uid: "admin", email: adminEmail });
+  await assertSucceeds(getDoc(doc(admin, "editionOperations/pending")));
+  await assertFails(updateDoc(doc(admin, "editionOperations/pending"), { state: "completed" }));
 });

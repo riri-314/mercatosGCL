@@ -1,4 +1,4 @@
-import { renderHook } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { formatTimeLeft, useComitardResults } from '../../src/sections/results/results-helper';
 
@@ -12,6 +12,21 @@ beforeEach(() => {
 });
 
 describe('auction results', () => {
+  it('moves auctions to closed at expiry without waiting for another snapshot', () => {
+    vi.mocked(Date.now).mockRestore();
+    vi.useFakeTimers();
+    vi.setSystemTime(now);
+    const doc = snapshot({ seller: { comitards: {
+      first: profile('First', now + 1000), later: profile('Later', now + 2000),
+    } } });
+    const { result } = renderHook(() => useComitardResults(doc));
+    expect(result.current.running).toHaveLength(2);
+    act(() => vi.advanceTimersByTime(1000));
+    expect(result.current.running.map(item => item.nickname)).toEqual(['Later']);
+    act(() => vi.advanceTimersByTime(1000));
+    expect(result.current.running).toHaveLength(0);
+    expect(result.current.closed.map(item => item.nickname)).toEqual(['Later', 'First']);
+  });
   it.each([null, undefined, snapshot(undefined), snapshot(null), snapshot([])])(
     'returns empty results when no edition data is available', (doc) => {
       const { result } = renderHook(() => useComitardResults(doc));

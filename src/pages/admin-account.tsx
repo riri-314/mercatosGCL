@@ -1,40 +1,24 @@
-import {Helmet} from "react-helmet-async";
+import { useRef } from "react";
+import { Helmet } from "react-helmet-async";
 import Container from "@mui/material/Container";
+import type { DocumentData } from "firebase/firestore";
 import AdminAccount from "../sections/admin-account/admin-account-view";
 import Loading from "../sections/loading/loading";
-import {collection, DocumentData, getDocs} from "firebase/firestore";
-import {db} from "../firebase_config";
-import {useCallback, useEffect, useState} from "react";
-
-// ----------------------------------------------------------------------
+import { useData } from "../data/data-context";
+import { useEditionHistory } from "../data/use-edition-history";
 
 export default function AdminAccountPage() {
-    const [data, setData] = useState<DocumentData[] | null>(null);
-    const [activeData, setActiveData] = useState<DocumentData | null>(null);
+  const { data } = useData();
+  const history = useEditionHistory();
+  // Keep the controls available during the brief gap in an edition transition.
+  const lastActive = useRef<DocumentData | null>(null);
+  if (data) lastActive.current = data;
+  const activeData = data ?? lastActive.current;
 
-    // The admin page reads all editions with a one-shot getDocs, so it owns its
-    // own refresh. DataProvider.refetchData is a no-op for logged-in users, so
-    // relying on it here meant admin edits never showed until a full reload.
-    const fetchAllData = useCallback(async () => {
-        const editionRef = collection(db, "editions");
-        const docs = await getDocs(editionRef);
-        const dataArray = docs.docs.map((doc) => doc);
-        const activeData = dataArray.filter((item) => item.data().active === true);
-        setData(dataArray);
-        setActiveData(activeData[0]);
-    }, []);
-
-    useEffect(() => {
-        fetchAllData();
-    }, [fetchAllData]);
-
-    return (<>
-            <Container maxWidth="xl">
-                <Helmet>
-                    <title> Compte </title>
-                </Helmet>
-                {data && activeData ? <AdminAccount data={data} refetchData={fetchAllData} activeData={activeData}/> :
-                    <Loading/>}
-            </Container>
-        </>);
+  return <Container maxWidth="xl">
+    <Helmet><title>Compte</title></Helmet>
+    {activeData
+      ? <AdminAccount history={history} refetchData={history.refresh} activeData={activeData} />
+      : <Loading />}
+  </Container>;
 }

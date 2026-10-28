@@ -1,13 +1,10 @@
-import PropTypes from 'prop-types';
 import {forwardRef} from 'react';
-import {Link} from 'react-router-dom';
+import {Link, type LinkProps} from 'react-router-dom';
 
 // ----------------------------------------------------------------------
 
-const RouterLink = forwardRef(({href, ...other}: any, ref) => <Link ref={ref} to={href} {...other} />);
-
-RouterLink.propTypes = {
-    href: PropTypes.string,
-};
+const RouterLink = forwardRef<HTMLAnchorElement, Omit<LinkProps, 'to'> & { href: LinkProps['to'] }>(
+    ({href, ...other}, ref) => <Link ref={ref} to={href} {...other} />
+);
 
 export default RouterLink;

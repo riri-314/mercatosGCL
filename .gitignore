@@ -32,3 +32,9 @@ scripts/*
 2025-02-10T17:25:33_46845/*
 
 .env
+
+# Firebase account exports must never be committed.
+**/auth_export/
+**/firestore_export/
+**/storage_export/
+**/firebase-export-metadata.json

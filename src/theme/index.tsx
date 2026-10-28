@@ -1,4 +1,4 @@
-import {useMemo} from 'react';
+import {useMemo, type ReactNode} from 'react';
 
 import CssBaseline from '@mui/material/CssBaseline';
 import {createTheme, ThemeProvider as MUIThemeProvider} from '@mui/material/styles';
@@ -11,7 +11,7 @@ import {overrides} from './overrides';
 
 // ----------------------------------------------------------------------
 
-export default function ThemeProvider({children}: any) {
+export default function ThemeProvider({children}: { children: ReactNode }) {
     const memoizedValue = useMemo(
         () => ({
             palette: palette(),

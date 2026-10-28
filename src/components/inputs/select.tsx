@@ -6,30 +6,45 @@ import {
   SelectRootSlotProps,
 } from "@mui/base/Select";
 import { Option as BaseOption, optionClasses } from "@mui/base/Option";
-import { Popper as BasePopper } from "@mui/base/Popper";
+import { Popper as BasePopper, type PopperProps } from "@mui/base/Popper";
 import { styled } from "@mui/system";
 import FormHelperText from "@mui/material/FormHelperText";
 
-interface OptionProps {
-  defaultValue?: number;
-  option: object;
+interface OptionProps<T extends number | string> {
+  defaultValue?: T;
+  label?: string;
+  option: Record<string, T>;
   helpText?: string;
   isError?: boolean;
-  change: (event: any, val: any) => void;
+  change: NonNullable<SelectProps<T, false>["onChange"]>;
 }
 
-export default function UnstyledSelectIntroduction({
+export default function UnstyledSelectIntroduction<T extends number | string>({
   defaultValue,
+  label,
   option,
   helpText,
   isError,
   change,
-}: OptionProps) {
+}: OptionProps<T>) {
   return (
     <>
-      <Select style={isError ? { color: "red", borderColor: "red" } : {}} defaultValue={defaultValue} placeholder="Choisir une proportion" onChange={change}>
+      {label && (
+        <FormHelperText sx={{ mb: 0.75, fontSize: 13, fontWeight: 600 }}>
+          {label}
+        </FormHelperText>
+      )}
+      <Select
+        aria-label={label ?? helpText ?? "Choisir une option"}
+        style={isError ? { color: "red", borderColor: "red" } : {}}
+        defaultValue={defaultValue}
+        placeholder="Choisir…"
+        onChange={change}
+      >
         {Object.entries(option).map(([text, value]) => (
-          <Option key={value} value={value}>{text}</Option>
+          <Option key={value} value={value}>
+            {text}
+          </Option>
         ))}
       </Select>
       <FormHelperText>{helpText}</FormHelperText>
@@ -38,11 +53,11 @@ export default function UnstyledSelectIntroduction({
 }
 
 const Select = React.forwardRef(function CustomSelect<
-  TValue extends {},
-  Multiple extends boolean
+  TValue extends NonNullable<unknown>,
+  Multiple extends boolean,
 >(
   props: SelectProps<TValue, Multiple>,
-  ref: React.ForwardedRef<HTMLButtonElement>
+  ref: React.ForwardedRef<HTMLButtonElement>,
 ) {
   const slots = {
     root: StyledButton,
@@ -52,7 +67,9 @@ const Select = React.forwardRef(function CustomSelect<
   };
 
   return <BaseSelect {...props} ref={ref} slots={slots} />;
-});
+}) as <TValue extends NonNullable<unknown>, Multiple extends boolean = false>(
+  props: SelectProps<TValue, Multiple> & React.RefAttributes<HTMLButtonElement>,
+) => React.ReactElement;
 
 const blue = {
   100: "#DAECFF",
@@ -78,13 +95,14 @@ const grey = {
 };
 
 const Button = React.forwardRef(function Button<
-  TValue extends {},
-  Multiple extends boolean
+  TValue extends NonNullable<unknown>,
+  Multiple extends boolean,
 >(
   props: SelectRootSlotProps<TValue, Multiple>,
-  ref: React.ForwardedRef<HTMLButtonElement>
+  ref: React.ForwardedRef<HTMLButtonElement>,
 ) {
-  const { ownerState, ...other } = props;
+  const other = { ...props };
+  delete (other as Partial<typeof props>).ownerState;
   return (
     <button type="button" {...other} ref={ref}>
       {other.children}
@@ -94,8 +112,8 @@ const Button = React.forwardRef(function Button<
 
 const StyledButton = styled(Button, { shouldForwardProp: () => true })(
   ({ theme }) => `
-  font-family: 'IBM Plex Sans', sans-serif;
-  font-size: 0.875rem;
+  font-family: 'Public Sans', sans-serif;
+  font-size: 1rem;
   box-sizing: border-box;
   width: 100%;
   padding: ${theme.spacing(2)};
@@ -134,17 +152,19 @@ const StyledButton = styled(Button, { shouldForwardProp: () => true })(
     top: 0;
     right: 10px;
   }
-  `
+  `,
 );
 
 const Listbox = styled("ul")(
   ({ theme }) => `
-  font-family: 'IBM Plex Sans', sans-serif;
-  font-size: 0.875rem;
+  font-family: 'Public Sans', sans-serif;
+  font-size: 1rem;
   box-sizing: border-box;
   padding: 6px;
   margin: 12px 0;
-  min-width: 320px;
+  min-width: min(280px, calc(100vw - 32px));
+  max-width: calc(100vw - 32px);
+  max-height: min(360px, 50dvh);
   border-radius: 12px;
   overflow: auto;
   outline: 0px;
@@ -154,13 +174,15 @@ const Listbox = styled("ul")(
   box-shadow: 0px 2px 4px ${
     theme.palette.mode === "dark" ? "rgba(0,0,0, 0.5)" : "rgba(0,0,0, 0.05)"
   };
-  `
+  `,
 );
 
 const Option = styled(BaseOption)(
   ({ theme }) => `
   list-style: none;
-  padding: 8px;
+  padding: 12px;
+  min-height: 44px;
+  overflow-wrap: anywhere;
   border-radius: 8px;
   cursor: default;
   &:last-of-type {
@@ -194,10 +216,13 @@ const Option = styled(BaseOption)(
     background-color: ${theme.palette.mode === "dark" ? grey[800] : grey[100]};
     color: ${theme.palette.mode === "dark" ? grey[300] : grey[900]};
   }
-  `
+  `,
 );
 
-const PopperRoot = React.forwardRef(function PopperRoot(props: any, ref: React.ForwardedRef<any>) {
+const PopperRoot = React.forwardRef(function PopperRoot(
+  props: PopperProps,
+  ref: React.ForwardedRef<HTMLDivElement>,
+) {
   return <BasePopper keepMounted disablePortal={false} {...props} ref={ref} />;
 });
 

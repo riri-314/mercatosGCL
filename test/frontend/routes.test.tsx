@@ -1,11 +1,11 @@
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { useAuth } from '../../src/auth/AuthProvider';
+import { useAuth } from '../../src/auth/auth-context';
 import Router from '../../src/routes/sections';
 import type { ReactNode } from 'react';
 
-vi.mock('../../src/auth/AuthProvider', () => ({ useAuth: vi.fn() }));
+vi.mock('../../src/auth/auth-context', () => ({ useAuth: vi.fn() }));
 vi.mock('../../src/layouts/dashboard', () => ({ default: ({ children }: { children: ReactNode }) => <main>{children}</main> }));
 vi.mock('../../src/pages/results', () => ({ default: () => <h1>Results</h1> }));
 vi.mock('../../src/pages/comitards-page', () => ({ default: () => <h1>Profiles</h1> }));

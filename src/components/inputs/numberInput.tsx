@@ -15,14 +15,26 @@ const CustomNumberInput = React.forwardRef(function CustomNumberInput(
     helpText?: string;
     error?: boolean;
   },
-  ref: React.ForwardedRef<HTMLInputElement>
+  ref: React.ForwardedRef<HTMLInputElement>,
 ) {
+  // Keep zero as a real controlled value: the base hook initializes its editable
+  // text to an empty string for an uncontrolled defaultValue of zero.
+  const [currentValue, setCurrentValue] = React.useState<number | null>(
+    props.defaultValue ?? null,
+  );
   const {
     getRootProps,
     getInputProps,
     getIncrementButtonProps,
     getDecrementButtonProps,
-  } = useNumberInput(props);
+  } = useNumberInput({
+    ...props,
+    value: props.value !== undefined ? props.value : currentValue,
+    onChange: (event, value) => {
+      setCurrentValue(value);
+      props.onChange?.(event, value);
+    },
+  });
 
   const inputProps = getInputProps();
 
@@ -38,6 +50,7 @@ const CustomNumberInput = React.forwardRef(function CustomNumberInput(
             variant="outlined"
             size="large"
             {...getDecrementButtonProps()}
+            aria-label={`Diminuer ${props.title}`}
             className="decrement"
           >
             -
@@ -45,6 +58,7 @@ const CustomNumberInput = React.forwardRef(function CustomNumberInput(
           <StyledDiv>
             <StyledTextField
               fullWidth
+              inputProps={{ inputMode: "numeric" }}
               error={props.error}
               label={props.title}
               {...inputProps}
@@ -59,6 +73,7 @@ const CustomNumberInput = React.forwardRef(function CustomNumberInput(
             variant="outlined"
             size="large"
             {...getIncrementButtonProps()}
+            aria-label={`Augmenter ${props.title}`}
             className="increment"
           >
             +
@@ -81,7 +96,7 @@ interface QuantityInputProps {
       | React.FocusEvent<HTMLInputElement>
       | React.PointerEvent
       | React.KeyboardEvent,
-    val: any
+    val: number | undefined,
   ) => void;
 }
 
@@ -104,7 +119,7 @@ export default function UseNumberInputWithTitle({
         error={error}
         helpText={helpText}
         defaultValue={defaultValue}
-        onChange={change}
+        onChange={(event, value) => change(event, value ?? undefined)}
       />
     </>
   );
@@ -114,17 +129,21 @@ const StyledInputRoot = styled("div")(() => ({
   display: "flex",
   alignItems: "start",
   width: "100%",
+  gap: 8,
 }));
 
 const StyledTextField = styled(TextField)(() => ({}));
 
-const StyledDiv = styled("div")(({ theme }) => ({
-  width: "100%",
-  marginLeft: theme.spacing(1),
-  marginRight: theme.spacing(1),
+const StyledDiv = styled("div")(() => ({
+  flex: 1,
+  minWidth: 0,
 }));
 
 const StyledButton = styled(Button)(({ theme }) => ({
   height: theme.spacing(7),
-  minWidth: theme.spacing(1),
+  width: 44,
+  minWidth: 44,
+  flexShrink: 0,
+  padding: 0,
+  fontSize: 20,
 }));

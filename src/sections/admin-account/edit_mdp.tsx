@@ -1,10 +1,12 @@
+import type { DocumentData } from "firebase/firestore";
+import FormActions from "../../components/account/form-actions";
 import {
-  Alert,
   AlertColor,
   Box,
   FormHelperText,
   Grid,
   TextField,
+  Typography,
 } from "@mui/material";
 import { useState } from "react";
 import { LoadingButton } from "@mui/lab";
@@ -17,7 +19,7 @@ interface ChangeMDPProps {
   /**
    * Data of the table.
    */
-  data: Record<string, any>;
+  data: DocumentData;
 
   editionId: string;
 
@@ -29,16 +31,11 @@ interface ChangeMDPProps {
   refetchData: () => void;
 }
 
-export default function EditMDP({
-  data,
-  editionId,
-  close,
-  refetchData,
-}: ChangeMDPProps) {
+export default function EditMDP({ data, close, refetchData }: ChangeMDPProps) {
   console.log("data:", data);
   const [loading, setLoading] = useState<boolean>(false);
 
-  const [newMDP, setNewMDP] = useState<string>(data.description);
+  const [newMDP, setNewMDP] = useState<string>("");
   const [newMDPError, setNewMDPError] = useState<boolean>(false);
 
   const [mdpError, setCercleError] = useState<string>("");
@@ -51,7 +48,6 @@ export default function EditMDP({
   async function handleNewMDP() {
     setCercleError("");
     setLoading(true);
-    console.log("handleNewMDP called with newMDP:", newMDP, editionId, data.id);
     // check if mdp is valid
     const mdpRegex =
       /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
@@ -78,7 +74,9 @@ export default function EditMDP({
       setCercleErrorSeverity("success");
       refetchData();
     } else {
-      setCercleError("Une erreur est survenue lors de la mise à jour du mot de passe.");
+      setCercleError(
+        "Une erreur est survenue lors de la mise à jour du mot de passe.",
+      );
       setCercleErrorSeverity("error");
     }
     setLoading(false);
@@ -86,20 +84,27 @@ export default function EditMDP({
 
   return (
     <>
-      <Box component="form" noValidate autoComplete="off">
-        Changer le mot de passe du cercle <strong>{data.name}</strong> avec id{" "}
-        {data.id} et description "{data.description}"
-        <br />
+      <Box
+        component="form"
+        noValidate
+        autoComplete="off"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void handleNewMDP();
+        }}
+      >
+        <Typography sx={{ fontSize: 14, mb: 2 }}>{data.name}</Typography>
         <Grid container spacing={2} sx={{ mt: 1 }}>
           <Grid item xs={12} sm={12}>
             <TextField
               label="Nouveau mot de passe"
-              multiline
-              maxRows={4}
+              type="password"
+              autoComplete="new-password"
+              value={newMDP}
               error={newMDPError}
               fullWidth
               onChange={(e) => {
-                if (e.target.value.length < textLenght) {
+                if (e.target.value.length <= textLenght) {
                   setNewMDP(e.target.value);
                 }
                 if (e.target.value === "") {
@@ -115,35 +120,15 @@ export default function EditMDP({
             </FormHelperText>
           </Grid>
 
-          <Grid item xs={12} sm={12}>
-            <LoadingButton
-              color="error"
-              size="large"
-              variant="contained"
-              fullWidth
-              onClick={close}
-            >
+          <FormActions error={mdpError} severity={MDPErrorSeverity}>
+            <LoadingButton color="inherit" variant="outlined" onClick={close}>
               Annuler
             </LoadingButton>
-          </Grid>
-
-          <Grid item xs={12} sm={12}>
-            <LoadingButton
-              size="large"
-              variant="contained"
-              fullWidth
-              onClick={() => handleNewMDP()}
-              loading={loading}
-            >
+            <LoadingButton type="submit" variant="contained" loading={loading}>
               Mettre à jour mot de passe
             </LoadingButton>
-          </Grid>
+          </FormActions>
         </Grid>
-        {mdpError && (
-          <Alert sx={{ mt: 3 }} severity={MDPErrorSeverity}>
-            {mdpError}
-          </Alert>
-        )}
       </Box>
     </>
   );

@@ -1,10 +1,12 @@
+import FormSection from "../../components/account/form-section";
+import FormActions from "../../components/account/form-actions";
+import { uploadProfilePictures } from "../../utils/upload-profile-pictures";
+import { getEditionData } from "../../data/edition-data";
 import LoadingButton from "@mui/lab/LoadingButton";
 import {
-  Alert,
   AlertColor,
   Button,
   CardContent,
-  Divider,
   FormHelperText,
   Grid,
   TextField,
@@ -16,28 +18,28 @@ import QuantityInput from "../../components/inputs/numberInput";
 import { useState } from "react";
 import PictureInput from "../../components/inputs/pictureInput";
 import { ImageListType } from "react-images-uploading";
-import { functions, storage } from "../../firebase_config";
-import { getDownloadURL, ref, uploadBytesResumable } from "firebase/storage";
-import { v4 as uuidv4 } from "uuid";
+import { functions } from "../../firebase_functions";
 import { DocumentData } from "firebase/firestore";
-import { useAuth } from "../../auth/AuthProvider";
+import { useAuth } from "../../auth/auth-context";
 import { httpsCallable } from "firebase/functions";
 import { requireMutationSuccess } from "../../utils/callable-result";
 
 interface EditComitardProps {
   ComitardData: DocumentData;
   activeData: DocumentData;
-  admin: Boolean;
+  admin: boolean;
   close: () => void;
   refetchData: () => void;
 }
 
 function getCercleIdByComitardId(
   activeData: DocumentData,
-  comitardId: string
+  comitardId: string,
 ): string | undefined {
-  for (const [cercleId, cercle] of Object.entries(activeData.data().cercles)) {
-    if ((cercle as any).comitards && comitardId in (cercle as any).comitards) {
+  for (const [cercleId, cercle] of Object.entries<DocumentData>(
+    (getEditionData(activeData) ?? {}).cercles ?? {},
+  )) {
+    if (cercle.comitards && comitardId in cercle.comitards) {
       return cercleId;
     }
   }
@@ -81,11 +83,11 @@ export default function EditComitard({
   const [pictureUpdated, setPictureUpdated] = useState(false);
   const [pictureError, setPictureError] = useState(false);
   const [pictureUpload, setPictureUpload] = useState<number | undefined>(
-    undefined
+    undefined,
   );
   const [error, setError] = useState("");
   const [errorSeverity, setErrorSeverity] = useState<AlertColor | undefined>(
-    "error"
+    "error",
   );
   const [loading, setLoading] = useState(false);
 
@@ -103,7 +105,9 @@ export default function EditComitard({
 
   function cerclesOption() {
     const out: { [key: string]: string } = {}; // Add type annotation to the 'out' object
-    for (const [key, value] of Object.entries(activeData.data().cercles)) {
+    for (const [key, value] of Object.entries(
+      (getEditionData(activeData) ?? {}).cercles,
+    )) {
       if (typeof value === "object" && value !== null) {
         out[(value as { name: string }).name] = key; // Add type assertion to 'value'
       }
@@ -221,152 +225,72 @@ export default function EditComitard({
         setError("Cercle non trouvé pour ce comitard.");
         return;
       }
+      let pictures: { picture: string; pictureThumbnail?: string } = {
+        picture,
+        ...(ComitardData.pictureThumbnail
+          ? { pictureThumbnail: ComitardData.pictureThumbnail }
+          : {}),
+      };
       if (pictureUpdated) {
-        const storageRef = ref(
-          storage,
-          `${activeData.id}/${cercleId}/${uuidv4()}`
-        );
-
-        const uploadTask = uploadBytesResumable(
-          storageRef,
-          picture[0].file as File
-        );
-        uploadTask.on(
-          "state_changed",
-          (snapshot) => {
-            // Observe state change events such as progress, pause, and resume
-            // Get task progress, including the number of bytes uploaded and the total number of bytes to be uploaded
-            const progress =
-              (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-            console.log("Upload is " + progress + "% done");
-            setPictureUpload(progress);
-            switch (snapshot.state) {
-              case "paused":
-                console.log("Upload is paused");
-                break;
-              case "running":
-                console.log("Upload is running");
-                break;
-            }
-          },
-          (error) => {
-            // Handle unsuccessful uploads
-            console.log("error uploading file: ", error);
-            setPictureUpload(undefined);
-            setErrorSeverity("error");
-            setError("Une erreur est survenue lors de l'upload de l'image.");
-            setLoading(false);
-
-            return;
-          },
-          () => {
-            getDownloadURL(uploadTask.snapshot.ref)
-              .then((downloadURL) => {
-                console.log("File available at", downloadURL);
-                const data1 = {
-                  editionId: activeData.id,
-                  comitardId: ComitardData.id,
-                  name: name,
-                  firstname: firstname,
-                  nickname: nickname,
-                  post: post,
-                  cercleId,
-                  cercle: cercle ? cercle : null,
-                  teneurTaule: teneurTaule,
-                  etatCivil: etatCivil,
-                  age: age,
-                  nbEtoiles: nbEtoiles,
-                  pointFort: pointFort,
-                  pointFaible: pointFaible,
-                  estLeSeul: estLeSeul,
-                  campus: campus,
-                  picture: downloadURL,
-                };
-                // call another cloud function to update the doc
-                const addMessage = httpsCallable(functions, "editcomitard");
-                addMessage(data1)
-                  .then((result) => {
-                    requireMutationSuccess(result.data);
-                    const ComitardData: any = result.data;
-                    // reload ComitardData
-                    refetchData();
-                    console.log("ComitardData:", ComitardData);
-                    setPictureUpload(undefined);
-                    setErrorSeverity("success");
-                    setError("Comitard mis à jour avec succès");
-                    setLoading(false);
-                  })
-                  .catch((error) => {
-                    console.log("error:", error);
-                    setPictureUpload(undefined);
-                    setErrorSeverity("error");
-                    setError(
-                      "Une erreur est survenue lors de la mise à jour du comitard. serveur error."
-                    );
-                    setLoading(false);
-                  });
-                // call cloud function with all arguments and wait for response
-              })
-              .catch((error) => {
-                console.log("error uploading file: ", error);
-                setPictureUpload(undefined);
-                setErrorSeverity("error");
-                setError(
-                  "Une erreur est survenue lors de l'upload de l'image."
-                );
-                setLoading(false);
-              });
-          }
-        );
-      } else {
-        console.log("do not change the picture");
-        const data1 = {
+        try {
+          pictures = await uploadProfilePictures(
+            picture[0],
+            activeData.id,
+            cercleId,
+            setPictureUpload,
+          );
+        } catch (cause) {
+          setErrorSeverity("error");
+          setError(
+            "Une erreur est survenue lors de l'upload de l'image. " +
+              String(cause),
+          );
+          setPictureUpload(undefined);
+          setLoading(false);
+          return;
+        }
+      }
+      try {
+        const result = await httpsCallable(
+          functions,
+          "editcomitard",
+        )({
           editionId: activeData.id,
           comitardId: ComitardData.id,
-          name: name,
-          firstname: firstname,
-          nickname: nickname,
-          post: post,
+          name,
+          firstname,
+          nickname,
+          post,
           cercleId,
-          cercle: cercle ? cercle : null,
-          teneurTaule: teneurTaule,
-          etatCivil: etatCivil,
-          age: age,
-          nbEtoiles: nbEtoiles,
-          pointFort: pointFort,
-          pointFaible: pointFaible,
-          estLeSeul: estLeSeul,
-          campus: campus,
-          picture: picture,
-        };
-        // call another cloud function to update the doc
-        const addMessage = httpsCallable(functions, "editcomitard");
-        addMessage(data1)
-          .then((result) => {
-            requireMutationSuccess(result.data);
-            const ComitardData: any = result.data;
-            // reload ComitardData
-            refetchData();
-            console.log("ComitardData:", ComitardData);
-            setPictureUpload(undefined);
-            setErrorSeverity("success");
-            setError("Comitard mis à jour avec succès");
-            setLoading(false);
-          })
-          .catch((error) => {
-            console.log("error:", error);
-            setPictureUpload(undefined);
-            setErrorSeverity("error");
-            setError(
-              "Une erreur est survenue lors de la mise à jour du comitard. serveur error."
-            );
-            setLoading(false);
-          });
+          cercle: cercle || null,
+          teneurTaule,
+          etatCivil,
+          age,
+          nbEtoiles,
+          pointFort,
+          pointFaible,
+          estLeSeul,
+          campus,
+          ...pictures,
+        });
+        requireMutationSuccess(result.data);
+        refetchData();
+        setErrorSeverity("success");
+        setError("Comitard mis à jour avec succès");
+      } catch (cause) {
+        setErrorSeverity("error");
+        setError(
+          "Une erreur est survenue lors de la mise à jour du comitard. " +
+            String(cause),
+        );
+      } finally {
+        setPictureUpload(undefined);
+        setLoading(false);
       }
     } else {
       setLoading(false);
       setErrorSeverity("error");
-      setError("Certains champs sont incorrects. Petit con.");
+      setError("Certains champs sont incorrects.");
     }
   }
   return (
@@ -377,6 +301,7 @@ export default function EditComitard({
             Éditer comitard
           </Typography>
           <Grid container spacing={2}>
+            <FormSection title="Identité" />
             <Grid item xs={12} sm={6}>
               <TextField
                 error={nameError}
@@ -384,7 +309,7 @@ export default function EditComitard({
                 value={name}
                 fullWidth
                 onChange={(e) => {
-                  let value = e.target.value;
+                  const value = e.target.value;
                   if (value.length <= txtlenght1) {
                     setName(value);
                   }
@@ -407,7 +332,7 @@ export default function EditComitard({
                 fullWidth
                 value={firstname}
                 onChange={(e) => {
-                  let value = e.target.value;
+                  const value = e.target.value;
                   if (value.length <= txtlenght1) {
                     setFirstname(value);
                   }
@@ -430,7 +355,7 @@ export default function EditComitard({
                 fullWidth
                 value={nickname}
                 onChange={(e) => {
-                  let value = e.target.value;
+                  const value = e.target.value;
                   if (value.length <= txtlenght1) {
                     setNickname(value);
                   }
@@ -453,7 +378,7 @@ export default function EditComitard({
                 fullWidth
                 value={post}
                 onChange={(e) => {
-                  let value = e.target.value;
+                  const value = e.target.value;
                   if (value.length <= txtlenght1) {
                     setPost(value);
                   }
@@ -476,13 +401,14 @@ export default function EditComitard({
                   defaultValue={cercle}
                   option={cerclesOption()}
                   helpText={"Cercle du comitard"}
-                  change={(_event: any, val: any) => {
+                  change={(_event, val) => {
                     setCercle(val);
                     setCercleError(false);
                   }}
                 />
               </Grid>
             )}
+            <FormSection title="Profil" />
             <Grid item xs={12} sm={6}>
               <QuantityInput
                 title="Teneur en taule du comitard"
@@ -491,7 +417,7 @@ export default function EditComitard({
                 error={teneurTauleError}
                 defaultValue={teneurTaule}
                 helpText={`Teneur en taule du comitard de 0 à 10`}
-                change={(_event: any, val: any) => {
+                change={(_event, val) => {
                   setTeneurTaule(val);
                   if (val == undefined) {
                     setTeneurTauleError(true);
@@ -508,7 +434,7 @@ export default function EditComitard({
                 value={etatCivil}
                 error={etatCivilError}
                 onChange={(e) => {
-                  let value = e.target.value;
+                  const value = e.target.value;
                   if (value.length <= txtlenght2) {
                     setEtatCivil(value);
                   }
@@ -532,7 +458,7 @@ export default function EditComitard({
                 error={ageError}
                 defaultValue={age}
                 helpText={`Age du comitard de 0 à 99`}
-                change={(_event: any, val: any) => {
+                change={(_event, val) => {
                   setAge(val);
                   if (val == undefined) {
                     setAgeError(true);
@@ -550,7 +476,7 @@ export default function EditComitard({
                 error={nbEtoilesError}
                 defaultValue={nbEtoiles}
                 helpText={`Nombre d'étoiles du comitard de 0 à 10 (plus que 10 étoiles faut décrocher)`}
-                change={(_event: any, val: any) => {
+                change={(_event, val) => {
                   setNbEtoiles(val);
                   if (val == undefined) {
                     setNbEtoilesError(true);
@@ -569,7 +495,7 @@ export default function EditComitard({
                 error={pointFortError}
                 value={pointFort}
                 onChange={(e) => {
-                  let value = e.target.value;
+                  const value = e.target.value;
                   if (value.length <= txtlenght2) {
                     setPointFort(value);
                   }
@@ -594,7 +520,7 @@ export default function EditComitard({
                 error={pointFaibleError}
                 value={pointFaible}
                 onChange={(e) => {
-                  let value = e.target.value;
+                  const value = e.target.value;
                   if (value.length <= txtlenght2) {
                     setPointFaible(value);
                   }
@@ -619,7 +545,7 @@ export default function EditComitard({
                 error={estLeSeulError}
                 value={estLeSeul}
                 onChange={(e) => {
-                  let value = e.target.value;
+                  const value = e.target.value;
                   if (value.length <= txtlenght2) {
                     setEstLeSeul(value);
                   }
@@ -641,14 +567,14 @@ export default function EditComitard({
                 isError={campusError}
                 option={changerCampus}
                 helpText={"Chaud changer de campus?"}
-                change={(_event: any, val: any) => {
+                change={(_event, val) => {
                   console.log("campus changed to ", val);
                   setCampus(val);
                   setCampusError(false);
                 }}
               />
             </Grid>
-            <Divider />
+            <FormSection title="Photo" />
 
             {pictureUpdated ? (
               <Grid item xs={12} sm={12}>
@@ -672,7 +598,11 @@ export default function EditComitard({
                     src={picture}
                     alt=""
                     width="100"
-                    style={{ width: "100%" }}
+                    style={{
+                      width: "100%",
+                      maxHeight: 240,
+                      objectFit: "contain",
+                    }}
                   />
                   <div className="image-item__btn-wrapper">
                     <Button
@@ -690,37 +620,25 @@ export default function EditComitard({
               </Grid>
             )}
 
-            <Divider />
-
-            <Grid item xs={12} sm={12}>
+            <FormActions error={error} severity={errorSeverity}>
               <LoadingButton
                 size="large"
-                variant="contained"
-                fullWidth
+                variant="outlined"
                 onClick={close}
-                color="error"
+                color="inherit"
               >
                 Annuler
               </LoadingButton>
-            </Grid>
-
-            <Grid item xs={12} sm={12}>
               <LoadingButton
                 size="large"
                 variant="contained"
-                fullWidth
                 onClick={handleEditComitard}
                 loading={loading}
               >
                 Mettre à jour comitard
               </LoadingButton>
-            </Grid>
+            </FormActions>
           </Grid>
-          {error && (
-            <Alert sx={{ mt: 3 }} severity={errorSeverity}>
-              {error}
-            </Alert>
-          )}
         </CardContent>
       </Card>
     </>

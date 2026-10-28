@@ -6,14 +6,15 @@ import imageCompression from 'browser-image-compression';
 import { httpsCallable } from 'firebase/functions';
 import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
 import type { StorageError, UploadTaskSnapshot } from 'firebase/storage';
-import { useAuth } from '../../src/auth/AuthProvider';
-import { functions, storage } from '../../src/firebase_config';
+import { useAuth } from '../../src/auth/auth-context';
+import { functions } from "../../src/firebase_functions";
+import { storage } from "../../src/firebase_storage";
 import NewComitard from '../../src/sections/admin-account/new_comitard';
 import EditComitard from '../../src/sections/admin-account/edit_comitard';
 
 vi.mock('firebase/functions', () => ({ httpsCallable: vi.fn() }));
 vi.mock('firebase/storage', () => ({ ref: vi.fn(), uploadBytesResumable: vi.fn(), getDownloadURL: vi.fn() }));
-vi.mock('../../src/auth/AuthProvider', () => ({ useAuth: vi.fn() }));
+vi.mock('../../src/auth/auth-context', () => ({ useAuth: vi.fn() }));
 vi.mock('browser-image-compression', () => ({ default: vi.fn() }));
 // Icons fetch definitions over the network; keep the form controls real.
 vi.mock('../../src/components/iconify/iconify', () => ({ default: () => null }));
@@ -87,6 +88,7 @@ async function renderForm(mode: Mode, options: { admin?: boolean; values?: Parti
           admin={admin} refetchData={refetchData} close={close} />}
   </ThemeProvider>);
   if (mode === 'create') await user.click(screen.getByRole('button', { name: 'Créer nouveau comitard' }));
+  await screen.findByLabelText('Nom');
   const submit = () => screen.getByRole('button', { name: mode === 'create' ? 'Créer comitard' : 'Mettre à jour comitard' });
   return { user, refetchData, close, submit };
 }
@@ -121,8 +123,8 @@ async function fillNewForm(user: User, options: { admin?: boolean; omit?: 'circl
 }
 
 async function completeUpload() {
-  const complete = observeUpload.mock.calls.at(-1)![3] as () => void;
-  await act(async () => complete());
+  const completions = observeUpload.mock.calls.slice(-2).map(call => call[3] as () => void);
+  await act(async () => completions.forEach(complete => complete()));
 }
 
 async function prepareForm(mode: Mode, replacement = false) {
@@ -136,6 +138,16 @@ async function prepareForm(mode: Mode, replacement = false) {
 }
 
 describe('profile creation', formTests, () => {
+  it('keeps the compressed photo usable if thumbnail generation fails', async () => {
+    vi.mocked(imageCompression).mockResolvedValueOnce(compressedFile).mockRejectedValueOnce(new Error('Thumbnail unavailable'));
+    const { user, submit } = await renderForm('create');
+    await fillNewForm(user);
+    await user.click(submit());
+    expect(uploadBytesResumable).toHaveBeenCalledExactlyOnceWith(uploadedRef, compressedFile);
+    await completeUpload();
+    expect(save).toHaveBeenCalledWith(expect.objectContaining({ picture: uploadedPicture, pictureThumbnail: uploadedPicture }));
+    expect(screen.getByRole('alert')).toHaveTextContent('Comitard créé avec succès');
+  });
   it('validates required fields before uploading or saving', async () => {
     const { user, submit, refetchData } = await renderForm('create');
     await user.click(submit());
@@ -159,7 +171,7 @@ describe('profile creation', formTests, () => {
     expect(save).not.toHaveBeenCalled();
     await completeUpload();
     expect(httpsCallable).toHaveBeenCalledWith(functions, 'addcomitard');
-    expect(save).toHaveBeenCalledExactlyOnceWith({ ...fields, editionId: 'edition', cercle: 'member', picture: uploadedPicture });
+    expect(save).toHaveBeenCalledExactlyOnceWith({ ...fields, editionId: 'edition', cercle: 'member', picture: uploadedPicture, pictureThumbnail: uploadedPicture });
     expect(refetchData).not.toHaveBeenCalled();
     expect(screen.queryByText('Comitard créé avec succès')).not.toBeInTheDocument();
     expect(screen.getByLabelText('Nom')).toHaveValue(profile.name);
@@ -172,7 +184,7 @@ describe('profile creation', formTests, () => {
     expect(screen.getByLabelText('Teneur en taule du comitard')).toHaveValue('');
     expect(screen.getByLabelText("Nombre d'étoiles du comitard")).toHaveValue('');
     expect(screen.getAllByRole('combobox')).toHaveLength(2);
-    for (const select of screen.getAllByRole('combobox')) expect(select).toHaveTextContent('Choisir une proportion');
+    for (const select of screen.getAllByRole('combobox')) expect(select).toHaveTextContent('Choisir…');
     expect(screen.getByRole('button', { name: 'Click ou glisse une image ici' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Supprimer image' })).not.toBeInTheDocument();
     expect(submit()).toBeEnabled();
@@ -343,7 +355,7 @@ describe.each(['create', 'edit'] as const)('%s validation and upload recovery', 
     expect(refetchData).not.toHaveBeenCalled();
     await user.click(submit());
     await completeUpload();
-    expect(uploadBytesResumable).toHaveBeenCalledTimes(2);
+    expect(uploadBytesResumable).toHaveBeenCalledTimes(4);
     expect(save).toHaveBeenCalledOnce();
     expect(save).toHaveBeenCalledWith(expect.objectContaining({ name: 'À conserver' }));
     expect(refetchData).toHaveBeenCalledOnce();

@@ -1,7 +1,10 @@
+import { useBoundaryTime } from "../../hooks/use-boundary-time";
+import { getEditionData } from "../../data/edition-data";
 import { useMemo } from "react";
+import type { DocumentData } from "firebase/firestore";
 import type { ResultsSplit, Cercle, Comitard, Enchere, ComitardWithMeta } from "../../types/results.types";
 
-function isRecordObject(value: unknown): value is Record<string, any> {
+function isRecordObject(value: unknown): value is DocumentData {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
 
@@ -22,8 +25,8 @@ function normalizeEncheres(
       return {
         date: e.date,
         // in DB, sender is (apparently) cercleID -> map to cercle name
-        sender: cercleNameById.get((e as any).sender) ?? "",
-        vote: (e as any).vote ?? 0,
+        sender: cercleNameById.get(e.sender) ?? "",
+        vote: e.vote ?? 0,
       };
     });
 
@@ -33,12 +36,22 @@ function normalizeEncheres(
   return [];
 }
 
-export function useComitardResults(rawDoc: any): ResultsSplit {
+export function useComitardResults(rawDoc: DocumentData | null | undefined): ResultsSplit {
+  const cercles = getEditionData(rawDoc)?.cercles ?? {};
+  const current = Date.now();
+  let nextExpiry: number | null = null;
+  for (const cercle of Object.values<DocumentData>(cercles)) {
+    for (const comitard of Object.values<DocumentData>(cercle.comitards ?? {})) {
+      const stop = comitard?.enchereStop?.toMillis();
+      if (stop > current && (nextExpiry == null || stop < nextExpiry)) nextExpiry = stop;
+    }
+  }
+  const boundaryNow = useBoundaryTime(null, nextExpiry);
   return useMemo(() => {
     const running: ComitardWithMeta[] = [];
     const closed: ComitardWithMeta[] = [];
 
-    const cerclesData = rawDoc?.data?.()?.cercles ?? rawDoc?.data()?.cercles;
+    const cerclesData = getEditionData(rawDoc)?.cercles;
     if (!isRecordObject(cerclesData)) return { running, closed };
 
     // Build cercle lookup
@@ -59,7 +72,7 @@ export function useComitardResults(rawDoc: any): ResultsSplit {
       cercles.push(cercle);
     }
 
-    const now = Date.now();
+    const now = boundaryNow;
 
     for (const cercle of cercles) {
       for (const comitard of cercle.comitards) {
@@ -86,7 +99,7 @@ export function useComitardResults(rawDoc: any): ResultsSplit {
     );
 
     return { running, closed };
-  }, [rawDoc]);
+  }, [rawDoc, boundaryNow]);
 }
 
 export function formatTimeLeft(ms: number): string {

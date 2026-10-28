@@ -1,4 +1,6 @@
-import { Alert, AlertColor, Grid } from "@mui/material";
+import FormSection from "../../components/account/form-section";
+import FormActions from "../../components/account/form-actions";
+import { AlertColor, Grid } from "@mui/material";
 import { DocumentData } from "firebase/firestore";
 import dayjs, { Dayjs } from "dayjs";
 import React, { useState } from "react";
@@ -26,41 +28,41 @@ export default function NewEdition({
   const [rules, setRules] = useState<string>(data.rules ? data.rules : "");
   // const [rulesError, setRulesError] = useState<boolean>(false);        not needed if the addionnal rules are not mandatory
   const [start, setStart] = useState<Dayjs | null>(
-    updateMode && data.start ? dayjs(data.start.toDate()) : null
+    updateMode && data.start ? dayjs(data.start.toDate()) : null,
   );
   const [stop, setStop] = useState<Dayjs | null>(
-    updateMode && data.stop ? dayjs(data.stop.toDate()) : null
+    updateMode && data.stop ? dayjs(data.stop.toDate()) : null,
   );
   const [nbFut, setNbFut] = useState<number>(
-    updateMode && data.nbFut ? data.nbFut : 100
+    updateMode && data.nbFut ? data.nbFut : 100,
   );
   const [nbFutError, setNbFutError] = useState<boolean>(false);
   const [duration, setDuration] = useState<number>(
-    updateMode && data.duration ? data.duration : 16
+    updateMode && data.duration ? data.duration : 16,
   );
   const [durationError, setDurationError] = useState<boolean>(false);
   const [nbComitard, setNbComitard] = useState<number>(
-    updateMode && data.nbComitard ? data.nbComitard : 5
+    updateMode && data.nbComitard ? data.nbComitard : 5,
   );
   const [nbComitardError, setNbComitardError] = useState<boolean>(false);
   const [enchereMin, setEnchereMin] = useState<number>(
-    updateMode && data.enchereMin ? data.enchereMin : 1
+    updateMode && data.enchereMin ? data.enchereMin : 1,
   );
   const [enchereMinError, setEnchereMinError] = useState<boolean>(false);
   const [enchereMax, setEnchereMax] = useState<number>(
-    updateMode && data.enchereMax ? data.enchereMax : 100
+    updateMode && data.enchereMax ? data.enchereMax : 100,
   );
   const [enchereMaxError, setEnchereMaxError] = useState<boolean>(false);
   const [remboursementVendeur, setRemboursementVendeur] = useState<number>(
-    updateMode && data.remboursementVendeur ? data.remboursementVendeur : 0.5
+    updateMode ? (data.remboursementVendeur ?? 0.5) : 0.5,
   );
 
   const [remboursementPerdant, setRemboursementPerdant] = useState<number>(
-    updateMode && data.remboursementPerdant ? data.remboursementPerdant : 1
+    updateMode ? (data.remboursementPerdant ?? 1) : 1,
   );
 
   const [remboursementGagnant, setRemboursementGagnant] = useState<number>(
-    updateMode && data.remboursementGagnant ? data.remboursementGagnant : 0
+    updateMode ? (data.remboursementGagnant ?? 0) : 0,
   );
 
   const [error, setError] = useState<string>("");
@@ -68,7 +70,7 @@ export default function NewEdition({
   const [errorType, setErrorType] = useState<AlertColor | undefined>("error");
 
   //console.log("updateMode: ", updateMode);
-  //console.log("remboursement gagnat:", updateMode && data.remboursementGagnant ? data.remboursementGagnant : 0)
+  //console.log("remboursement gagnat:", updateMode ? (data.remboursementGagnant ?? 0) : 0)
   function validateDates() {
     //console.log(start, stop)
     if (start && stop && start.isAfter(stop)) {
@@ -103,7 +105,7 @@ export default function NewEdition({
       return;
     } else if (!validateDates()) {
       setError(
-        "La date de fin doit être supérieur à la date de début et la période les séparant doit être plus grande que la durée d'une enchere"
+        "La date de fin doit être supérieur à la date de début et la période les séparant doit être plus grande que la durée d'une enchere",
       );
       setLoading(false);
       return;
@@ -125,7 +127,7 @@ export default function NewEdition({
       return;
     } else if (enchereMin > nbFut) {
       setError(
-        "L'enchère minimum doit être inférieur au nombre de futs par cercle"
+        "L'enchère minimum doit être inférieur au nombre de futs par cercle",
       );
       setEnchereMinError(true);
       setNbFutError(true);
@@ -141,57 +143,66 @@ export default function NewEdition({
 
       return;
     }
-    let ret = 0;
-    if (updateMode) {
-      const updateData = {
-        rules,
-        start: start?.toDate(),
-        stop: stop?.toDate(),
-        nbFut,
-        duration,
-        nbComitard,
-        enchereMin,
-        enchereMax,
-        remboursementVendeur,
-        remboursementPerdant,
-        remboursementGagnant,
-        edition: data.edition, // Set the edition field to data.edition
-      };
-      ret = await editEdition(updateData);
-    } else {
-      ret = await newEdition(
-        rules,
-        start,
-        stop,
-        nbFut,
-        duration,
-        nbComitard,
-        enchereMin,
-        enchereMax,
-        remboursementVendeur,
-        remboursementPerdant,
-        remboursementGagnant
-      );
-    }
-
-    //console.log("ret: ", ret);
-    if (ret) {
-      refetchData();
-      setErrorType("success");
+    try {
+      let ret = 0;
       if (updateMode) {
-        setError("Edition mise à jour");
+        const updateData = {
+          rules,
+          start: start?.toDate(),
+          stop: stop?.toDate(),
+          nbFut,
+          duration,
+          nbComitard,
+          enchereMin,
+          enchereMax,
+          remboursementVendeur,
+          remboursementPerdant,
+          remboursementGagnant,
+          edition: data.edition, // Set the edition field to data.edition
+        };
+        ret = await editEdition(updateData);
       } else {
-        setError("Edition créée");
+        ret = await newEdition(
+          rules,
+          start,
+          stop,
+          nbFut,
+          duration,
+          nbComitard,
+          enchereMin,
+          enchereMax,
+          remboursementVendeur,
+          remboursementPerdant,
+          remboursementGagnant,
+        );
       }
 
-      // load modal that ask to reload the website to fetch new data.
-    } else {
-      setErrorType("error");
-      setError("Erreur lors de la création de l'édition, contactez un geek");
-    }
+      //console.log("ret: ", ret);
+      if (ret) {
+        refetchData();
+        setErrorType("success");
+        if (updateMode) {
+          setError("Edition mise à jour");
+        } else {
+          setError("Edition créée");
+        }
 
-    setLoading(false);
-    console.log("create edition");
+        // load modal that ask to reload the website to fetch new data.
+      } else {
+        setErrorType("error");
+        setError("Erreur lors de la création de l'édition, contactez un geek");
+      }
+    } catch (error: unknown) {
+      setErrorType("error");
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Impossible de terminer l'opération.",
+      );
+      refetchData();
+    } finally {
+      setLoading(false);
+    }
   }
 
   // stop come after start. Duration of auction cannot be gretter than the duration of the contest (stop - start)
@@ -201,22 +212,19 @@ export default function NewEdition({
   return (
     <>
       <Grid container spacing={2}>
-        <Grid item xs={12} sm={12}>
-          <EditorWithTheme setRules={setRules} markdown={rules} />
-        </Grid>
-
+        <FormSection title="Dates" />
         <LocalizationProvider dateAdapter={AdapterDayjs}>
-          <Grid item xs={12} sm={updateMode ? 12 : 6}>
+          <Grid item xs={12} sm={6}>
             <DateTimePicker
               label="Début du mercato"
-              sx={{ width: "100%", color: "red" }}
+              sx={{ width: "100%" }}
               defaultValue={
                 data.start && updateMode ? dayjs(data.start.toDate()) : null
               }
               onChange={(e: Dayjs | null) => setStart(e)}
             />
           </Grid>
-          <Grid item xs={12} sm={updateMode ? 12 : 6}>
+          <Grid item xs={12} sm={6}>
             <DateTimePicker
               label="Fin du mercato"
               onChange={(e: Dayjs | null) => setStop(e)}
@@ -228,21 +236,20 @@ export default function NewEdition({
           </Grid>
         </LocalizationProvider>
 
-        <Grid item xs={12} sm={updateMode ? 6 : 4}>
+        <FormSection title="Limites et enchères" />
+        <Grid item xs={12} sm={6}>
           <QuantityInput
             title="Fûts par cercle"
             min={1}
             error={nbFutError}
-            defaultValue={data.nbFut && updateMode && data.nbFut}
-            helpText={`Nombre de futs qu'un cercle possède initialement. Défaut: ${
-              data.nbFut ? data.nbFut : 100
-            }`}
+            defaultValue={nbFut}
+            helpText="Budget initial de chaque cercle."
             change={(
               _event:
                 | React.FocusEvent<HTMLInputElement>
                 | React.PointerEvent
                 | React.KeyboardEvent,
-              val: number | undefined
+              val: number | undefined,
             ) => {
               if (typeof val !== "undefined") {
                 setNbFut(val);
@@ -254,21 +261,19 @@ export default function NewEdition({
           />
         </Grid>
 
-        <Grid item xs={12} sm={updateMode ? 6 : 4}>
+        <Grid item xs={12} sm={6}>
           <QuantityInput
             title="Comitards par cercle"
             min={1}
             error={nbComitardError}
-            defaultValue={data.nbComitard && updateMode && data.nbComitard}
-            helpText={`Nombre maximum de comitard qu'un cercle peut proposer à l'enchère. Défaut:  ${
-              data.nbComitard ? data.nbComitard : 5
-            }`}
+            defaultValue={nbComitard}
+            helpText="Nombre maximum de comitards par cercle."
             change={(
               _event:
                 | React.FocusEvent<HTMLInputElement>
                 | React.PointerEvent
                 | React.KeyboardEvent,
-              val: number | undefined
+              val: number | undefined,
             ) => {
               if (typeof val !== "undefined") {
                 setNbComitard(val);
@@ -280,21 +285,19 @@ export default function NewEdition({
           />
         </Grid>
 
-        <Grid item xs={12} sm={updateMode ? 6 : 4}>
+        <Grid item xs={12} sm={6}>
           <QuantityInput
             title="Durée d'une enchère"
             min={1}
             error={durationError}
-            defaultValue={data.duration && updateMode && data.duration}
-            helpText={`Durée d'une enchère en heures. Défaut: ${
-              data.duration ? data.duration : 16
-            }`}
+            defaultValue={duration}
+            helpText="Durée en heures."
             change={(
               _event:
                 | React.FocusEvent<HTMLInputElement>
                 | React.PointerEvent
                 | React.KeyboardEvent,
-              val: number | undefined
+              val: number | undefined,
             ) => {
               if (typeof val !== "undefined") {
                 setDuration(val);
@@ -311,16 +314,14 @@ export default function NewEdition({
             title="Enchère minimum"
             min={1}
             error={enchereMinError}
-            defaultValue={data.enchereMin && updateMode && data.enchereMin}
-            helpText={`Enchere minimum qu'il cercle peut mettre sur un comitard. Defaut: ${
-              data.enchereMin ? data.enchereMin : 1
-            }`}
+            defaultValue={enchereMin}
+            helpText="Mise minimale, en fûts."
             change={(
               _event:
                 | React.FocusEvent<HTMLInputElement>
                 | React.PointerEvent
                 | React.KeyboardEvent,
-              val: number | undefined
+              val: number | undefined,
             ) => {
               if (typeof val !== "undefined") {
                 setEnchereMin(val);
@@ -336,16 +337,14 @@ export default function NewEdition({
             title="Enchere maximum"
             min={1}
             error={enchereMaxError}
-            defaultValue={data.enchereMax && updateMode && data.enchereMax}
-            helpText={`Enchere maximum qu'il cercle peut mettre sur un comitard. Defaut ${
-              data.enchereMax ? data.enchereMax : 100
-            }`}
+            defaultValue={enchereMax}
+            helpText="Mise maximale, en fûts."
             change={(
               _event:
                 | React.FocusEvent<HTMLInputElement>
                 | React.PointerEvent
                 | React.KeyboardEvent,
-              val: number | undefined
+              val: number | undefined,
             ) => {
               if (typeof val !== "undefined") {
                 setEnchereMax(val);
@@ -356,9 +355,11 @@ export default function NewEdition({
             }}
           />
         </Grid>
-        <Grid item xs={12} sm={updateMode ? 6 : 4}>
+        <FormSection title="Remboursements" />
+        <Grid item xs={12} sm={6}>
           <UnstyledSelectIntroduction
             defaultValue={remboursementVendeur}
+            label="Cercle vendeur"
             option={{
               "100%": 1,
               "75%": 0.75,
@@ -366,15 +367,14 @@ export default function NewEdition({
               "25%": 0.25,
               "0%": 0,
             }}
-            helpText={`Pourcentage de la somme des futs mis en enchère qui est remboursée au cercle vendant son comitard. Défaut: ${
-              data.remboursementVendeur ? data.remboursementVendeur * 100 : 50
-            }%`}
-            change={(_event: any, val: any) => setRemboursementVendeur(val)}
+            helpText="Part remboursée au cercle vendeur."
+            change={(_event, val) => { if (val !== null) setRemboursementVendeur(val); }}
           />
         </Grid>
-        <Grid item xs={12} sm={updateMode ? 6 : 4}>
+        <Grid item xs={12} sm={6}>
           <UnstyledSelectIntroduction
             defaultValue={remboursementPerdant}
+            label="Cercle perdant"
             option={{
               "100%": 1,
               "75%": 0.75,
@@ -382,15 +382,14 @@ export default function NewEdition({
               "25%": 0.25,
               "0%": 0,
             }}
-            helpText={`Pourcentage de la somme des futs mis en enchère qui est remboursé au cercle perdant l'enchère. Défaut: ${
-              data.remboursementPerdant ? data.remboursementPerdant * 100 : 100
-            }%`}
-            change={(_event: any, val: any) => setRemboursementPerdant(val)}
+            helpText="Part remboursée au cercle perdant."
+            change={(_event, val) => { if (val !== null) setRemboursementPerdant(val); }}
           />
         </Grid>
-        <Grid item xs={12} sm={updateMode ? 6 : 4}>
+        <Grid item xs={12} sm={6}>
           <UnstyledSelectIntroduction
             defaultValue={remboursementGagnant}
+            label="Cercle gagnant"
             option={{
               "100%": 1,
               "75%": 0.75,
@@ -398,43 +397,35 @@ export default function NewEdition({
               "25%": 0.25,
               "0%": 0,
             }}
-            helpText={`Pourcentage de la somme des futs mis en enchère qui est remboursé au cercle gagnant l'enchère. Défaut: ${
-              data.remboursementGagnant ? data.remboursementGagnant * 100 : 0
-            }%`}
-            change={(_event: any, val: any) => setRemboursementGagnant(val)}
+            helpText="Part remboursée au cercle gagnant."
+            change={(_event, val) => { if (val !== null) setRemboursementGagnant(val); }}
           />
         </Grid>
-        {updateMode && (
-          <Grid item xs={12} sm={12}>
+        <FormSection title="Règlement" />
+        <Grid item xs={12}>
+          <EditorWithTheme setRules={setRules} markdown={rules} />
+        </Grid>
+        <FormActions error={error} severity={errorType}>
+          {updateMode && (
             <LoadingButton
               size="large"
-              variant="contained"
-              color="error"
-              fullWidth
+              variant="outlined"
+              color="inherit"
               onClick={close}
             >
-              annuler
+              Annuler
             </LoadingButton>
-          </Grid>
-        )}
-
-        <Grid item xs={12} sm={12}>
+          )}
           <LoadingButton
             size="large"
             variant="contained"
-            fullWidth
             loading={loading}
             onClick={handleCreateEdition}
           >
             {updateMode ? "Mettre à jour édition" : "Créer édition"}
           </LoadingButton>
-        </Grid>
+        </FormActions>
       </Grid>
-      {error && (
-        <Alert sx={{ mt: 3 }} severity={errorType}>
-          {error}
-        </Alert>
-      )}
     </>
   );
 }

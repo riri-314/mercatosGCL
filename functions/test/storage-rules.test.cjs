@@ -122,3 +122,11 @@ test("deactivating an edition immediately blocks public SDK reads", async () => 
   });
   await assertFails(getBytes(picture));
 });
+
+test("a transition freezes public picture reads and member uploads", async () => {
+  await environment.withSecurityRulesDisabled(context => updateDoc(doc(context.firestore(), "editions/active"), { transitioning: true }));
+  await assertFails(getBytes(ref(client(null), "active/member/photo.jpg")));
+  await assertFails(getBytes(ref(client(member), "active/member/photo.jpg")));
+  await assertFails(uploadBytes(ref(client(member), "active/member/late.jpg"), bytes, { contentType: "image/jpeg" }));
+  await assertSucceeds(getBytes(ref(client(admin), "active/member/photo.jpg")));
+});

@@ -9,7 +9,9 @@
     "build:watch": "tsc -w && cp src/*.json lib",
     "serve": "firebase serve --only functions",
     "start": "concurrently \"npm run build:watch\" \"npm run serve\"",
-    "test": "npm run build && firebase emulators:exec --only firestore,auth,storage --project demo-mercatos-security --config ../firebase.test.json \"node --test --test-concurrency=1 test/*.test.cjs\""
+    "test": "npm run build && firebase emulators:exec --only firestore,auth,storage --project demo-mercatos-security --config ../firebase.test.json \"node --test --test-concurrency=1 test/*.test.cjs\"",
+    "seed:emulators": "node scripts/seed-emulators.cjs",
+    "benchmark:edition": "npm run build && firebase emulators:exec --only firestore --project demo-mercatos-benchmark --config ../firebase.test.json \"node scripts/measure-edition.cjs\""
   },
   "engines": {
     "node": "24"

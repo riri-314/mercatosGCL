@@ -3,7 +3,12 @@ import { alpha, styled } from '@mui/material/styles';
 
 // ----------------------------------------------------------------------
 
-export const StyledLabel = styled(Box)(({ theme, ownerState }: any) => {
+export interface LabelState {
+  color: 'default' | 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error';
+  variant: 'filled' | 'outlined' | 'soft';
+}
+
+export const StyledLabel = styled(Box)<{ ownerState: LabelState }>(({ theme, ownerState }) => {
   const lightMode = theme.palette.mode === 'light';
 
   const filledVariant = ownerState.variant === 'filled';

@@ -1,242 +1,195 @@
 import { useEffect } from "react";
-
-import Box from "@mui/material/Box";
-import Stack from "@mui/material/Stack";
-import Drawer from "@mui/material/Drawer";
-import { alpha } from "@mui/material/styles";
-import ListItemButton from "@mui/material/ListItemButton";
-
+import {
+  Box,
+  Button,
+  Drawer,
+  IconButton,
+  LinearProgress,
+  ListItemButton,
+  Stack,
+  Typography,
+} from "@mui/material";
+import { alpha, useTheme } from "@mui/material/styles";
+import useMediaQuery from "@mui/material/useMediaQuery";
 import { NAV } from "./config-layout";
-
-import { useResponsive } from "../../hooks/use-responsive";
-import { useAuth } from "../../auth/AuthProvider";
-import SvgColor from "../../components/svg-color/svg-color";
-import Logo from "../../components/logo/logo";
+import { useAuth } from "../../auth/auth-context";
+import { useData } from "../../data/data-context";
+import { getEditionData } from "../../data/edition-data";
 import { usePathname } from "../../routes/hooks/use-pathname";
 import RouterLink from "../../routes/components/router-link";
-import Scrollbar from "../../components/scrollbar/scrollbar";
-import { Typography } from "@mui/material";
+import Logo from "../../components/logo/logo";
+import ClubIcon from "../../components/club-icon/club-icon";
 
-import LinearProgress, {
-  linearProgressClasses,
-} from "@mui/material/LinearProgress";
-import { styled } from "@mui/material/styles";
-import { useData } from "../../data/DataProvider";
-
-// ----------------------------------------------------------------------
-
-export default function Nav({ openNav, onCloseNav }: any) {
+export default function Nav({ openNav, onCloseNav }: { openNav: boolean; onCloseNav: () => void }) {
   const pathname = usePathname();
-  //const { user, isAdmin } = useAuth();
-
-  
-  const { data } = useData();
-
-  const upLg = useResponsive("lg", "tt", "up"); //fix
-
-  useEffect(() => {
-    if (openNav) {
-      onCloseNav();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname]);
-
-  function nbFutsLeft(): number {
-    if (user) {
-      const nbFuts = data?.data().cercles[user?.uid]?.nbFut;
-      if (nbFuts) {
-        return nbFuts;
-      } else {
-        return 0;
-      }
-    } else {
-      return 0;
-    }
-  }
-
-  function nbFutsMax(): number {
-    const nbFuts = data?.data().nbFut;
-    if (nbFuts) {
-      return nbFuts;
-    } else {
-      return 0;
-    }
-  }
-
-  function futsPercent(): number {
-    return (nbFutsLeft() / nbFutsMax()) * 100;
-  }
-
-  const icon = (name: string) => (
-    <SvgColor
-      src={`/assets/icons/navbar/${name}.svg`}
-      sx={{ width: 1, height: 1 }}
-    />
-  );
-
   const { user, isAdmin } = useAuth();
-
-  const navConfig = [
-    {
-      title: "résultats",
-      path: "/",
-      icon: icon("ic_analytics"),
-    },
-    {
-      title: "comitards",
-      path: "/comitards",
-      icon: icon("ic_user"),
-    },
-    {
-      title: "Règlement",
-      path: "/rules",
-      icon: icon("ic_disabled"),
-    },
-    {
-      title: user ? "Compte" : "Connexion",
-      path: user ? "/account" : "/login",
-      icon: icon("ic_lock"),
-    },
+  const { data } = useData();
+  const upLg = useMediaQuery(useTheme().breakpoints.up("lg"));
+  const edition = getEditionData(data);
+  const balance = user ? (edition?.cercles?.[user.uid]?.nbFut ?? 0) : 0;
+  const maximum = edition?.nbFut ?? 0;
+  useEffect(() => {
+    onCloseNav();
+  }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
+  const items = [
+    { title: "Résultats", path: "/", icon: "activity" as const },
+    { title: "Comitards", path: "/comitards", icon: "people" as const },
+    { title: "Règlement", path: "/rules", icon: "book" as const },
   ];
-
-  const renderMenu = (
-    <Stack component="nav" spacing={0.5} sx={{ px: 2 }}>
-      {navConfig.map((item) => (
-        <NavItem key={item.title} item={item} />
-      ))}
-    </Stack>
-  );
-
-  const BorderLinearProgress = styled(LinearProgress)(({ theme }) => ({
-    height: 10,
-    borderRadius: 5,
-    [`&.${linearProgressClasses.colorPrimary}`]: {
-      backgroundColor:
-        theme.palette.grey[theme.palette.mode === "light" ? 400 : 800],
-    },
-    [`& .${linearProgressClasses.bar}`]: {
-      borderRadius: 5,
-      backgroundColor: theme.palette.mode === "light" ? "#1a90ff" : "#308fe8",
-    },
-  }));
-
-  const renderFutsLeft = (
-    <Box sx={{ px: 2.5, pb: 3, mt: 10 }}>
-      <Stack
-        alignItems="center"
-        spacing={3}
-        sx={{ pt: 5, borderRadius: 2, position: "relative" }}
-      >
-        <Box sx={{ textAlign: "center" }}>
-          <Typography> {String(nbFutsLeft())} Fûts sur {String(nbFutsMax())} restants</Typography>
-
-          <BorderLinearProgress variant="determinate" value={futsPercent()} />
-        </Box>
-      </Stack>
-    </Box>
-  );
-
-  const renderContent = (
-    <Scrollbar
-      sx={{
-        height: 1,
-        "& .simplebar-content": {
-          height: 1,
-          display: "flex",
-          flexDirection: "column",
-        },
-      }}
-    >
-      <Logo />
-
-      {renderMenu}
-    </Scrollbar>
-  );
-
-  return (
+  const content = (
     <Box
       sx={{
-        flexShrink: { lg: 0 },
-        width: { lg: NAV.WIDTH },
+        height: 1,
+        display: "flex",
+        flexDirection: "column",
+        p: 2,
+        overflowY: "auto",
       }}
     >
-      {upLg ? (
-        <>
-          <Box
-            sx={{
-              height: 1,
-              position: "fixed",
-              width: NAV.WIDTH,
-
-              borderRight: (theme) => `dashed 1px ${theme.palette.divider}`,
-            }}
+      <Box
+        sx={{
+          px: 1,
+          pt: 1,
+          pb: 4,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        <Logo size={64} />
+        {!upLg && (
+          <IconButton
+            aria-label="Fermer le menu"
+            onClick={onCloseNav}
+            sx={{ minWidth: 44, minHeight: 44 }}
           >
-            {renderContent}
-          </Box>
-          <Box
+            <ClubIcon name="close" />
+          </IconButton>
+        )}
+      </Box>
+      <Stack component="nav" aria-label="Navigation principale" spacing={0.5}>
+        {items.map((item) => (
+          <ListItemButton
+            key={item.path}
+            component={RouterLink}
+            href={item.path}
+            aria-current={pathname === item.path ? "page" : undefined}
             sx={{
-              position: "fixed",
-              width: NAV.WIDTH,
-              bottom: 0,
-              borderRight: (theme) => `dashed 1px ${theme.palette.divider}`,
-            }}
-          >
-            {user && !isAdmin() && renderFutsLeft}
-          </Box>
-        </>
-      ) : (
-        <>
-          <Drawer
-            open={openNav}
-            onClose={onCloseNav}
-            PaperProps={{
-              sx: {
-                width: NAV.WIDTH,
+              minHeight: 48,
+              px: 2,
+              gap: 1.5,
+              borderRadius: 1.5,
+              color: pathname === item.path ? "primary.main" : "text.secondary",
+              bgcolor: (theme) =>
+                pathname === item.path
+                  ? alpha(theme.palette.primary.main, 0.08)
+                  : "transparent",
+              "&:hover": {
+                bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1),
               },
             }}
           >
-            {renderContent}
-            {user && !isAdmin() && renderFutsLeft}
-          </Drawer>
-        </>
-      )}
+            <ClubIcon name={item.icon} sx={{ fontSize: 22 }} />
+            <Typography
+              sx={{
+                fontSize: 14,
+                fontWeight: pathname === item.path ? 600 : 400,
+              }}
+            >
+              {item.title}
+            </Typography>
+          </ListItemButton>
+        ))}
+      </Stack>
+      <Box sx={{ mt: "auto", pt: 4 }}>
+        {user && !isAdmin() && (
+          <Box
+            sx={{
+              p: 2,
+              bgcolor: (theme) => alpha(theme.palette.primary.main, 0.04),
+              borderRadius: 2,
+              mb: 2,
+            }}
+          >
+            <Typography sx={{ fontSize: 12, color: "text.secondary", mb: 1 }}>
+              Fûts restants
+            </Typography>
+            <Typography
+              sx={{ fontSize: 26, fontWeight: 700, color: "primary.main" }}
+            >
+              {balance}
+              <Box
+                component="span"
+                sx={{
+                  fontSize: 12,
+                  fontWeight: 400,
+                  color: "text.secondary",
+                  ml: 1,
+                }}
+              >
+                / {maximum}
+              </Box>
+            </Typography>
+            <LinearProgress
+              variant="determinate"
+              value={
+                maximum > 0
+                  ? Math.min(100, Math.max(0, (balance / maximum) * 100))
+                  : 0
+              }
+              sx={{ mt: 1.5, height: 5, borderRadius: 1 }}
+            />
+          </Box>
+        )}
+        <Button
+          component={RouterLink}
+          href={user ? "/account" : "/login"}
+          fullWidth
+          startIcon={
+            <ClubIcon name={user ? "people" : "login"} sx={{ fontSize: 20 }} />
+          }
+          sx={{
+            justifyContent: "flex-start",
+            color: "text.secondary",
+            fontSize: 13,
+            minHeight: 48,
+            px: 2,
+          }}
+        >
+          {user ? (isAdmin() ? "Administration" : "Mon compte") : "Connexion"}
+        </Button>
+      </Box>
     </Box>
   );
-}
-
-// ----------------------------------------------------------------------
-
-function NavItem({ item }: any) {
-  const pathname = usePathname();
-
-  const active = item.path === pathname;
-
+  const paper = {
+    width: NAV.WIDTH,
+    bgcolor: "background.paper",
+    borderRight: "1px solid",
+    borderColor: "divider",
+  };
   return (
-    <ListItemButton
-      component={RouterLink}
-      href={item.path}
-      sx={{
-        minHeight: 44,
-        borderRadius: 0.75,
-        typography: "body2",
-        color: "text.secondary",
-        textTransform: "capitalize",
-        fontWeight: "fontWeightMedium",
-        ...(active && {
-          color: "primary.main",
-          fontWeight: "fontWeightSemiBold",
-          bgcolor: (theme) => alpha(theme.palette.primary.main, 0.08),
-          "&:hover": {
-            bgcolor: (theme) => alpha(theme.palette.primary.main, 0.16),
-          },
-        }),
-      }}
-    >
-      <Box component="span" sx={{ width: 24, height: 24, mr: 2 }}>
-        {item.icon}
-      </Box>
-
-      <Box component="span">{item.title} </Box>
-    </ListItemButton>
+    <Box sx={{ flexShrink: { lg: 0 }, width: { lg: NAV.WIDTH } }}>
+      {upLg ? (
+        <Box
+          component="aside"
+          sx={{
+            ...paper,
+            position: "fixed",
+            inset: "var(--cercle-session-banner-height, 0px) auto 0 0",
+            height: "calc(100dvh - var(--cercle-session-banner-height, 0px))",
+          }}
+        >
+          {content}
+        </Box>
+      ) : (
+        <Drawer open={openNav} onClose={onCloseNav} PaperProps={{ sx: {
+          ...paper,
+          top: "var(--cercle-session-banner-height, 0px)",
+          height: "calc(100% - var(--cercle-session-banner-height, 0px))",
+        } }}>
+          {content}
+        </Drawer>
+      )}
+    </Box>
   );
 }

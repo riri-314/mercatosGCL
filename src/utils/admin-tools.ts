@@ -1,24 +1,21 @@
+import { getEditionData } from "../data/edition-data";
 import {
   collection,
   getDocs,
   updateDoc,
   doc,
   deleteField,
-  writeBatch,
   query,
   where,
   DocumentData,
-  increment,
-  runTransaction,
 } from "firebase/firestore";
-import { auth, db, functions } from "../firebase_config";
+import { db } from "../firebase_config";
+import { functions } from "../firebase_functions";
 import { Dayjs } from "dayjs";
 import { httpsCallable } from "firebase/functions";
-import { sendPasswordResetEmail } from "firebase/auth";
+import { requireMutationSuccess } from "./callable-result";
 
-type Dict = {
-  [key: string]: any;
-};
+type Dict = DocumentData;
 
 const editionsRef = collection(db, "editions");
 
@@ -38,120 +35,52 @@ export async function updateMDP(uid: string, newMDP: string): Promise<number> {
   }
 }
 
-// This function is used to add a new edition to the database.
-// It takes a string (description), two dates (start and end) and a number (votes) as parameters.
-// The string represents the description of the edition, the first date is the start date and the second date is the end date.
-// The number represents the number of votes per cercle.
-// The function first gets the number of the last edition in the database.
-// Then it creates a new document in the 'editions' collection with the provided data.
-// The function does not return anything.
+const pendingEditionOperations = new Map<string, { id: string; signature: string }>();
+
+async function editionOperation(name: string, payload: Record<string, unknown>) {
+  const key = `mercatos:${name}`;
+  const signature = JSON.stringify(payload);
+  let saved = pendingEditionOperations.get(name);
+  try { saved = saved ?? JSON.parse(localStorage.getItem(key) || "null") ?? undefined; } catch { /* Storage may be unavailable. */ }
+  const operationId = saved?.signature === signature ? saved.id : crypto.randomUUID();
+  pendingEditionOperations.set(name, { id: operationId, signature });
+  try { localStorage.setItem(key, JSON.stringify({ id: operationId, signature })); } catch { /* Server state remains durable. */ }
+  const result = await httpsCallable(functions, name)({ ...payload, operationId });
+  const response = result.data as { success?: boolean; state?: string };
+  if (response.state === "pending") {
+    throw new Error("L'opération est en attente de reprise automatique. Consultez son état dans le compte administrateur.");
+  }
+  requireMutationSuccess(response);
+  if (pendingEditionOperations.get(name)?.id === operationId) pendingEditionOperations.delete(name);
+  try {
+    if (JSON.parse(localStorage.getItem(key) || "null")?.id === operationId) localStorage.removeItem(key);
+  } catch { /* No persisted client state. */ }
+  return 1;
+}
+
 export async function newEdition(
-  rules: String,
+  rules: string,
   start: Dayjs | null,
   end: Dayjs | null,
-  votes: Number,
-  enchere_duration: Number,
-  comitard_per_cercle: Number,
-  min_encheres: Number,
-  max_encheres: Number,
-  remboursementVendeur: Number,
-  remboursementPerdant: Number,
-  remboursementGagnant: Number
+  votes: number,
+  enchere_duration: number,
+  comitard_per_cercle: number,
+  min_encheres: number,
+  max_encheres: number,
+  remboursementVendeur: number,
+  remboursementPerdant: number,
+  remboursementGagnant: number
 ): Promise<number> {
-  let newEdition = 0;
-  let oldCercles: any = {};
-  let errorCode = 0;
-  let oldEditionId = "";
+  return editionOperation("createedition", {
+    rules, startMs: start?.valueOf(), stopMs: end?.valueOf(), nbFut: votes,
+    duration: enchere_duration, nbComitard: comitard_per_cercle,
+    enchereMin: min_encheres, enchereMax: max_encheres,
+    remboursementVendeur, remboursementPerdant, remboursementGagnant,
+  });
+}
 
-  // Retrieve all documents in the "editions" collection
-  await getDocs(editionsRef)
-    .then((snapshot) => {
-      const batch = writeBatch(db);
-      // Loop through each document in the collection and update the "active" field to false
-      snapshot.forEach((Doc) => {
-        const edition = Doc.data().edition;
-        if (edition > newEdition) {
-          oldEditionId = Doc.id;
-          newEdition = edition;
-          oldCercles = Doc.data().cercles;
-          Object.keys(oldCercles).forEach(function (cercleId) {
-            const cercle = oldCercles[cercleId];
-            if (cercle.hasOwnProperty("comitards")) {
-              oldCercles[cercleId].comitards = {};
-              oldCercles[cercleId].nbFut = votes;
-            }
-          });
-        }
-        const docRef = doc(editionsRef, Doc.id);
-        batch.update(docRef, { active: false });
-      });
-
-      const newEditionData = {
-        rules: rules,
-        edition: newEdition + 1,
-        stop: end?.toDate(),
-        start: start?.toDate(),
-        nbFut: votes,
-        cercles: oldCercles,
-        duration: enchere_duration,
-        nbComitard: comitard_per_cercle,
-        enchereMin: min_encheres,
-        enchereMax: max_encheres,
-        active: true,
-        remboursementVendeur: remboursementVendeur,
-        remboursementPerdant: remboursementPerdant,
-        remboursementGagnant: remboursementGagnant,
-      };
-
-      // Create a new document in the same collection
-      const newDocRef = doc(editionsRef); // Auto-generated document ID
-      batch.set(newDocRef, newEditionData); // Add new document data
-
-      console.log("created new doc, calling reset password function");
-      // reset all oldCercles passwords
-      const addMessage = httpsCallable(functions, "resetpasswords");
-      addMessage({ editionId: oldEditionId })
-        .then((result) => {
-          const data: any = result.data;
-          //console.log("data:", data);
-          const emailArray = data.emails;
-          //console.log("emailArray:", emailArray);
-          emailArray.forEach(async (email: string) => {
-            console.log("sending reset password email:", email);
-            await sendPasswordResetEmail(auth, email);
-          });
-        })
-        .catch((error) => {
-          console.log("error while reseting passwords:", error);
-        });
-
-      // Commit the batched write operation
-      return batch.commit();
-    })
-    .then(async () => {
-      console.log(
-        "All active fields set to false, and a new document added successfully."
-      );
-      // Revoke the public picture URLs of the edition that just closed.
-      if (oldEditionId) {
-        try {
-          const lockFn = httpsCallable(functions, "lockeditionpictures");
-          const res = await lockFn({ editionId: oldEditionId });
-          console.log("Locked old edition pictures:", res.data);
-        } catch (e) {
-          console.log("Error locking old edition pictures:", e);
-        }
-      }
-      errorCode = 1;
-    })
-    .catch((error) => {
-      console.error(
-        "Error updating active fields and adding a new document:",
-        error
-      );
-    });
-
-  return errorCode;
+export async function resetEditionPasswords(editionId: string) {
+  return editionOperation("resetpasswords", { editionId });
 }
 
 export async function editEdition(data: Dict) {
@@ -178,7 +107,7 @@ export async function editEdition(data: Dict) {
 export async function lockAllPastEditions(): Promise<number> {
   try {
     const fn = httpsCallable(functions, "lockallpasteditions");
-    const res: any = await fn({});
+    const res = await fn({});
     console.log("Locked past editions:", res.data);
     return 1;
   } catch (e) {
@@ -190,50 +119,7 @@ export async function lockAllPastEditions(): Promise<number> {
 //deleting edition is forbiden, can only be done from the web firebase console.
 
 export async function setActiveEdition(edition: number) {
-  const editionsQuery = query(editionsRef);
-  const editionsSnapshot = await getDocs(editionsQuery);
-
-  let foundEdition = false;
-  let targetId = "";
-  const toLock: string[] = [];
-
-  const batch = writeBatch(db);
-
-  editionsSnapshot.forEach((doc) => {
-    if (doc.data().edition === edition) {
-      batch.update(doc.ref, { active: true });
-      foundEdition = true;
-      targetId = doc.id;
-    } else {
-      // Only editions transitioning active -> inactive need locking.
-      if (doc.data().active === true) {
-        toLock.push(doc.id);
-      }
-      batch.update(doc.ref, { active: false });
-    }
-  });
-
-  if (!foundEdition) {
-    console.log(`No edition found with edition number ${edition}`);
-    return 0;
-  }
-
-  await batch.commit();
-
-  // Restore the newly active edition's public picture URLs, and revoke the
-  // ones that were just deactivated.
-  try {
-    const unlockFn = httpsCallable(functions, "unlockeditionpictures");
-    await unlockFn({ editionId: targetId });
-    const lockFn = httpsCallable(functions, "lockeditionpictures");
-    for (const id of toLock) {
-      await lockFn({ editionId: id });
-    }
-  } catch (e) {
-    console.log("Error toggling edition picture locks:", e);
-  }
-
-  return 1;
+  return editionOperation("activateedition", { edition });
 }
 
 // This function is used to remove a comitard from the database.
@@ -267,9 +153,9 @@ export async function editComitard(id: string, comitardID: string, data: Dict) {
 }
 
 function getEnchre(data: DocumentData, enchereID: string) {
-  const activeEditionCercle = data.data().cercles;
+  const activeEditionCercle = getEditionData(data)?.cercles ?? {};
 
-  let enchereFound: any = null;
+  let enchereFound: DocumentData | null = null;
   let comitardIdFound: string | null = null;
   let cercleIdFound: string | null = null;
   let senderId: string | null = null;
@@ -296,38 +182,18 @@ function getEnchre(data: DocumentData, enchereID: string) {
 }
 
 export async function editEnchereAmount(
-  amountReemboursement: number,
+  refund: boolean,
   data: DocumentData,
   enchereID: string,
   amount: number
 ) {
-  const editionId = data.id;
-  const { enchereFound, comitardIdFound, cercleIdFound, senderId } = getEnchre(
-    data,
-    enchereID
-  );
-
-  if (enchereFound === null) {
-    console.log("Error enchere not found");
-    return -1;
-  } else {
-    console.log("enchereFound: ", enchereFound);
-    // only update enchere amount
-    const s = `cercles.${cercleIdFound}.comitards.${comitardIdFound}.encheres.${enchereID}.vote`;
-    // update the document
-    const docRef = doc(db, "editions", editionId);
-    await updateDoc(docRef, {
-      [s]: amount,
-    });
-
-    // increment fut amount of the enchere sender by amountReemboursement
-    console.log("Reimbursing cercle ", senderId, " by ", amountReemboursement);
-    const t = `cercles.${senderId}.nbFut`;
-    await updateDoc(docRef, {
-      [t]: increment(amountReemboursement),
-    });
-    return 0;
-  }
+  const { enchereFound } = getEnchre(data, enchereID);
+  if (!enchereFound) return -1;
+  const result = await httpsCallable(functions, "editbid")({
+    editionId: data.id, bidId: enchereID, expectedAmount: enchereFound.vote, amount, refund,
+  });
+  requireMutationSuccess(result.data);
+  return 0;
 }
 
 export type DeleteEnchereStatus =
@@ -346,105 +212,20 @@ export async function deleteEnchereWithStates(
   enchereID: string,
   rembourse: boolean
 ): Promise<DeleteEnchereResult> {
-  const editionId = originalSnap.id;
-  const editionRef = doc(db, "editions", editionId);
-  const originalData = originalSnap.data();
-
-  if (!originalData) {
-    return {
-      status: "error",
-      message: "Original document data is missing.",
-    };
-  }
-
+  if (!getEditionData(originalSnap)) return { status: "error", message: "Original document data is missing." };
+  const { enchereFound } = getEnchre(originalSnap, enchereID);
+  if (!enchereFound) return { status: "error", message: "Impossible de trouver cette enchère." };
   try {
-    const result = await runTransaction(db, async (tx) => {
-      const snap = await tx.get(editionRef);
-      if (!snap.exists()) {
-        return {
-          status: "error",
-          message: "L'édition n'existe plus.",
-        } as DeleteEnchereResult;
-      }
-
-      const currentData = snap.data() as DocumentData;
-
-      // 1) ERROR: old and new data are not the same
-      if (JSON.stringify(currentData) !== JSON.stringify(originalData)) {
-        return {
-          status: "stale_client",
-          message:
-            "Les données ont été modifiées depuis l’ouverture de la page. Recharge la page pour voir la version à jour.",
-        } as DeleteEnchereResult;
-      }
-
-      // Recompute everything based on the transaction snapshot
-      const { enchereFound, comitardIdFound, cercleIdFound, senderId } =
-        getEnchre(snap, enchereID);
-
-      if (
-        enchereFound === null ||
-        comitardIdFound === null ||
-        cercleIdFound === null ||
-        senderId === null
-      ) {
-        return {
-          status: "error",
-          message:
-            "Impossible de trouver cette enchère. Elle a peut-être déjà été supprimée.",
-        } as DeleteEnchereResult;
-      }
-
-      const updates: Record<string, any> = {};
-
-      const comitardEncheres =
-        currentData.cercles[cercleIdFound].comitards[comitardIdFound].encheres;
-
-      const basePath = `cercles.${cercleIdFound}.comitards.${comitardIdFound}`;
-
-      // If this is the only enchère for this comitard, delete other fields
-      if (Object.keys(comitardEncheres).length === 1) {
-        updates[`${basePath}.enchereProcessed`] = deleteField();
-        updates[`${basePath}.enchereStart`] = deleteField();
-        updates[`${basePath}.enchereStop`] = deleteField();
-        updates[`${basePath}.encheres`] = deleteField();
-      } else {
-        updates[`${basePath}.encheres.${enchereID}`] = deleteField();
-      }
-
-      // Remboursement
-      if (rembourse) {
-        const futPath = `cercles.${senderId}.nbFut`;
-        updates[futPath] = increment(enchereFound.vote);
-      }
-
-      // All writes atomically in the transaction
-      tx.update(editionRef, updates);
-
-      return {
-        status: "ok",
-        message: "Enchère supprimée avec succès.",
-      } as DeleteEnchereResult;
+    const result = await httpsCallable(functions, "deletebid")({
+      editionId: originalSnap.id, bidId: enchereID, expectedAmount: enchereFound.vote, refund: rembourse,
     });
-
-    // If the transaction callback returned a DeleteEnchereResult, we just pass it through
-    return result;
-  } catch (e: any) {
-    // 2) ERROR: document changed in between (transaction conflicted)
-    // Firestore uses "aborted" / "failed-precondition" for concurrent updates
-    if (e?.code === "aborted" || e?.code === "failed-precondition") {
-      return {
-        status: "concurrent_write",
-        message:
-          "Les données ont été modifiées en même temps par quelqu'un d'autre. Réessaie l'action.",
-      };
-    }
-
-    // 3) Any other error
-    console.error("deleteEnchereWithStates error:", e);
+    requireMutationSuccess(result.data);
+    return { status: "ok", message: "Enchère supprimée avec succès." };
+  } catch (error: unknown) {
+    const code = (error as { code?: string }).code?.replace("functions/", "");
     return {
-      status: "error",
-      message: "Erreur inattendue lors de la suppression de l'enchère.",
+      status: code === "aborted" ? "stale_client" : "error",
+      message: error instanceof Error ? error.message : "Erreur lors de la suppression de l'enchère.",
     };
   }
 }

@@ -1,6 +1,11 @@
+import { ResponsiveRecords } from "../../components/account/mobile-record-list";
+import RecordCard from "../../components/account/record-card";
+import { Button, Typography } from "@mui/material";
+import { getEditionData } from "../../data/edition-data";
 import Box from "@mui/material/Box";
 import {
   DataGrid,
+  frFR,
   GridActionsCellItem,
   GridColDef,
   GridRenderCellParams,
@@ -10,17 +15,17 @@ import {
 import Iconify from "../../components/iconify/iconify";
 import { DocumentData } from "firebase/firestore";
 import { LoadingButton } from "@mui/lab";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import WarningModal from "../../components/modal/warning_modal";
-import { Avatar } from "@mui/material";
-import { useAuth } from "../../auth/AuthProvider";
+import ProfileAvatar from "../../components/profile-avatar/profile-avatar";
+import { useAuth } from "../../auth/auth-context";
 import { deleteEnchereWithStates } from "../../utils/admin-tools";
 
 interface enchereTableProps {
   data: DocumentData;
   admin: boolean;
   refetchData: () => void;
-  handleOpenModalEnchere: (id: number) => void;
+  handleOpenModalEnchere: (row: DocumentData) => void;
 }
 
 export default function EncheresTable({
@@ -31,87 +36,39 @@ export default function EncheresTable({
 }: enchereTableProps) {
   const [loading, setLoading] = useState<boolean>(false);
   const [openModal, setOpenModal] = useState<boolean>(false);
-  const [modalData, setModalData] = useState<any | null>(null);
+  const [modalData, setModalData] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<boolean>(false);
   const { user } = useAuth();
 
-  const enchereDataArray: any[] = [];
-
-  // date, sender, receiver, amount
-
-  let cerclesNames: { [key: string]: string } = {};
-  if (data.data().cercles) {
-    Object.entries(data.data().cercles).forEach((cercle: any) => {
-      cerclesNames[cercle[0]] = cercle[1].name;
-    });
-  }
-  if (admin) {
-    Object.entries(data.data().cercles).forEach((cercle: any) => {
-      Object.entries(cercle[1].comitards ?? {}).forEach((comitard: any) => {
-        //
-        //comitard[0] is the comitard id
-        if (comitard[1].encheres != undefined) {
-          Object.entries(comitard[1].encheres).forEach((enchere: any) => {
-            const test = {
-              id: enchere[0],
-              date: enchere[1].date,
-              sender: enchere[1].sender,
-              senderName: cerclesNames[enchere[1].sender],
-              receiver: comitard[0],
-              receiverName:
-                comitard[1].firstname +
-                " " +
-                comitard[1].nickname +
-                " " +
-                comitard[1].name,
-              receiverPicture: comitard[1].picture,
-              receiverCercle: cercle[1].name,
-              amount: enchere[1].vote,
-            };
-            //console.log("test: ", test);
-            enchereDataArray.push(test);
+  const enchereDataArray = useMemo(() => {
+    const rows: DocumentData[] = [];
+    const cercles = getEditionData(data)?.cercles ?? {};
+    for (const cercle of Object.values<DocumentData>(cercles)) {
+      for (const [comitardId, comitard] of Object.entries<DocumentData>(
+        cercle.comitards ?? {},
+      )) {
+        for (const [id, enchere] of Object.entries<DocumentData>(
+          comitard.encheres ?? {},
+        )) {
+          if (!admin && enchere.sender !== user?.uid) continue;
+          rows.push({
+            id,
+            date: enchere.date,
+            sender: enchere.sender,
+            senderName: cercles[enchere.sender]?.name,
+            receiver: comitardId,
+            receiverName: `${comitard.firstname} ${comitard.nickname} ${comitard.name}`,
+            receiverPicture: comitard.picture,
+            receiverThumbnail: comitard.pictureThumbnail,
+            receiverCercle: cercle.name,
+            amount: enchere.vote,
           });
         }
-        //
-      });
-    });
-  } else {
-    Object.entries(data.data().cercles).forEach((cercle: any) => {
-      Object.entries(cercle[1].comitards ?? {}).forEach((comitard: any) => {
-        //
-        //comitard[0] is the comitard id
-
-        if (comitard[1].encheres != undefined) {
-          Object.entries(comitard[1].encheres).forEach((enchere: any) => {
-            if (enchere[1].sender == user?.uid) {
-              const test = {
-                id: enchere[0],
-                date: enchere[1].date,
-                sender: enchere[1].sender,
-                senderName: cerclesNames[enchere[1].sender],
-                receiver: comitard[0],
-                receiverName:
-                  comitard[1].firstname +
-                  " " +
-                  comitard[1].nickname +
-                  " " +
-                  comitard[1].name,
-                receiverPicture: comitard[1].picture,
-                receiverCercle: cercle[1].name,
-                amount: enchere[1].vote,
-              };
-              //console.log("test: ", test);
-              enchereDataArray.push(test);
-            }
-          });
-        }
-        //
-      });
-    });
-  }
-
-  //console.log("enchereDataArray: ", enchereDataArray);
+      }
+    }
+    return rows;
+  }, [data, admin, user?.uid]);
 
   async function handleClick(enchereUid: string) {
     setLoading(true);
@@ -145,7 +102,7 @@ export default function EncheresTable({
     } catch (errorMessage) {
       setLoading(false);
       setError(`Error while deleting enchere. See console for more info.`);
-      console.error("Error deleting enchere:", error);
+      console.error("Error deleting enchere:", errorMessage);
     }
   }
 
@@ -154,11 +111,14 @@ export default function EncheresTable({
     {
       field: "picture",
       headerName: "Photo",
-      width: 150,
+      width: 64,
       renderCell: (params) => {
         return (
           <>
-            <Avatar src={params.row.receiverPicture} />
+            <ProfileAvatar
+              picture={params.row.receiverPicture}
+              thumbnail={params.row.receiverThumbnail}
+            />
           </>
         );
       },
@@ -254,11 +214,13 @@ export default function EncheresTable({
         headerName: "Supprimer",
         minWidth: 150,
         editable: false,
-        renderCell: (params: GridRenderCellParams<any, string>) => (
+        renderCell: (params: GridRenderCellParams<DocumentData, string>) => (
           <LoadingButton
             disabled={false}
             color="error"
             onClick={() => {
+              setDone(false);
+              setError(null);
               setOpenModal(true);
               setModalData(params.row.id);
             }}
@@ -267,28 +229,109 @@ export default function EncheresTable({
             Supprimer
           </LoadingButton>
         ),
-      }
+      },
     );
   }
 
   return (
     <>
-      <Box sx={{ height: 400, width: 1 }}>
-        <DataGrid
-          rows={enchereDataArray}
-          disableColumnFilter
-          disableColumnSelector
-          disableDensitySelector
-          columns={columns}
-          slots={{ toolbar: GridToolbar }}
-          slotProps={{
-            toolbar: {
-              showQuickFilter: true,
-            },
-          }}
-          getRowId={(row: any) => row.id}
-        />
-      </Box>
+      <ResponsiveRecords
+        rows={enchereDataArray}
+        label="les enchères"
+        getKey={(row) => row.id}
+        getSearchText={(row) =>
+          `${row.receiverName} ${row.receiverCercle} ${row.senderName} ${row.amount}`
+        }
+        sortOptions={[
+          {
+            value: "date",
+            label: "Les plus récentes",
+            compare: (a, b) =>
+              (b.date?.toMillis?.() ?? (b.date?.seconds ?? 0) * 1000) -
+              (a.date?.toMillis?.() ?? (a.date?.seconds ?? 0) * 1000),
+          },
+          {
+            value: "amount",
+            label: "Montant décroissant",
+            compare: (a, b) => b.amount - a.amount,
+          },
+        ]}
+        renderItem={(row) => (
+          <RecordCard
+            title={row.receiverName}
+            subtitle={row.receiverCercle}
+            avatar={
+              <ProfileAvatar
+                alt={row.receiverName}
+                picture={row.receiverPicture}
+                thumbnail={row.receiverThumbnail}
+                sx={{ width: 44, height: 44, flexShrink: 0 }}
+              />
+            }
+            details={
+              <Box>
+                <Typography sx={{ fontSize: 14, fontWeight: 600, mb: 0.5 }}>
+                  {row.amount} fûts · {row.senderName}
+                </Typography>
+                <Typography sx={{ fontSize: 12, color: "text.secondary" }}>
+                  {new Date(
+                    row.date?.toMillis?.() ?? (row.date?.seconds ?? 0) * 1000,
+                  ).toLocaleString("fr-BE", {
+                    day: "2-digit",
+                    month: "2-digit",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </Typography>
+              </Box>
+            }
+            actions={
+              admin ? (
+                <Button
+                  variant="outlined"
+                  onClick={() => handleOpenModalEnchere(row)}
+                >
+                  Modifier
+                </Button>
+              ) : undefined
+            }
+            moreActions={
+              admin
+                ? [
+                    {
+                      label: "Supprimer l’enchère",
+                      destructive: true,
+                      onClick: () => {
+                        setModalData(row.id);
+                        setDone(false);
+                        setError(null);
+                        setOpenModal(true);
+                      },
+                    },
+                  ]
+                : []
+            }
+          />
+        )}
+      >
+        <Box sx={{ height: 400, width: 1 }}>
+          <DataGrid
+            rows={enchereDataArray}
+            disableColumnFilter
+            disableDensitySelector
+            columns={columns}
+            initialState={{ columns: { columnVisibilityModel: { id: false } } }}
+            localeText={frFR.components.MuiDataGrid.defaultProps.localeText}
+            slots={{ toolbar: GridToolbar }}
+            slotProps={{
+              toolbar: {
+                showQuickFilter: true,
+              },
+            }}
+            getRowId={(row: DocumentData) => row.id}
+          />
+        </Box>
+      </ResponsiveRecords>
       <WarningModal
         done={done}
         error={error}

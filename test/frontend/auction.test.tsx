@@ -1,13 +1,13 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { httpsCallable } from 'firebase/functions';
-import { useAuth } from '../../src/auth/AuthProvider';
-import { functions } from '../../src/firebase_config';
+import { useAuth } from '../../src/auth/auth-context';
+import { functions } from "../../src/firebase_functions";
 import { campusLabel, formatTimeLeft, useComitardAuction } from '../../src/sections/comitards/comitard-helper';
 import type { UseComitardAuctionArgs } from '../../src/sections/comitards/comitard-helper';
 
 vi.mock('firebase/functions', () => ({ httpsCallable: vi.fn() }));
-vi.mock('../../src/auth/AuthProvider', () => ({ useAuth: vi.fn() }));
+vi.mock('../../src/auth/auth-context', () => ({ useAuth: vi.fn() }));
 
 const now = 1_800_000_000_000;
 const timestamp = (ms: number) => ({ toMillis: () => ms });
@@ -48,6 +48,16 @@ beforeEach(() => {
 });
 
 describe('auction availability and limits', () => {
+  it('opens and closes voting at time boundaries without a page clock', () => {
+    const product = { enchereStart: timestamp(now + 1000), enchereStop: timestamp(now + 3000) };
+    const { result } = renderHook(() => useComitardAuction(args({ product, now: undefined })));
+    expect(result.current.displayVote).toBe(false);
+    act(() => vi.advanceTimersByTime(1000));
+    expect(result.current.displayVote).toBe(true);
+    act(() => vi.advanceTimersByTime(2000));
+    expect(result.current.displayVote).toBe(false);
+    expect(result.current.timeLeft).toBe(0);
+  });
   it('allows members to start an auction within their balance', () => {
     const { result } = renderHook(() => useComitardAuction(args()));
     expect(result.current).toMatchObject({
@@ -169,4 +179,16 @@ describe('auction labels', () => {
     [2, 'Pas possible 👎'], [3, 'Bouillant mort! 🔥'], [4, 'Pas du tout possible 🙅'], [5, 'Non renseigné']])(
     'labels campus status %s', (campus, expected) => expect(campusLabel(campus)).toBe(expected),
   );
+});
+
+
+it('uses the highest corrected bid for the leader and next minimum', () => {
+  const product = activeProduct();
+  product.encheres.old.vote = 40;
+  product.encheres.latest.vote = 20;
+  const { result } = renderHook(() => useComitardAuction(args({ product })));
+  expect(result.current.firstEnchere).toMatchObject({ sender: 'buyer', vote: 40 });
+  expect(result.current.maxEnchere).toBe(40);
+  expect(result.current.minEnchereComputed).toBe(41);
+  expect(result.current.encheresArray.map(bid => bid.vote)).toEqual([40, 20]);
 });

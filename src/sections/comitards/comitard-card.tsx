@@ -1,6 +1,15 @@
+import Countdown from "../../components/countdown/countdown";
 import React, { useCallback, useMemo, useState } from "react";
 
-import { Box, Card, Stack, Typography, LinearProgress, Alert } from "@mui/material";
+import {
+  Box,
+  ButtonBase,
+  Card,
+  Stack,
+  Typography,
+  LinearProgress,
+  Alert,
+} from "@mui/material";
 import { LoadingButton } from "@mui/lab";
 
 import Iconify from "../../components/iconify/iconify";
@@ -8,14 +17,19 @@ import Label from "../../components/label/label";
 import QuantityInput from "../../components/inputs/numberInput";
 
 import ComitardModal from "./comitard-modal";
-import { buildComitardModalProps, formatTimeLeft, useComitardAuction } from "./comitard-helper";
+import {
+  buildComitardModalProps,
+  formatTimeLeft,
+  useComitardAuction,
+} from "./comitard-helper";
 
 import type { AlertColor } from "@mui/material";
 import type { CerclesData } from "./comitard-modal";
 import FadeImage from "./comitard-picture";
+import type { DocumentData } from "firebase/firestore";
 
 interface ComitardCardProps {
-  product: any;
+  product: DocumentData;
   user: string | undefined; // kept for compatibility, not used (auth comes from hook via useAuth)
   cercleId: string;
   editionId: string;
@@ -24,7 +38,6 @@ interface ComitardCardProps {
   enchereMin: number;
   enchereMax: number;
   isInTimeFrame: boolean;
-  now: number;
   refetchData: () => void;
   cerclesData: CerclesData;
 }
@@ -38,7 +51,6 @@ function ComitardCardInner({
   enchereMin,
   enchereMax,
   isInTimeFrame,
-  now,
   refetchData,
   cerclesData,
 }: ComitardCardProps) {
@@ -56,7 +68,6 @@ function ComitardCardInner({
     enchereMin,
     enchereMax,
     isInTimeFrame,
-    now,
     refetchData,
   });
 
@@ -71,17 +82,20 @@ function ComitardCardInner({
           right: 16,
           position: "absolute",
           textTransform: "uppercase",
-          boxShadow: (t: any) => t.shadows[4],
+          boxShadow: (t) => t.shadows[4],
         }}
       >
-        {formatTimeLeft(auction.timeLeft)} <Iconify icon="jam:chronometer" />
+        <Countdown stop={auction.enchereStopMs ?? 0} format={formatTimeLeft} />{" "}
+        <Iconify icon="jam:chronometer" />
       </Label>
     ),
-    [auction.timeLeft]
+    [auction.enchereStopMs],
   );
 
   const renderPrice = useMemo(() => {
-    const current = auction.firstEnchere ? `${auction.firstEnchere.vote} fûts` : "No data";
+    const current = auction.firstEnchere
+      ? `${auction.firstEnchere.vote} fûts`
+      : "No data";
 
     return (
       <Label
@@ -93,7 +107,7 @@ function ComitardCardInner({
           left: 16,
           position: "absolute",
           textTransform: "uppercase",
-          boxShadow: (t: any) => t.shadows[4],
+          boxShadow: (t) => t.shadows[4],
         }}
       >
         <Iconify icon="ic:round-show-chart" />
@@ -116,7 +130,7 @@ function ComitardCardInner({
           left: 16,
           position: "absolute",
           textTransform: "uppercase",
-          boxShadow: (t: any) => t.shadows[4],
+          boxShadow: (t) => t.shadows[4],
         }}
       >
         <Iconify icon="solar:cup-bold" />
@@ -134,11 +148,15 @@ function ComitardCardInner({
         cercleId,
         cerclesData,
         auction,
-        renderStatus,
-        renderPrice,
-        renderWinner,
       }),
-    [open, handleClose, product, cercleId, cerclesData, auction, renderStatus, renderPrice, renderWinner]
+    [
+      open,
+      handleClose,
+      product,
+      cercleId,
+      cerclesData,
+      auction,
+    ],
   );
 
   // for the small card inline alert, keep compatibility with MUI AlertColor
@@ -146,9 +164,33 @@ function ComitardCardInner({
 
   return (
     <>
-      <Card>
-        <Box onClick={handleOpen} sx={{ pt: "100%", position: "relative" }}>
-          <FadeImage src={product?.picture} alt={product?.name ?? ""} absolute />
+      <Card
+        sx={{
+          height: "100%",
+          transition: "border-color 180ms",
+          "&:hover": {
+            borderColor: "primary.light",
+          },
+        }}
+      >
+        <Box
+          sx={{
+            pt: { xs: "60%", sm: "90%" },
+            position: "relative",
+            bgcolor: "background.neutral",
+          }}
+        >
+          <ButtonBase
+            onClick={handleOpen}
+            aria-label={`Voir la fiche de ${product?.firstname} ${product?.name}`}
+            sx={{ position: "absolute", inset: 0, width: 1, height: 1 }}
+          >
+            <FadeImage
+              src={product?.picture}
+              alt={product?.name ?? ""}
+              absolute
+            />
+          </ButtonBase>
 
           {auction.timeLeft > 0 && renderStatus}
           {auction.timeLeft > 0 && renderPrice}
@@ -157,10 +199,38 @@ function ComitardCardInner({
 
         {auction.timeLeft > 0 && <LinearProgress color="error" />}
 
-        <Stack spacing={2} sx={{ p: 3 }}>
-          <Typography variant="h6" noWrap>
-            {product?.firstname} "{product?.nickname}" {product?.name}
-          </Typography>
+        <Stack spacing={2} sx={{ p: 2.5 }}>
+          <ButtonBase
+            onClick={handleOpen}
+            sx={{
+              textAlign: "left",
+              justifyContent: "flex-start",
+              width: 1,
+              minHeight: 44,
+              borderRadius: 1,
+            }}
+          >
+            <Box>
+              <Typography
+                component="h3"
+                sx={{ fontSize: 14, fontWeight: 700, overflowWrap: "anywhere" }}
+              >
+                {product?.firstname} {product?.name}
+              </Typography>
+              {product?.nickname && (
+                <Typography
+                  sx={{
+                    fontSize: 13,
+                    color: "text.secondary",
+                    mt: 0.5,
+                    overflowWrap: "anywhere",
+                  }}
+                >
+                  « {product.nickname} »
+                </Typography>
+              )}
+            </Box>
+          </ButtonBase>
 
           {auction.displayVote && (
             <>
@@ -170,7 +240,7 @@ function ComitardCardInner({
                 max={auction.voteMax}
                 error={false}
                 helpText=""
-                change={(_event: any, val: any) => auction.setVote(val)}
+                change={(_event, val) => auction.setVote(val ?? 0)}
               />
 
               <LoadingButton
@@ -201,29 +271,4 @@ function ComitardCardInner({
   );
 }
 
-export default React.memo(
-  ComitardCardInner,
-  (prev, next) => {
-    // rerender if server data changed (reference changed)
-    if (prev.product !== next.product) return false;
-
-    // rerender if constraints changed
-    if (prev.nbFutsLeft !== next.nbFutsLeft) return false;
-    if (prev.enchereMin !== next.enchereMin) return false;
-    if (prev.enchereMax !== next.enchereMax) return false;
-    if (prev.isInTimeFrame !== next.isInTimeFrame) return false;
-    if (prev.cerclesData !== next.cerclesData) return false;
-    if (prev.user !== next.user) return false;
-
-    // Ignore now unless auction is active (so only “live” cards tick)
-    const ps = prev.product?.enchereStart?.toMillis?.() ?? null;
-    const pe = prev.product?.enchereStop?.toMillis?.() ?? null;
-    if (ps && pe) {
-      const prevActive = prev.now >= ps && prev.now <= pe;
-      const nextActive = next.now >= ps && next.now <= pe;
-      if (prevActive || nextActive) return false;
-    }
-
-    return true;
-  }
-);
+export default React.memo(ComitardCardInner);
