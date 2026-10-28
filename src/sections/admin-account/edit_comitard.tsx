@@ -1,12 +1,12 @@
+import FormSection from "../../components/account/form-section";
+import FormActions from "../../components/account/form-actions";
 import { uploadProfilePictures } from "../../utils/upload-profile-pictures";
 import { getEditionData } from "../../data/edition-data";
 import LoadingButton from "@mui/lab/LoadingButton";
 import {
-  Alert,
   AlertColor,
   Button,
   CardContent,
-  Divider,
   FormHelperText,
   Grid,
   TextField,
@@ -34,9 +34,11 @@ interface EditComitardProps {
 
 function getCercleIdByComitardId(
   activeData: DocumentData,
-  comitardId: string
+  comitardId: string,
 ): string | undefined {
-  for (const [cercleId, cercle] of Object.entries((getEditionData(activeData) ?? {}).cercles)) {
+  for (const [cercleId, cercle] of Object.entries(
+    (getEditionData(activeData) ?? {}).cercles,
+  )) {
     if ((cercle as any).comitards && comitardId in (cercle as any).comitards) {
       return cercleId;
     }
@@ -81,11 +83,11 @@ export default function EditComitard({
   const [pictureUpdated, setPictureUpdated] = useState(false);
   const [pictureError, setPictureError] = useState(false);
   const [pictureUpload, setPictureUpload] = useState<number | undefined>(
-    undefined
+    undefined,
   );
   const [error, setError] = useState("");
   const [errorSeverity, setErrorSeverity] = useState<AlertColor | undefined>(
-    "error"
+    "error",
   );
   const [loading, setLoading] = useState(false);
 
@@ -103,7 +105,9 @@ export default function EditComitard({
 
   function cerclesOption() {
     const out: { [key: string]: string } = {}; // Add type annotation to the 'out' object
-    for (const [key, value] of Object.entries((getEditionData(activeData) ?? {}).cercles)) {
+    for (const [key, value] of Object.entries(
+      (getEditionData(activeData) ?? {}).cercles,
+    )) {
       if (typeof value === "object" && value !== null) {
         out[(value as { name: string }).name] = key; // Add type assertion to 'value'
       }
@@ -223,24 +227,50 @@ export default function EditComitard({
       }
       let pictures: { picture: string; pictureThumbnail?: string } = {
         picture,
-        ...(ComitardData.pictureThumbnail ? { pictureThumbnail: ComitardData.pictureThumbnail } : {}),
+        ...(ComitardData.pictureThumbnail
+          ? { pictureThumbnail: ComitardData.pictureThumbnail }
+          : {}),
       };
       if (pictureUpdated) {
         try {
-          pictures = await uploadProfilePictures(picture[0], activeData.id, cercleId, setPictureUpload);
+          pictures = await uploadProfilePictures(
+            picture[0],
+            activeData.id,
+            cercleId,
+            setPictureUpload,
+          );
         } catch (cause) {
           setErrorSeverity("error");
-          setError("Une erreur est survenue lors de l'upload de l'image. " + String(cause));
+          setError(
+            "Une erreur est survenue lors de l'upload de l'image. " +
+              String(cause),
+          );
           setPictureUpload(undefined);
           setLoading(false);
           return;
         }
       }
       try {
-        const result = await httpsCallable(functions, "editcomitard")({
-          editionId: activeData.id, comitardId: ComitardData.id,
-          name, firstname, nickname, post, cercleId, cercle: cercle || null,
-          teneurTaule, etatCivil, age, nbEtoiles, pointFort, pointFaible, estLeSeul, campus,
+        const result = await httpsCallable(
+          functions,
+          "editcomitard",
+        )({
+          editionId: activeData.id,
+          comitardId: ComitardData.id,
+          name,
+          firstname,
+          nickname,
+          post,
+          cercleId,
+          cercle: cercle || null,
+          teneurTaule,
+          etatCivil,
+          age,
+          nbEtoiles,
+          pointFort,
+          pointFaible,
+          estLeSeul,
+          campus,
           ...pictures,
         });
         requireMutationSuccess(result.data);
@@ -249,7 +279,10 @@ export default function EditComitard({
         setError("Comitard mis à jour avec succès");
       } catch (cause) {
         setErrorSeverity("error");
-        setError("Une erreur est survenue lors de la mise à jour du comitard. " + String(cause));
+        setError(
+          "Une erreur est survenue lors de la mise à jour du comitard. " +
+            String(cause),
+        );
       } finally {
         setPictureUpload(undefined);
         setLoading(false);
@@ -257,7 +290,7 @@ export default function EditComitard({
     } else {
       setLoading(false);
       setErrorSeverity("error");
-      setError("Certains champs sont incorrects. Petit con.");
+      setError("Certains champs sont incorrects.");
     }
   }
   return (
@@ -268,6 +301,7 @@ export default function EditComitard({
             Éditer comitard
           </Typography>
           <Grid container spacing={2}>
+            <FormSection title="Identité" />
             <Grid item xs={12} sm={6}>
               <TextField
                 error={nameError}
@@ -374,6 +408,7 @@ export default function EditComitard({
                 />
               </Grid>
             )}
+            <FormSection title="Profil" />
             <Grid item xs={12} sm={6}>
               <QuantityInput
                 title="Teneur en taule du comitard"
@@ -539,7 +574,7 @@ export default function EditComitard({
                 }}
               />
             </Grid>
-            <Divider />
+            <FormSection title="Photo" />
 
             {pictureUpdated ? (
               <Grid item xs={12} sm={12}>
@@ -563,7 +598,11 @@ export default function EditComitard({
                     src={picture}
                     alt=""
                     width="100"
-                    style={{ width: "100%" }}
+                    style={{
+                      width: "100%",
+                      maxHeight: 240,
+                      objectFit: "contain",
+                    }}
                   />
                   <div className="image-item__btn-wrapper">
                     <Button
@@ -581,37 +620,25 @@ export default function EditComitard({
               </Grid>
             )}
 
-            <Divider />
-
-            <Grid item xs={12} sm={12}>
+            <FormActions error={error} severity={errorSeverity}>
               <LoadingButton
                 size="large"
-                variant="contained"
-                fullWidth
+                variant="outlined"
                 onClick={close}
-                color="error"
+                color="inherit"
               >
                 Annuler
               </LoadingButton>
-            </Grid>
-
-            <Grid item xs={12} sm={12}>
               <LoadingButton
                 size="large"
                 variant="contained"
-                fullWidth
                 onClick={handleEditComitard}
                 loading={loading}
               >
                 Mettre à jour comitard
               </LoadingButton>
-            </Grid>
+            </FormActions>
           </Grid>
-          {error && (
-            <Alert sx={{ mt: 3 }} severity={errorSeverity}>
-              {error}
-            </Alert>
-          )}
         </CardContent>
       </Card>
     </>

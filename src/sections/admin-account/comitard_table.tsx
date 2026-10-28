@@ -1,7 +1,11 @@
+import { ResponsiveRecords } from "../../components/account/mobile-record-list";
+import RecordCard from "../../components/account/record-card";
+import { Button, Typography } from "@mui/material";
 import { getEditionData } from "../../data/edition-data";
 import Box from "@mui/material/Box";
 import {
   DataGrid,
+  frFR,
   GridActionsCellItem,
   GridColDef,
   GridRenderCellParams,
@@ -21,7 +25,7 @@ interface ComitardTableProps {
   data: DocumentData;
   admin: boolean;
   refetchData: () => void;
-  handleOpenModalComitard: (id: number) => void;
+  handleOpenModalComitard: (row: DocumentData) => void;
 }
 
 export default function ComitardTable({
@@ -42,7 +46,9 @@ export default function ComitardTable({
     const cercles = getEditionData(data)?.cercles ?? {};
     for (const [cercleId, cercle] of Object.entries<DocumentData>(cercles)) {
       if (!admin && cercleId !== user?.uid) continue;
-      for (const [id, comitard] of Object.entries<DocumentData>(cercle.comitards ?? {})) {
+      for (const [id, comitard] of Object.entries<DocumentData>(
+        cercle.comitards ?? {},
+      )) {
         rows.push({ ...comitard, id, cercle: cercle.name, cercleId });
       }
     }
@@ -77,11 +83,14 @@ export default function ComitardTable({
     {
       field: "picture",
       headerName: "Photo",
-      width: 200,
+      width: 64,
       renderCell: (params) => {
         return (
           <>
-            <ProfileAvatar picture={params.row.picture} thumbnail={params.row.pictureThumbnail} />
+            <ProfileAvatar
+              picture={params.row.picture}
+              thumbnail={params.row.pictureThumbnail}
+            />
           </>
         );
       },
@@ -89,7 +98,7 @@ export default function ComitardTable({
     {
       field: "name",
       headerName: "Nom",
-      minWidth: 200,
+      minWidth: 150,
       editable: false,
     },
     {
@@ -193,6 +202,8 @@ export default function ComitardTable({
           disabled={params.row.active}
           color="error"
           onClick={() => {
+            setDone(false);
+            setError(null);
             setOpenModal(true);
             setModalData([
               params.row.id,
@@ -210,22 +221,116 @@ export default function ComitardTable({
 
   return (
     <>
-      <Box sx={{ height: 400, width: 1 }}>
-        <DataGrid
-          rows={cercleDataArray}
-          disableColumnFilter
-          disableColumnSelector
-          disableDensitySelector
-          columns={columns}
-          slots={{ toolbar: GridToolbar }}
-          slotProps={{
-            toolbar: {
-              showQuickFilter: true,
-            },
-          }}
-          getRowId={(row: any) => row.id}
-        />
-      </Box>
+      <ResponsiveRecords
+        rows={cercleDataArray}
+        label="les comitards"
+        getKey={(row) => `${row.cercleId}/${row.id}`}
+        getSearchText={(row) =>
+          `${row.firstname} ${row.name} ${row.nickname} ${row.cercle} ${row.post}`
+        }
+        sortOptions={[
+          {
+            value: "name",
+            label: "Nom A–Z",
+            compare: (a, b) =>
+              `${a.name} ${a.firstname}`.localeCompare(
+                `${b.name} ${b.firstname}`,
+                "fr",
+              ),
+          },
+          {
+            value: "circle",
+            label: "Cercle A–Z",
+            compare: (a, b) =>
+              String(a.cercle).localeCompare(String(b.cercle), "fr"),
+          },
+        ]}
+        renderItem={(row) => (
+          <RecordCard
+            title={`${row.firstname} ${row.name}`}
+            subtitle={[
+              row.nickname && `« ${row.nickname} »`,
+              admin && row.cercle,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+            avatar={
+              <ProfileAvatar
+                alt={`${row.firstname} ${row.name}`}
+                picture={row.picture}
+                thumbnail={row.pictureThumbnail}
+                sx={{ width: 44, height: 44, flexShrink: 0 }}
+              />
+            }
+            details={
+              <Typography sx={{ fontSize: 12, color: "text.secondary" }}>
+                {row.post}
+              </Typography>
+            }
+            actions={
+              <Button
+                variant="outlined"
+                onClick={() => handleOpenModalComitard(row)}
+              >
+                Modifier
+              </Button>
+            }
+            moreActions={
+              admin
+                ? [
+                    {
+                      label: "Supprimer le comitard",
+                      destructive: true,
+                      disabled: row.active,
+                      onClick: () => {
+                        setModalData([
+                          row.id,
+                          row.cercleId,
+                          `Supprimer ${row.firstname} ${row.name} et toutes ses données ? Cette action est irréversible.`,
+                        ]);
+                        setDone(false);
+                        setError(null);
+                        setOpenModal(true);
+                      },
+                    },
+                  ]
+                : []
+            }
+          />
+        )}
+      >
+        <Box sx={{ height: 400, width: 1 }}>
+          <DataGrid
+            rows={cercleDataArray}
+            disableColumnFilter
+            disableDensitySelector
+            columns={columns}
+            initialState={{
+              columns: {
+                columnVisibilityModel: {
+                  id: false,
+                  post: false,
+                  teneurTaule: false,
+                  etatCivil: false,
+                  age: false,
+                  nbEtoiles: false,
+                  pointFort: false,
+                  pointFaible: false,
+                  estLeSeul: false,
+                },
+              },
+            }}
+            localeText={frFR.components.MuiDataGrid.defaultProps.localeText}
+            slots={{ toolbar: GridToolbar }}
+            slotProps={{
+              toolbar: {
+                showQuickFilter: true,
+              },
+            }}
+            getRowId={(row: any) => `${row.cercleId}/${row.id}`}
+          />
+        </Box>
+      </ResponsiveRecords>
       <WarningModal
         error={error}
         done={done}

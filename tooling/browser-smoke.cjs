@@ -22,8 +22,8 @@ let activeErrors;
   await page.waitForURL('http://127.0.0.1:5175/');
   await page.goto('http://127.0.0.1:5175/account');
   try {
-    if(role==='buyer') await page.getByText(/Bonjour, bienvenue/).waitFor({timeout:15000});
-    else await page.getByText('Créer une nouvelle édition',{exact:true}).waitFor({timeout:15000});
+    if(role==='buyer') await page.getByRole('heading',{name:'Mon cercle',exact:true}).waitFor({timeout:15000});
+    else await page.getByRole('heading',{name:'Administration',exact:true}).waitFor({timeout:15000});
   } catch(error) {
     console.log('BROWSERSTATE',page.url(),await page.locator('body').innerText());
     console.log('BROWSERERRORS',errors);
@@ -37,6 +37,7 @@ let activeErrors;
   });
   await page.getByRole('button',{name:'Supprimer image',exact:true}).waitFor();
   if(role==='admin') {
+    await page.getByRole('tab',{name:'Éditions',exact:true}).click();
     await page.getByRole('button',{name:'Créer une nouvelle édition',exact:true}).click();
     await page.locator('[contenteditable="true"]').waitFor();
     await page.getByText('Page 1',{exact:true}).waitFor();

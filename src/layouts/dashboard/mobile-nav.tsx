@@ -5,14 +5,14 @@ import RouterLink from "../../routes/components/router-link";
 import ClubIcon from "../../components/club-icon/club-icon";
 
 export default function MobileNav() {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const pathname = usePathname();
   const items = [
     { label: "Résultats", path: "/", icon: "activity" as const },
     { label: "Comitards", path: "/comitards", icon: "people" as const },
     { label: "Règlement", path: "/rules", icon: "book" as const },
     {
-      label: user ? "Mon cercle" : "Connexion",
+      label: user ? (isAdmin() ? "Admin" : "Mon cercle") : "Connexion",
       path: user ? "/account" : "/login",
       icon: "login" as const,
     },

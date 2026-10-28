@@ -58,3 +58,22 @@
     scroll-behavior: auto !important;
   }
 }
+
+.account-page {
+  --account-action-bottom: calc(68px + env(safe-area-inset-bottom, 0px));
+}
+.account-form .MuiGrid-item {
+  min-width: 0;
+}
+.account-form input,
+.account-form textarea {
+  font-size: 16px;
+}
+.account-form .MuiInputLabel-root {
+  max-width: calc(100% - 24px);
+}
+@media (min-width: 600px) {
+  .account-page {
+    --account-action-bottom: 0px;
+  }
+}

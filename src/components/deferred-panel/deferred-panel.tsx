@@ -1,20 +1,56 @@
 import { Suspense, type ReactNode } from "react";
-import Accordion from "@mui/material/Accordion";
-import AccordionDetails from "@mui/material/AccordionDetails";
-import AccordionSummary from "@mui/material/AccordionSummary";
-import Card from "@mui/material/Card";
-import CardContent from "@mui/material/CardContent";
-import Typography from "@mui/material/Typography";
+import {
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
+  Card,
+  Typography,
+} from "@mui/material";
+import ClubIcon from "../club-icon/club-icon";
 
-export default function DeferredPanel({ title, children }: { title: string; children: ReactNode }) {
-  return <Card sx={{ width: "100%", mb: 4 }}><CardContent>
-    <Accordion slotProps={{ transition: { mountOnEnter: true } }}>
-      <AccordionSummary expandIcon={<span aria-hidden>⌄</span>}>
-        <Typography variant="h5">{title}</Typography>
-      </AccordionSummary>
-      <AccordionDetails>
-        <Suspense fallback={<div role="status">Chargement…</div>}>{children}</Suspense>
-      </AccordionDetails>
-    </Accordion>
-  </CardContent></Card>;
+export default function DeferredPanel({
+  title,
+  children,
+}: {
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <Card sx={{ width: 1, mb: 2, overflow: "visible" }}>
+      <Accordion
+        slotProps={{ transition: { mountOnEnter: true } }}
+        sx={{
+          "&::before": { display: "none" },
+          "&.Mui-expanded": { m: 0 },
+          boxShadow: "none",
+        }}
+      >
+        <AccordionSummary
+          expandIcon={
+            <ClubIcon
+              name="arrow"
+              sx={{ fontSize: 18, transform: "rotate(90deg)" }}
+            />
+          }
+          sx={{
+            minHeight: 56,
+            px: 2,
+            "& .MuiAccordionSummary-content": { my: 1.5 },
+          }}
+        >
+          <Typography sx={{ fontSize: 14, fontWeight: 600 }}>
+            {title}
+          </Typography>
+        </AccordionSummary>
+        <AccordionDetails
+          className="account-form"
+          sx={{ p: { xs: 2, sm: 3 }, pt: "0 !important" }}
+        >
+          <Suspense fallback={<div role="status">Chargement…</div>}>
+            {children}
+          </Suspense>
+        </AccordionDetails>
+      </Accordion>
+    </Card>
+  );
 }

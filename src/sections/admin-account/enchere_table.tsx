@@ -1,7 +1,11 @@
+import { ResponsiveRecords } from "../../components/account/mobile-record-list";
+import RecordCard from "../../components/account/record-card";
+import { Button, Typography } from "@mui/material";
 import { getEditionData } from "../../data/edition-data";
 import Box from "@mui/material/Box";
 import {
   DataGrid,
+  frFR,
   GridActionsCellItem,
   GridColDef,
   GridRenderCellParams,
@@ -21,7 +25,7 @@ interface enchereTableProps {
   data: DocumentData;
   admin: boolean;
   refetchData: () => void;
-  handleOpenModalEnchere: (id: number) => void;
+  handleOpenModalEnchere: (row: DocumentData) => void;
 }
 
 export default function EncheresTable({
@@ -41,16 +45,24 @@ export default function EncheresTable({
     const rows: DocumentData[] = [];
     const cercles = getEditionData(data)?.cercles ?? {};
     for (const cercle of Object.values<DocumentData>(cercles)) {
-      for (const [comitardId, comitard] of Object.entries<DocumentData>(cercle.comitards ?? {})) {
-        for (const [id, enchere] of Object.entries<DocumentData>(comitard.encheres ?? {})) {
+      for (const [comitardId, comitard] of Object.entries<DocumentData>(
+        cercle.comitards ?? {},
+      )) {
+        for (const [id, enchere] of Object.entries<DocumentData>(
+          comitard.encheres ?? {},
+        )) {
           if (!admin && enchere.sender !== user?.uid) continue;
           rows.push({
-            id, date: enchere.date, sender: enchere.sender,
+            id,
+            date: enchere.date,
+            sender: enchere.sender,
             senderName: cercles[enchere.sender]?.name,
             receiver: comitardId,
             receiverName: `${comitard.firstname} ${comitard.nickname} ${comitard.name}`,
-            receiverPicture: comitard.picture, receiverThumbnail: comitard.pictureThumbnail,
-            receiverCercle: cercle.name, amount: enchere.vote,
+            receiverPicture: comitard.picture,
+            receiverThumbnail: comitard.pictureThumbnail,
+            receiverCercle: cercle.name,
+            amount: enchere.vote,
           });
         }
       }
@@ -99,11 +111,14 @@ export default function EncheresTable({
     {
       field: "picture",
       headerName: "Photo",
-      width: 150,
+      width: 64,
       renderCell: (params) => {
         return (
           <>
-            <ProfileAvatar picture={params.row.receiverPicture} thumbnail={params.row.receiverThumbnail} />
+            <ProfileAvatar
+              picture={params.row.receiverPicture}
+              thumbnail={params.row.receiverThumbnail}
+            />
           </>
         );
       },
@@ -204,6 +219,8 @@ export default function EncheresTable({
             disabled={false}
             color="error"
             onClick={() => {
+              setDone(false);
+              setError(null);
               setOpenModal(true);
               setModalData(params.row.id);
             }}
@@ -212,28 +229,109 @@ export default function EncheresTable({
             Supprimer
           </LoadingButton>
         ),
-      }
+      },
     );
   }
 
   return (
     <>
-      <Box sx={{ height: 400, width: 1 }}>
-        <DataGrid
-          rows={enchereDataArray}
-          disableColumnFilter
-          disableColumnSelector
-          disableDensitySelector
-          columns={columns}
-          slots={{ toolbar: GridToolbar }}
-          slotProps={{
-            toolbar: {
-              showQuickFilter: true,
-            },
-          }}
-          getRowId={(row: any) => row.id}
-        />
-      </Box>
+      <ResponsiveRecords
+        rows={enchereDataArray}
+        label="les enchères"
+        getKey={(row) => row.id}
+        getSearchText={(row) =>
+          `${row.receiverName} ${row.receiverCercle} ${row.senderName} ${row.amount}`
+        }
+        sortOptions={[
+          {
+            value: "date",
+            label: "Les plus récentes",
+            compare: (a, b) =>
+              (b.date?.toMillis?.() ?? (b.date?.seconds ?? 0) * 1000) -
+              (a.date?.toMillis?.() ?? (a.date?.seconds ?? 0) * 1000),
+          },
+          {
+            value: "amount",
+            label: "Montant décroissant",
+            compare: (a, b) => b.amount - a.amount,
+          },
+        ]}
+        renderItem={(row) => (
+          <RecordCard
+            title={row.receiverName}
+            subtitle={row.receiverCercle}
+            avatar={
+              <ProfileAvatar
+                alt={row.receiverName}
+                picture={row.receiverPicture}
+                thumbnail={row.receiverThumbnail}
+                sx={{ width: 44, height: 44, flexShrink: 0 }}
+              />
+            }
+            details={
+              <Box>
+                <Typography sx={{ fontSize: 14, fontWeight: 600, mb: 0.5 }}>
+                  {row.amount} fûts · {row.senderName}
+                </Typography>
+                <Typography sx={{ fontSize: 12, color: "text.secondary" }}>
+                  {new Date(
+                    row.date?.toMillis?.() ?? (row.date?.seconds ?? 0) * 1000,
+                  ).toLocaleString("fr-BE", {
+                    day: "2-digit",
+                    month: "2-digit",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </Typography>
+              </Box>
+            }
+            actions={
+              admin ? (
+                <Button
+                  variant="outlined"
+                  onClick={() => handleOpenModalEnchere(row)}
+                >
+                  Modifier
+                </Button>
+              ) : undefined
+            }
+            moreActions={
+              admin
+                ? [
+                    {
+                      label: "Supprimer l’enchère",
+                      destructive: true,
+                      onClick: () => {
+                        setModalData(row.id);
+                        setDone(false);
+                        setError(null);
+                        setOpenModal(true);
+                      },
+                    },
+                  ]
+                : []
+            }
+          />
+        )}
+      >
+        <Box sx={{ height: 400, width: 1 }}>
+          <DataGrid
+            rows={enchereDataArray}
+            disableColumnFilter
+            disableDensitySelector
+            columns={columns}
+            initialState={{ columns: { columnVisibilityModel: { id: false } } }}
+            localeText={frFR.components.MuiDataGrid.defaultProps.localeText}
+            slots={{ toolbar: GridToolbar }}
+            slotProps={{
+              toolbar: {
+                showQuickFilter: true,
+              },
+            }}
+            getRowId={(row: any) => row.id}
+          />
+        </Box>
+      </ResponsiveRecords>
       <WarningModal
         done={done}
         error={error}

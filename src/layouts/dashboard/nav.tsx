@@ -156,7 +156,7 @@ export default function Nav({ openNav, onCloseNav }: any) {
             px: 2,
           }}
         >
-          {user ? "Mon compte" : "Connexion"}
+          {user ? (isAdmin() ? "Administration" : "Mon compte") : "Connexion"}
         </Button>
       </Box>
     </Box>

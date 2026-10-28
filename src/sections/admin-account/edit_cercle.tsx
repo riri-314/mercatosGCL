@@ -1,5 +1,5 @@
+import FormActions from "../../components/account/form-actions";
 import {
-  Alert,
   AlertColor,
   Box,
   FormHelperText,
@@ -41,7 +41,7 @@ export default function EditCerle({
   const [loading, setLoading] = useState<boolean>(false);
 
   const [cercleDescription, setCercleDescription] = useState<string>(
-    data.description
+    data.description,
   );
   const [cercleDescriptionError, setCercleDescriptionError] =
     useState<boolean>(false);
@@ -103,13 +103,21 @@ export default function EditCerle({
 
   return (
     <>
-      <Box component="form" noValidate autoComplete="off">
+      <Box
+        component="form"
+        noValidate
+        autoComplete="off"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void handleNewCercle();
+        }}
+      >
         <Grid container spacing={2}>
           <Grid item xs={12} sm={6}>
             <QuantityInput
               defaultValue={data.nbFut}
               title="Nombre de futs"
-              min={1}
+              min={0}
               error={nbFutError}
               helpText={`Nombre de futs restants`}
               change={(
@@ -117,7 +125,7 @@ export default function EditCerle({
                   | React.FocusEvent<HTMLInputElement>
                   | React.PointerEvent
                   | React.KeyboardEvent,
-                val: number | undefined
+                val: number | undefined,
               ) => {
                 if (typeof val !== "undefined") {
                   setNbFut(val);
@@ -169,35 +177,15 @@ export default function EditCerle({
             </FormHelperText>
           </Grid>
 
-          <Grid item xs={12} sm={12}>
-            <LoadingButton
-              color="error"
-              size="large"
-              variant="contained"
-              fullWidth
-              onClick={close}
-            >
+          <FormActions error={cercleError} severity={cercleErrorSeverity}>
+            <LoadingButton color="inherit" variant="outlined" onClick={close}>
               Annuler
             </LoadingButton>
-          </Grid>
-
-          <Grid item xs={12} sm={12}>
-            <LoadingButton
-              size="large"
-              variant="contained"
-              fullWidth
-              onClick={() => handleNewCercle()}
-              loading={loading}
-            >
+            <LoadingButton type="submit" variant="contained" loading={loading}>
               Mettre à jour cercle
             </LoadingButton>
-          </Grid>
+          </FormActions>
         </Grid>
-        {cercleError && (
-          <Alert sx={{ mt: 3 }} severity={cercleErrorSeverity}>
-            {cercleError}
-          </Alert>
-        )}
       </Box>
     </>
   );

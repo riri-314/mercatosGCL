@@ -184,7 +184,7 @@ describe('profile creation', formTests, () => {
     expect(screen.getByLabelText('Teneur en taule du comitard')).toHaveValue('');
     expect(screen.getByLabelText("Nombre d'étoiles du comitard")).toHaveValue('');
     expect(screen.getAllByRole('combobox')).toHaveLength(2);
-    for (const select of screen.getAllByRole('combobox')) expect(select).toHaveTextContent('Choisir une proportion');
+    for (const select of screen.getAllByRole('combobox')) expect(select).toHaveTextContent('Choisir…');
     expect(screen.getByRole('button', { name: 'Click ou glisse une image ici' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Supprimer image' })).not.toBeInTheDocument();
     expect(submit()).toBeEnabled();

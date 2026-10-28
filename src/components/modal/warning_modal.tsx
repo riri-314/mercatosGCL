@@ -1,15 +1,23 @@
-import { Button, Card, CardContent, Modal, Typography } from "@mui/material";
+import { useId } from "react";
+import {
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+} from "@mui/material";
 import { LoadingButton } from "@mui/lab";
 
 interface WarningModalProps {
-  title: string; //title of the modal eg. Warning your going to destroy the world and all it's glory
-  message: string; //message to diplsay on the modal
-  open: boolean; //let open the modal
-  loading: boolean; //let the proceed button load
-  error: null | string; //let some console log message
-  done: boolean; //let know if the action is done
-  close: () => void; //let close the modal
-  onProceed: () => void; //let run a functionwhen user proceed
+  title: string;
+  message: string;
+  open: boolean;
+  loading: boolean;
+  error: null | string;
+  done: boolean;
+  close: () => void;
+  onProceed: () => void;
 }
 
 export default function WarningModal({
@@ -22,74 +30,58 @@ export default function WarningModal({
   close,
   onProceed,
 }: WarningModalProps) {
+  const id = useId();
   return (
-    <Modal
+    <Dialog
       open={open}
       onClose={close}
-      aria-labelledby="modal-modal-title"
-      aria-describedby="modal-modal-description"
-      sx={{
-        m: 3,
-        overflow: "scroll",
-        maxWidth: 800,
-        ml: "auto",
-        mr: "auto",
+      maxWidth="sm"
+      fullWidth
+      aria-labelledby={`${id}-title`}
+      aria-describedby={`${id}-message`}
+      PaperProps={{
+        sx: {
+          m: 2,
+          width: "calc(100% - 32px)",
+          maxHeight: "calc(100dvh - 32px)",
+        },
       }}
     >
-      <Card sx={{ width: "100%", mb: 4 }}>
-        <CardContent>
-          <Typography variant="h5" sx={{ mb: 1 }}>
-            {title}
-          </Typography>
-          <Typography sx={{ mb: 1 }}>{error ? error : message}</Typography>
-          <div style={{ display: "flex", justifyContent: "space-between" }}>
-            {!error ? (
-              !done ? (
-                <>
-                  <Button
-                    onClick={close}
-                    sx={{ width: "48%" }}
-                    size="large"
-                    variant="contained"
-                    color="error"
-                  >
-                    Annuler
-                  </Button>
-                  <LoadingButton
-                    onClick={onProceed}
-                    sx={{ width: "48%" }}
-                    loading={loading}
-                    size="large"
-                    variant="contained"
-                  >
-                    Procéder
-                  </LoadingButton>
-                </>
-              ) : (
-                <Button
-                  onClick={close}
-                  sx={{ width: "48%" }}
-                  size="large"
-                  variant="contained"
-                  color="success"
-                >
-                  Changment effectué, fermer
-                </Button>
-              )
-            ) : (
-              <Button
-                onClick={close}
-                sx={{ width: "48%" }}
-                size="large"
-                variant="contained"
-                color="error"
-              >
-                Error, fermer
-              </Button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-    </Modal>
+      <DialogTitle id={`${id}-title`}>{title}</DialogTitle>
+      <DialogContent>
+        <DialogContentText
+          id={`${id}-message`}
+          sx={{ overflowWrap: "anywhere" }}
+        >
+          {error || (done ? "Changement effectué." : message)}
+        </DialogContentText>
+      </DialogContent>
+      <DialogActions
+        sx={{
+          p: 2,
+          gap: 1,
+          "& .MuiButton-root": { minHeight: 48, flex: 1, ml: "0 !important" },
+        }}
+      >
+        {error || done ? (
+          <Button onClick={close} variant="contained">
+            Fermer
+          </Button>
+        ) : (
+          <>
+            <Button onClick={close} variant="outlined">
+              Annuler
+            </Button>
+            <LoadingButton
+              onClick={onProceed}
+              loading={loading}
+              variant="contained"
+            >
+              Procéder
+            </LoadingButton>
+          </>
+        )}
+      </DialogActions>
+    </Dialog>
   );
 }
