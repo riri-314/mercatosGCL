@@ -1,7 +1,15 @@
 import Countdown from "../../components/countdown/countdown";
 import React, { useCallback, useMemo, useState } from "react";
 
-import { Box, Card, Stack, Typography, LinearProgress, Alert } from "@mui/material";
+import {
+  Box,
+  ButtonBase,
+  Card,
+  Stack,
+  Typography,
+  LinearProgress,
+  Alert,
+} from "@mui/material";
 import { LoadingButton } from "@mui/lab";
 
 import Iconify from "../../components/iconify/iconify";
@@ -9,7 +17,11 @@ import Label from "../../components/label/label";
 import QuantityInput from "../../components/inputs/numberInput";
 
 import ComitardModal from "./comitard-modal";
-import { buildComitardModalProps, formatTimeLeft, useComitardAuction } from "./comitard-helper";
+import {
+  buildComitardModalProps,
+  formatTimeLeft,
+  useComitardAuction,
+} from "./comitard-helper";
 
 import type { AlertColor } from "@mui/material";
 import type { CerclesData } from "./comitard-modal";
@@ -55,7 +67,7 @@ function ComitardCardInner({
     enchereMin,
     enchereMax,
     isInTimeFrame,
-      refetchData,
+    refetchData,
   });
 
   const renderStatus = useMemo(
@@ -72,14 +84,17 @@ function ComitardCardInner({
           boxShadow: (t: any) => t.shadows[4],
         }}
       >
-        <Countdown stop={auction.enchereStopMs ?? 0} format={formatTimeLeft} /> <Iconify icon="jam:chronometer" />
+        <Countdown stop={auction.enchereStopMs ?? 0} format={formatTimeLeft} />{" "}
+        <Iconify icon="jam:chronometer" />
       </Label>
     ),
-    [auction.enchereStopMs]
+    [auction.enchereStopMs],
   );
 
   const renderPrice = useMemo(() => {
-    const current = auction.firstEnchere ? `${auction.firstEnchere.vote} fûts` : "No data";
+    const current = auction.firstEnchere
+      ? `${auction.firstEnchere.vote} fûts`
+      : "No data";
 
     return (
       <Label
@@ -136,7 +151,17 @@ function ComitardCardInner({
         renderPrice,
         renderWinner,
       }),
-    [open, handleClose, product, cercleId, cerclesData, auction, renderStatus, renderPrice, renderWinner]
+    [
+      open,
+      handleClose,
+      product,
+      cercleId,
+      cerclesData,
+      auction,
+      renderStatus,
+      renderPrice,
+      renderWinner,
+    ],
   );
 
   // for the small card inline alert, keep compatibility with MUI AlertColor
@@ -144,9 +169,33 @@ function ComitardCardInner({
 
   return (
     <>
-      <Card>
-        <Box onClick={handleOpen} sx={{ pt: "100%", position: "relative" }}>
-          <FadeImage src={product?.picture} alt={product?.name ?? ""} absolute />
+      <Card
+        sx={{
+          height: "100%",
+          transition: "border-color 180ms",
+          "&:hover": {
+            borderColor: "primary.light",
+          },
+        }}
+      >
+        <Box
+          sx={{
+            pt: { xs: "60%", sm: "90%" },
+            position: "relative",
+            bgcolor: "background.neutral",
+          }}
+        >
+          <ButtonBase
+            onClick={handleOpen}
+            aria-label={`Voir la fiche de ${product?.firstname} ${product?.name}`}
+            sx={{ position: "absolute", inset: 0, width: 1, height: 1 }}
+          >
+            <FadeImage
+              src={product?.picture}
+              alt={product?.name ?? ""}
+              absolute
+            />
+          </ButtonBase>
 
           {auction.timeLeft > 0 && renderStatus}
           {auction.timeLeft > 0 && renderPrice}
@@ -155,10 +204,38 @@ function ComitardCardInner({
 
         {auction.timeLeft > 0 && <LinearProgress color="error" />}
 
-        <Stack spacing={2} sx={{ p: 3 }}>
-          <Typography variant="h6" noWrap>
-            {product?.firstname} "{product?.nickname}" {product?.name}
-          </Typography>
+        <Stack spacing={2} sx={{ p: 2.5 }}>
+          <ButtonBase
+            onClick={handleOpen}
+            sx={{
+              textAlign: "left",
+              justifyContent: "flex-start",
+              width: 1,
+              minHeight: 44,
+              borderRadius: 1,
+            }}
+          >
+            <Box>
+              <Typography
+                component="h3"
+                sx={{ fontSize: 14, fontWeight: 700, overflowWrap: "anywhere" }}
+              >
+                {product?.firstname} {product?.name}
+              </Typography>
+              {product?.nickname && (
+                <Typography
+                  sx={{
+                    fontSize: 13,
+                    color: "text.secondary",
+                    mt: 0.5,
+                    overflowWrap: "anywhere",
+                  }}
+                >
+                  « {product.nickname} »
+                </Typography>
+              )}
+            </Box>
+          </ButtonBase>
 
           {auction.displayVote && (
             <>

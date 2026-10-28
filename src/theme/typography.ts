@@ -108,6 +108,7 @@ export function typography() {
             textTransform: 'capitalize' as any,
         },
         button: {
+            textTransform: "none" as const,
             fontWeight: 700,
             lineHeight: 24 / 14,
             fontSize: pxToRem(14),

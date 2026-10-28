@@ -77,19 +77,24 @@ export default function AccountPopover() {
 
   return (
     <>
-      <StyledTypography variant="subtitle1">
-        {isAdmin()? "" : ("Fûts restants : "+ nbFutsLeft())}
+      <StyledTypography
+        variant="subtitle1"
+        sx={{ fontSize: 12, mr: 1.5, display: { xs: "none", sm: "block" } }}
+      >
+        {isAdmin() ? "" : "Fûts restants : " + nbFutsLeft()}
       </StyledTypography>
       <IconButton
+        aria-label="Ouvrir le menu du compte"
         onClick={handleOpen}
         sx={{
-          width: (theme) => `${theme.spacing(8)}px`,
-          height: (theme) => `${theme.spacing(8)}px`,
+          width: 44,
+          height: 44,
+          p: 0.5,
           background: (theme) =>
             open
               ? `linear-gradient(135deg, ${alpha(
                   theme.palette.primary.light,
-                  0.5
+                  0.5,
                 )} 0%, ${alpha(theme.palette.primary.main, 0.5)} 100%)`
               : alpha(theme.palette.grey[500], 0.16),
           "&:hover": {
@@ -109,11 +114,15 @@ export default function AccountPopover() {
           }}
           alt={user?.email ?? "null"}
           sx={{
-            width: (theme) => `${theme.spacing(8)}px`,
-            height: (theme) => `${theme.spacing(8)}px`,
+            width: 36,
+            height: 36,
+            fontSize: 13,
+            fontWeight: 700,
           }}
         >
-          {user?.email ? user.email : "test".charAt(0).toUpperCase()}
+          {(user?.displayName || user?.email || "?")
+            .slice(0, 1)
+            .toLocaleUpperCase("fr")}
         </Avatar>
       </IconButton>
 
@@ -153,7 +162,7 @@ export default function AccountPopover() {
             width: "100%",
           }}
         >
-          Logout
+          Déconnexion
         </LoadingButton>
       </Popover>
     </>

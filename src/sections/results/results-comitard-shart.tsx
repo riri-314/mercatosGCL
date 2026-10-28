@@ -8,88 +8,74 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
-  LabelList,
 } from "recharts";
-import type { ComitardWithMeta, NormalizedEnchere } from "../../types/results.types";
+import type {
+  ComitardWithMeta,
+  NormalizedEnchere,
+} from "../../types/results.types";
 
 function CustomTooltip({ active, payload }: any) {
-  const theme = useTheme();
-
   if (!active || !payload?.length) return null;
-
-  const row = payload[0]?.payload as NormalizedEnchere & { sender: string };
+  const row = payload[0].payload as NormalizedEnchere & { sender: string };
   return (
-    <div
-      style={{
-        backgroundColor: "white",
-        padding: "8px",
-        boxShadow: theme.shadows[3],
-        borderRadius: "5px",
-        lineHeight: "0.5rem",
+    <Box
+      sx={{
+        bgcolor: "background.paper",
+        p: 1.5,
+        border: "1px solid",
+        borderColor: "divider",
+        borderRadius: 1.5,
+        fontSize: 11,
+        boxShadow: "0 4px 14px #172c4212",
       }}
     >
-      <p>
-        <strong>{row.sender}</strong>
-      </p>
-      <p>{payload[0].value} futs</p>
-      <p>{row.time.toLocaleString()}</p>
-    </div>
+      <strong>
+        {row.sender} · {row.votes} fûts
+      </strong>
+      <Box sx={{ color: "text.secondary", mt: 0.5 }}>
+        {row.time.toLocaleString("fr-BE")}
+      </Box>
+    </Box>
   );
 }
 
-type Props = {
-  comitard: ComitardWithMeta;
-  isClosed: boolean;
-};
-
+type Props = { comitard: ComitardWithMeta; isClosed: boolean };
 export function ComitardBidChart({ comitard, isClosed }: Props) {
   const theme = useTheme();
-
   const chartData: NormalizedEnchere[] = useMemo(
     () =>
-      comitard.encheres.map((e) => ({
-        time: new Date(e.date.toMillis()),
-        votes: e.vote,
-        sender: e.sender,
+      comitard.encheres.map((bid) => ({
+        time: new Date(bid.date.toMillis()),
+        votes: bid.vote,
+        sender: bid.sender,
       })),
-    [comitard.encheres]
+    [comitard.encheres],
   );
-
   return (
-    <Box sx={{ height: theme.spacing(16), mt: 2, ml: -4, mb: -2, mr: 1 }}>
+    <Box
+      role="img"
+      aria-label={`Évolution de ${comitard.encheres.length} offres, dernière enchère à ${comitard.encheres.at(-1)?.vote ?? 0} fûts`}
+      sx={{ height: 80, px: 1 }}
+    >
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={chartData}>
-          <XAxis dataKey="time" padding={{ left: 20, right: 20 }} />
-          <YAxis padding={{ top: 10, bottom: 10 }} />
+        <LineChart
+          data={chartData}
+          margin={{ top: 16, bottom: 12, left: 12, right: 12 }}
+        >
+          <XAxis dataKey="time" hide />
+          <YAxis hide domain={[0, "auto"]} />
           <Tooltip content={<CustomTooltip />} />
           <Line
             type="monotone"
             dataKey="votes"
-            stroke={isClosed ? theme.palette.success.main : theme.palette.info.main}
+            stroke={
+              isClosed ? theme.palette.success.main : theme.palette.primary.main
+            }
             strokeWidth={2}
-          >
-            <LabelList
-              dataKey="sender"
-              position="bottom"
-              content={(props) => {
-                const { x, y, value } = props as any;
-                return (
-                  <text
-                    x={x}
-                    dx={6}
-                    y={y}
-                    dy={4}
-                    fontSize={10}
-                    fill="#666"
-                    textAnchor="start"
-                    transform={`rotate(90, ${x}, ${y})`}
-                  >
-                    {value}
-                  </text>
-                );
-              }}
-            />
-          </Line>
+            dot={{ r: 3, fill: "#fff", strokeWidth: 2 }}
+            activeDot={{ r: 5 }}
+            isAnimationActive={false}
+          />
         </LineChart>
       </ResponsiveContainer>
     </Box>

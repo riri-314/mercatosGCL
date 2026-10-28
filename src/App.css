@@ -1,3 +1,60 @@
 .base-Popup-root.base-Select-popup {
   z-index: 2000 !important;
 }
+
+::selection {
+  background: #d0ecfe;
+  color: #042174;
+}
+:focus-visible {
+  outline: 3px solid #73bafb;
+  outline-offset: 4px;
+}
+.club-live-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: currentColor;
+}
+.club-rules {
+  line-height: 1.85;
+}
+.club-rules h1,
+.club-rules h2,
+.club-rules h3 {
+  line-height: 1.3;
+  margin-top: 1.8em;
+}
+.club-rules a {
+  color: #1877f2;
+  text-underline-offset: 3px;
+}
+.club-rules hr {
+  border: 0;
+  border-top: 1px solid #dfe3e8;
+  margin: 32px 0;
+}
+.club-rules table {
+  border-collapse: collapse;
+  width: 100%;
+}
+.club-rules th,
+.club-rules td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #dfe3e8;
+}
+.club-rules img {
+  height: auto;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}

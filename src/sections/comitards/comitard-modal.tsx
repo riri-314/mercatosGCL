@@ -6,6 +6,7 @@ import {
   Card,
   Divider,
   LinearProgress,
+  IconButton,
   Modal,
   Stack,
   Typography,
@@ -19,6 +20,7 @@ import QuantityInput from "../../components/inputs/numberInput";
 import EncheresList from "./comitard-encheres";
 import FadeImage from "./comitard-picture";
 import { campusLabel } from "./comitard-helper";
+import ClubIcon from "../../components/club-icon/club-icon";
 
 export interface CerclesData {
   [key: string]: { name: string };
@@ -82,26 +84,61 @@ export default function ComitardModal({
       top: "50%",
       left: "50%",
       transform: "translate(-50%, -50%)",
-      width: isMediumScreen ? "90%" : "50%",
-      height: "90vh",
+      width: isMediumScreen ? "calc(100% - 24px)" : "min(720px, 90%)",
+      maxHeight: "calc(100dvh - 24px)",
+      display: "flex",
+      flexDirection: "column" as const,
       boxShadow: "none",
       border: "none",
       outline: "none",
     }),
-    [isMediumScreen]
+    [isMediumScreen],
   );
 
   return (
-    <Modal open={open} onClose={onClose}>
-      <Card sx={style}>
-        <Box sx={{ pt: "40vh", position: "relative" }}>
+    <Modal
+      open={open}
+      onClose={onClose}
+      aria-labelledby="comitard-profile-title"
+    >
+      <Card sx={style} role="dialog" aria-modal="true" tabIndex={-1}>
+        <IconButton
+          onClick={onClose}
+          aria-label="Fermer la fiche"
+          sx={{
+            position: "absolute",
+            top: 10,
+            right: 10,
+            zIndex: 12,
+            width: 44,
+            height: 44,
+            bgcolor: "background.paper",
+            boxShadow: "0 2px 12px #172c4220",
+            "&:hover": { bgcolor: "background.neutral" },
+          }}
+        >
+          <ClubIcon name="close" />
+        </IconButton>
+        <Box
+          sx={{
+            height: { xs: "28dvh", sm: "34dvh" },
+            flexShrink: 0,
+            position: "relative",
+          }}
+        >
           {/* Image */}
-          <FadeImage src={product?.picture} alt={product?.name ?? ""} absolute />
+          <FadeImage
+            src={product?.picture}
+            alt={product?.name ?? ""}
+            absolute
+          />
 
           {/* Labels */}
-          {timeLeft > 0 && renderStatus}
-          {timeLeft > 0 && renderPrice}
-          {timeLeft <= 0 && product?.encheres && renderWinner}
+          <Box sx={{ position: "absolute", inset: "54px 0 0" }}>
+            {timeLeft > 0 && renderStatus}
+            {timeLeft > 0 && renderPrice}
+            {timeLeft <= 0 && product?.encheres && renderWinner}
+          </Box>
         </Box>
 
         {timeLeft > 0 && <LinearProgress color="error" />}
@@ -109,11 +146,11 @@ export default function ComitardModal({
         <Box
           sx={{
             p: (t) => t.spacing(3),
-            maxHeight: "50vh",
+            minHeight: 0,
             overflowY: "auto",
           }}
         >
-          <Typography variant="h3">
+          <Typography variant="h3" id="comitard-profile-title">
             {product?.firstname} "{product?.nickname}" {product?.name}
           </Typography>
 
@@ -129,11 +166,14 @@ export default function ComitardModal({
               {Array.from({ length: product?.teneurTaule ?? 0 }, (_, i) => (
                 <span key={i}>🍺</span>
               ))}
-              {Array.from({ length: Math.max(0, 10 - (product?.teneurTaule ?? 0)) }, (_, i) => (
-                <span key={i} style={{ filter: "grayscale(100%)" }}>
-                  🍺
-                </span>
-              ))}
+              {Array.from(
+                { length: Math.max(0, 10 - (product?.teneurTaule ?? 0)) },
+                (_, i) => (
+                  <span key={i} style={{ filter: "grayscale(100%)" }}>
+                    🍺
+                  </span>
+                ),
+              )}
               <br />
               <strong>État civil</strong> : {product?.etatCivil}
               <br />
@@ -150,7 +190,8 @@ export default function ComitardModal({
               <br />
               <strong>Est le seul</strong> : {product?.estLeSeul}
               <br />
-              <strong>Chaud changer de campus</strong> : {campusLabel(product?.campus)}
+              <strong>Chaud changer de campus</strong> :{" "}
+              {campusLabel(product?.campus)}
             </Typography>
 
             {displayVote && (
@@ -175,13 +216,24 @@ export default function ComitardModal({
                   {isDisabled ? "Enchère max atteinte" : "Enchérir"}
                 </LoadingButton>
 
-                {voteError && <Alert severity={voteErrorSeverity}>{voteError}</Alert>}
+                {voteError && (
+                  <Alert severity={voteErrorSeverity}>{voteError}</Alert>
+                )}
               </>
             )}
 
-            <EncheresList encheres={product?.encheres} cerclesData={cerclesData} won={won} />
+            <EncheresList
+              encheres={product?.encheres}
+              cerclesData={cerclesData}
+              won={won}
+            />
 
-            <LoadingButton onClick={onClose} variant="contained" color="error" fullWidth>
+            <LoadingButton
+              onClick={onClose}
+              variant="contained"
+              color="error"
+              fullWidth
+            >
               Fermer
             </LoadingButton>
           </Stack>

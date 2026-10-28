@@ -19,7 +19,8 @@ import { useRouter } from "../../routes/hooks/use-router";
 import Logo from "../../components/logo/logo";
 import Iconify from "../../components/iconify/iconify";
 import { auth } from "../../firebase_config";
-import LogoFull from "../../assets/gcl_full.svg";
+import ClubIcon from "../../components/club-icon/club-icon";
+import RouterLink from "../../routes/components/router-link";
 
 // ----------------------------------------------------------------------
 
@@ -88,18 +89,28 @@ export default function LoginView() {
         <TextField
           name="email"
           label="Email"
+          type="email"
+          autoComplete="email"
+          value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
 
         <TextField
           name="password"
           label="Mot de passe"
+          autoComplete="current-password"
+          value={password}
           type={showPassword ? "text" : "password"}
           onChange={(e) => setPassword(e.target.value)}
           InputProps={{
             endAdornment: (
               <InputAdornment position="end">
                 <IconButton
+                  aria-label={
+                    showPassword
+                      ? "Masquer le mot de passe"
+                      : "Afficher le mot de passe"
+                  }
                   onClick={() => setShowPassword(!showPassword)}
                   edge="end"
                 >
@@ -122,7 +133,11 @@ export default function LoginView() {
         <Link
           variant="subtitle2"
           underline="hover"
-          onClick={handleToggleForgotPassword}
+          href="#password-recovery"
+          onClick={(event) => {
+            event.preventDefault();
+            handleToggleForgotPassword();
+          }}
         >
           Mot de passe oublié?
         </Link>
@@ -133,9 +148,8 @@ export default function LoginView() {
         size="large"
         type="submit"
         variant="contained"
-        color="inherit"
+        color="primary"
         loading={loading}
-        onClick={handleClick}
       >
         Connexion
       </LoadingButton>
@@ -148,6 +162,9 @@ export default function LoginView() {
         <TextField
           name="email"
           label="Email"
+          type="email"
+          autoComplete="email"
+          value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
         <Stack
@@ -159,7 +176,11 @@ export default function LoginView() {
           <Link
             variant="subtitle2"
             underline="hover"
-            onClick={handleToggleForgotPassword}
+            href="#password-recovery"
+            onClick={(event) => {
+              event.preventDefault();
+              handleToggleForgotPassword();
+            }}
           >
             Connecte-toi
           </Link>
@@ -170,11 +191,10 @@ export default function LoginView() {
           size="large"
           type="submit"
           variant="contained"
-          color="inherit"
+          color="primary"
           loading={loading}
-          onClick={handleForgottenPassword}
         >
-          Réniitialiser le mot de passe
+          Réinitialiser le mot de passe
         </LoadingButton>
       </Stack>
     </>
@@ -185,45 +205,80 @@ export default function LoginView() {
   return (
     <Box
       sx={{
-        "&::before": {
-          content: "''",
-          position: "absolute",
-          top: 0,
-          left: 0,
-          width: "100%",
-          height: "100%",
-          mask: `url(${LogoFull})`,
-          maskRepeat: "no-repeat",
-          maskPosition: "center",
-          maskSize: "contain",
-          backgroundColor: (theme) => theme.palette.primary.main,
-          opacity: (theme) => theme.palette.action.hoverOpacity,
-          zIndex: -1,
-        },
-        height: 1,
+        minHeight: "100dvh",
+        display: "flex",
+        flexDirection: "column",
+        bgcolor: "background.default",
+        p: { xs: 2, sm: 3 },
       }}
     >
-      <Logo />
-
-      <Stack alignItems="center" justifyContent="center" sx={{ height: 1 }}>
-        <Card
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 2,
+          mb: 3,
+        }}
+      >
+        <Logo />
+        <Link
+          component={RouterLink}
+          href="/"
+          underline="hover"
           sx={{
-            p: 5,
-            width: 1,
-            maxWidth: 420,
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 1,
+            fontSize: 13,
+            color: "text.secondary",
+            minHeight: 44,
           }}
         >
-          <Typography sx={{ pb: 3 }} variant="h4">
-            Connecte-toi
+          <ClubIcon
+            name="arrow"
+            sx={{ fontSize: 18, transform: "rotate(180deg)" }}
+          />
+          Retour aux résultats
+        </Link>
+      </Box>
+      <Card
+        sx={{
+          width: 1,
+          maxWidth: 420,
+          mx: "auto",
+          my: "auto",
+          p: { xs: 3, sm: 4 },
+        }}
+      >
+        <Typography component="h1" variant="h4" sx={{ mb: 3 }}>
+          {forgotPassword ? "Mot de passe oublié" : "Connexion"}
+        </Typography>
+        {forgotPassword && (
+          <Typography sx={{ fontSize: 13, color: "text.secondary", mb: 3 }}>
+            Un lien de réinitialisation sera envoyé à ton adresse email.
           </Typography>
-          {error && (
-            <Alert sx={{ mb: 3 }} severity="error">
-              {error}
-            </Alert>
-          )}
+        )}
+        {error && (
+          <Alert
+            sx={{ mb: 3 }}
+            severity={error.startsWith("Un email") ? "success" : "error"}
+          >
+            {error}
+          </Alert>
+        )}
+        <Box
+          component="form"
+          noValidate
+          onSubmit={(event) => {
+            event.preventDefault();
+            void (forgotPassword ? handleForgottenPassword() : handleClick());
+          }}
+        >
           {renderForm}
-        </Card>
-      </Stack>
+        </Box>
+      </Card>
+      <Box sx={{ height: 80 }} />
     </Box>
   );
 }
