@@ -1,3 +1,4 @@
+import { getEditionData } from "../../data/edition-data";
 import { Card, CardContent, Grid, Typography } from "@mui/material";
 import LoadingButton from "@mui/lab/LoadingButton";
 import { useState } from "react";
@@ -87,8 +88,8 @@ export default function EditEnchere({
               <QuantityInput
                 title="Enchère"
                 defaultValue={value}
-                min={data.data().enchereMin}
-                max={data.data().enchereMax}
+                min={(getEditionData(data) ?? {}).enchereMin}
+                max={(getEditionData(data) ?? {}).enchereMax}
                 error={false}
                 helpText={""}
                 change={(_event: any, val: any) => {

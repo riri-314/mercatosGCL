@@ -1,3 +1,4 @@
+import { getEditionData } from "../../data/edition-data";
 import Box from "@mui/material/Box";
 import {
   DataGrid,
@@ -10,7 +11,7 @@ import {
 import Iconify from "../../components/iconify/iconify";
 import { DocumentData } from "firebase/firestore";
 import { LoadingButton } from "@mui/lab";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import WarningModal from "../../components/modal/warning_modal";
 import { Avatar } from "@mui/material";
 import { useAuth } from "../../auth/AuthProvider";
@@ -36,82 +37,26 @@ export default function EncheresTable({
   const [done, setDone] = useState<boolean>(false);
   const { user } = useAuth();
 
-  const enchereDataArray: any[] = [];
-
-  // date, sender, receiver, amount
-
-  let cerclesNames: { [key: string]: string } = {};
-  if (data.data().cercles) {
-    Object.entries(data.data().cercles).forEach((cercle: any) => {
-      cerclesNames[cercle[0]] = cercle[1].name;
-    });
-  }
-  if (admin) {
-    Object.entries(data.data().cercles).forEach((cercle: any) => {
-      Object.entries(cercle[1].comitards ?? {}).forEach((comitard: any) => {
-        //
-        //comitard[0] is the comitard id
-        if (comitard[1].encheres != undefined) {
-          Object.entries(comitard[1].encheres).forEach((enchere: any) => {
-            const test = {
-              id: enchere[0],
-              date: enchere[1].date,
-              sender: enchere[1].sender,
-              senderName: cerclesNames[enchere[1].sender],
-              receiver: comitard[0],
-              receiverName:
-                comitard[1].firstname +
-                " " +
-                comitard[1].nickname +
-                " " +
-                comitard[1].name,
-              receiverPicture: comitard[1].picture,
-              receiverCercle: cercle[1].name,
-              amount: enchere[1].vote,
-            };
-            //console.log("test: ", test);
-            enchereDataArray.push(test);
+  const enchereDataArray = useMemo(() => {
+    const rows: DocumentData[] = [];
+    const cercles = getEditionData(data)?.cercles ?? {};
+    for (const cercle of Object.values<DocumentData>(cercles)) {
+      for (const [comitardId, comitard] of Object.entries<DocumentData>(cercle.comitards ?? {})) {
+        for (const [id, enchere] of Object.entries<DocumentData>(comitard.encheres ?? {})) {
+          if (!admin && enchere.sender !== user?.uid) continue;
+          rows.push({
+            id, date: enchere.date, sender: enchere.sender,
+            senderName: cercles[enchere.sender]?.name,
+            receiver: comitardId,
+            receiverName: `${comitard.firstname} ${comitard.nickname} ${comitard.name}`,
+            receiverPicture: comitard.picture,
+            receiverCercle: cercle.name, amount: enchere.vote,
           });
         }
-        //
-      });
-    });
-  } else {
-    Object.entries(data.data().cercles).forEach((cercle: any) => {
-      Object.entries(cercle[1].comitards ?? {}).forEach((comitard: any) => {
-        //
-        //comitard[0] is the comitard id
-
-        if (comitard[1].encheres != undefined) {
-          Object.entries(comitard[1].encheres).forEach((enchere: any) => {
-            if (enchere[1].sender == user?.uid) {
-              const test = {
-                id: enchere[0],
-                date: enchere[1].date,
-                sender: enchere[1].sender,
-                senderName: cerclesNames[enchere[1].sender],
-                receiver: comitard[0],
-                receiverName:
-                  comitard[1].firstname +
-                  " " +
-                  comitard[1].nickname +
-                  " " +
-                  comitard[1].name,
-                receiverPicture: comitard[1].picture,
-                receiverCercle: cercle[1].name,
-                amount: enchere[1].vote,
-              };
-              //console.log("test: ", test);
-              enchereDataArray.push(test);
-            }
-          });
-        }
-        //
-      });
-    });
-  }
-
-  //console.log("enchereDataArray: ", enchereDataArray);
+      }
+    }
+    return rows;
+  }, [data, admin, user?.uid]);
 
   async function handleClick(enchereUid: string) {
     setLoading(true);

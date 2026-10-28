@@ -1,3 +1,4 @@
+import { getEditionData } from "../../data/edition-data";
 import LoadingButton from "@mui/lab/LoadingButton";
 import {
   Accordion,
@@ -91,7 +92,7 @@ export default function NewComitard({
 
   function cerclesOption() {
     const out: { [key: string]: string } = {}; // Add type annotation to the 'out' object
-    for (const [key, value] of Object.entries(data.data().cercles)) {
+    for (const [key, value] of Object.entries((getEditionData(data) ?? {}).cercles)) {
       if (typeof value === "object" && value !== null) {
         out[(value as { name: string }).name] = key; // Add type assertion to 'value'
       }

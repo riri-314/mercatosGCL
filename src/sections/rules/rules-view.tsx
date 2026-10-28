@@ -1,3 +1,4 @@
+import { getEditionData } from "../../data/edition-data";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import Card from "@mui/material/Card";
@@ -13,10 +14,11 @@ import Box from "@mui/material/Box";
 export default function Rules() {
 
     const {data} = useData();
-    let rules = data?.data().rules;
+    const edition = getEditionData(data) ?? {};
+    let rules = edition.rules;
     if (data != null) {
         // Remove escape characters from the rules
-        rules = data.data().rules.replace(/\\/g, "");
+        rules = edition.rules.replace(/\\/g, "");
     }
 
     return (<>
@@ -47,11 +49,11 @@ export default function Rules() {
                             <ul>
                                 <li>
                                     <strong>Nombre initial de fûts : </strong>
-                                    {data?.data().nbFut} fûts
+                                    {edition.nbFut} fûts
                                 </li>
                                 <li>
                                     <strong>Nombre maximum de comitards par cercle : </strong>
-                                    {data?.data().nbComitard} comitards
+                                    {edition.nbComitard} comitards
                                 </li>
                             </ul>
 
@@ -63,10 +65,10 @@ export default function Rules() {
 
                             <ul>
                                 <li><strong>Début des enchères : </strong>
-                                    {new Date(data?.data().start.seconds * 1000).toLocaleString()}</li>
+                                    {new Date(edition.start.seconds * 1000).toLocaleString()}</li>
                                 <li>
                                     <strong>Fin des enchères : </strong>
-                                    {new Date(data?.data().stop.seconds * 1000).toLocaleString()}
+                                    {new Date(edition.stop.seconds * 1000).toLocaleString()}
                                 </li>
                             </ul>
 
@@ -80,15 +82,15 @@ export default function Rules() {
                             <ul>
                                 <li>
                                     <strong>Durée d'une enchères : </strong>
-                                    {data?.data().duration}h
+                                    {edition.duration}h
                                 </li>
                                 <li>
                                     <strong>Enchère minimum : </strong>
-                                    {data?.data().enchereMin} fûts
+                                    {edition.enchereMin} fûts
                                 </li>
                                 <li>
                                     <strong>Enchère maximum : </strong>
-                                    {data?.data().enchereMax} fûts
+                                    {edition.enchereMax} fûts
                                 </li>
                             </ul>
 
@@ -101,15 +103,15 @@ export default function Rules() {
                             <ul>
                                 <li>
                                     <strong>Bénéfice lors de la vente d'un comitard : </strong>
-                                    {data?.data().remboursementVendeur * 100}% du prix d'achat
+                                    {edition.remboursementVendeur * 100}% du prix d'achat
                                 </li>
                                 <li>
                                     <strong>Remboursement pour le perdant d'une enchère : </strong>
-                                    {data?.data().remboursementPerdant * 100}% du prix d'achat
+                                    {edition.remboursementPerdant * 100}% du prix d'achat
                                 </li>
                                 <li>
                                     <strong>Remboursement pour le gagnant d'une enchère : </strong>
-                                    {data?.data().remboursementGagnant * 100}% du prix d'achat
+                                    {edition.remboursementGagnant * 100}% du prix d'achat
                                 </li>
                             </ul>
                         </>) : (<Loading/>)}

@@ -1,3 +1,4 @@
+import { getEditionData } from "../../data/edition-data";
 import { useEffect } from "react";
 import Box from "@mui/material/Box";
 import {
@@ -11,7 +12,7 @@ import {
 import Iconify from "../../components/iconify/iconify";
 import { DocumentData } from "firebase/firestore";
 import { LoadingButton } from "@mui/lab";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { httpsCallable } from "firebase/functions";
 import { functions } from "../../firebase_functions";
 import WarningModal from "../../components/modal/warning_modal";
@@ -88,9 +89,8 @@ export default function CercleTable({
     }
   }
 
-  const cercleDataArray = Object.keys(data.data().cercles).map(
-    (id: string) => ({ id, ...data.data().cercles[id] }),
-  );
+  const cercleDataArray = useMemo(() => Object.entries(getEditionData(data)?.cercles ?? {})
+    .map(([id, cercle]) => ({ id, ...(cercle as DocumentData) })), [data]);
 
   function handleClick(uid: string, functionName: string) {
     //delete th elogin of the user, not it's data

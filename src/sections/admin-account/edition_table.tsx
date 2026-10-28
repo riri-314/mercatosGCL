@@ -1,3 +1,4 @@
+import { getEditionData } from "../../data/edition-data";
 import Box from "@mui/material/Box";
 import {
     DataGrid,
@@ -11,7 +12,7 @@ import Iconify from "../../components/iconify/iconify";
 import {DocumentData} from "firebase/firestore";
 import {setActiveEdition} from "../../utils/admin-tools";
 import {LoadingButton} from "@mui/lab";
-import {useState} from "react";
+import {useMemo, useState} from "react";
 
 interface EditionTableProps {
     data: DocumentData[];
@@ -24,6 +25,7 @@ export default function QuickFilteringGrid({
                                                data, refetchData, error, handleOpenModalEdition,
                                            }: EditionTableProps) {
     const [loading, setLoading] = useState<boolean>(false);
+    const rows = useMemo(() => data.map((snapshot) => getEditionData(snapshot) ?? {}), [data]);
 
     const columns: GridColDef[] = [{field: "edition", headerName: "ID", width: 90}, {
         field: "rules", headerName: "Règles", width: 150, editable: false,
@@ -160,7 +162,7 @@ export default function QuickFilteringGrid({
 
     return (<Box sx={{height: 400, width: 1}}>
             <DataGrid
-                rows={data.map((doc) => doc.data())}
+                rows={rows}
                 disableColumnFilter
                 disableColumnSelector
                 disableDensitySelector

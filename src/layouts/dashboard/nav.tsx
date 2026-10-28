@@ -1,3 +1,4 @@
+import { getEditionData } from "../../data/edition-data";
 import { useEffect } from "react";
 
 import Box from "@mui/material/Box";
@@ -43,7 +44,7 @@ export default function Nav({ openNav, onCloseNav }: any) {
 
   function nbFutsLeft(): number {
     if (user) {
-      const nbFuts = data?.data().cercles[user?.uid]?.nbFut;
+      const nbFuts = getEditionData(data)?.cercles[user?.uid]?.nbFut;
       if (nbFuts) {
         return nbFuts;
       } else {
@@ -55,7 +56,7 @@ export default function Nav({ openNav, onCloseNav }: any) {
   }
 
   function nbFutsMax(): number {
-    const nbFuts = data?.data().nbFut;
+    const nbFuts = getEditionData(data)?.nbFut;
     if (nbFuts) {
       return nbFuts;
     } else {

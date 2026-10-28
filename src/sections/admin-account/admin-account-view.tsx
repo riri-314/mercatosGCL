@@ -1,3 +1,4 @@
+import { getEditionData } from "../../data/edition-data";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import Card from "@mui/material/Card";
@@ -99,7 +100,7 @@ export default function AdminAccount({
               <Typography variant="h5">Créer une nouvelle édition</Typography>
             </AccordionSummary>
             <AccordionDetails>
-              <NewEdition data={activeData.data()} refetchData={refetchData} />
+              <NewEdition data={(getEditionData(activeData) ?? {})} refetchData={refetchData} />
             </AccordionDetails>
           </Accordion>
         </CardContent>

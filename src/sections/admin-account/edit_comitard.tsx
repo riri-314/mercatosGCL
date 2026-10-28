@@ -1,3 +1,4 @@
+import { getEditionData } from "../../data/edition-data";
 import LoadingButton from "@mui/lab/LoadingButton";
 import {
   Alert,
@@ -37,7 +38,7 @@ function getCercleIdByComitardId(
   activeData: DocumentData,
   comitardId: string
 ): string | undefined {
-  for (const [cercleId, cercle] of Object.entries(activeData.data().cercles)) {
+  for (const [cercleId, cercle] of Object.entries((getEditionData(activeData) ?? {}).cercles)) {
     if ((cercle as any).comitards && comitardId in (cercle as any).comitards) {
       return cercleId;
     }
@@ -104,7 +105,7 @@ export default function EditComitard({
 
   function cerclesOption() {
     const out: { [key: string]: string } = {}; // Add type annotation to the 'out' object
-    for (const [key, value] of Object.entries(activeData.data().cercles)) {
+    for (const [key, value] of Object.entries((getEditionData(activeData) ?? {}).cercles)) {
       if (typeof value === "object" && value !== null) {
         out[(value as { name: string }).name] = key; // Add type assertion to 'value'
       }

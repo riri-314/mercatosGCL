@@ -1,3 +1,4 @@
+import { getEditionData } from "../data/edition-data";
 import {
   collection,
   getDocs,
@@ -154,7 +155,7 @@ export async function editComitard(id: string, comitardID: string, data: Dict) {
 }
 
 function getEnchre(data: DocumentData, enchereID: string) {
-  const activeEditionCercle = data.data().cercles;
+  const activeEditionCercle = getEditionData(data)?.cercles ?? {};
 
   let enchereFound: any = null;
   let comitardIdFound: string | null = null;
@@ -213,7 +214,7 @@ export async function deleteEnchereWithStates(
   enchereID: string,
   rembourse: boolean
 ): Promise<DeleteEnchereResult> {
-  if (!originalSnap.data()) return { status: "error", message: "Original document data is missing." };
+  if (!getEditionData(originalSnap)) return { status: "error", message: "Original document data is missing." };
   const { enchereFound } = getEnchre(originalSnap, enchereID);
   if (!enchereFound) return { status: "error", message: "Impossible de trouver cette enchère." };
   try {

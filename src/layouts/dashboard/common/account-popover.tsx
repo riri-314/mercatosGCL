@@ -1,3 +1,4 @@
+import { getEditionData } from "../../../data/edition-data";
 import { useState } from "react";
 
 import Box from "@mui/material/Box";
@@ -50,7 +51,7 @@ export default function AccountPopover() {
   }
 
   function nbFutsLeft(): number {
-    const nbFuts = user?.uid && data?.data()?.cercles[user.uid]?.nbFut;
+    const nbFuts = user?.uid && getEditionData(data)?.cercles[user.uid]?.nbFut;
     return nbFuts ?? 0;
   }
 

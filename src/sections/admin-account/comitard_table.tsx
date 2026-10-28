@@ -1,3 +1,4 @@
+import { getEditionData } from "../../data/edition-data";
 import Box from "@mui/material/Box";
 import {
   DataGrid,
@@ -10,7 +11,7 @@ import {
 import Iconify from "../../components/iconify/iconify";
 import { deleteField, doc, DocumentData, updateDoc } from "firebase/firestore";
 import { LoadingButton } from "@mui/lab";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { db } from "../../firebase_config";
 import WarningModal from "../../components/modal/warning_modal";
 import { Avatar } from "@mui/material";
@@ -36,33 +37,17 @@ export default function ComitardTable({
   const [done, setDone] = useState<boolean>(false);
   const { user } = useAuth();
 
-  const cercleDataArray: any[] = [];
-
-  if (admin) {
-    Object.entries(data.data().cercles).forEach((cercle: any) => {
-      //console.log("cercle: ", cercle);
-      if (cercle[1].comitards == undefined) {
-        cercle[1].comitards = {};
+  const cercleDataArray = useMemo(() => {
+    const rows: DocumentData[] = [];
+    const cercles = getEditionData(data)?.cercles ?? {};
+    for (const [cercleId, cercle] of Object.entries<DocumentData>(cercles)) {
+      if (!admin && cercleId !== user?.uid) continue;
+      for (const [id, comitard] of Object.entries<DocumentData>(cercle.comitards ?? {})) {
+        rows.push({ ...comitard, id, cercle: cercle.name, cercleId });
       }
-      Object.entries(cercle[1].comitards).forEach((comitard: any) => {
-        comitard[1].cercle = cercle[1].name;
-        comitard[1].cercleId = cercle[0];
-        comitard[1].id = comitard[0];
-        cercleDataArray.push(comitard[1]);
-      });
-    });
-  } else {
-    Object.entries(data.data().cercles).forEach((cercle: any) => {
-      Object.entries(cercle[1].comitards).forEach((comitard: any) => {
-        if (cercle[0] == user?.uid) {
-          comitard[1].cercle = cercle[1].name;
-          comitard[1].cercleId = cercle[0];
-          comitard[1].id = comitard[0];
-          cercleDataArray.push(comitard[1]);
-        }
-      });
-    });
-  }
+    }
+    return rows;
+  }, [data, admin, user?.uid]);
 
   async function handleClick(comitardUid: string, cercleUid: string) {
     setLoading(true);

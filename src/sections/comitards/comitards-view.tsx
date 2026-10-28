@@ -1,3 +1,4 @@
+import { getEditionData } from "../../data/edition-data";
 import { useEffect, useMemo, useState } from "react";
 import Container from "@mui/material/Container";
 import Grid from "@mui/material/Grid";
@@ -35,7 +36,7 @@ export default function ComitardsView() {
     return () => clearInterval(id);
   }, []);
 
-  const raw = useMemo(() => data?.data(), [data]);
+  const raw = useMemo(() => getEditionData(data), [data]);
 
   const cerclesData: CerclesData = useMemo(() => {
     const cercles = raw?.cercles;

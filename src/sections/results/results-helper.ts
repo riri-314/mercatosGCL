@@ -1,3 +1,4 @@
+import { getEditionData } from "../../data/edition-data";
 import { useMemo } from "react";
 import type { ResultsSplit, Cercle, Comitard, Enchere, ComitardWithMeta } from "../../types/results.types";
 
@@ -38,7 +39,7 @@ export function useComitardResults(rawDoc: any): ResultsSplit {
     const running: ComitardWithMeta[] = [];
     const closed: ComitardWithMeta[] = [];
 
-    const cerclesData = rawDoc?.data?.()?.cercles ?? rawDoc?.data()?.cercles;
+    const cerclesData = getEditionData(rawDoc)?.cercles;
     if (!isRecordObject(cerclesData)) return { running, closed };
 
     // Build cercle lookup

@@ -1,3 +1,4 @@
+import { getEditionData } from "../../data/edition-data";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import Card from "@mui/material/Card";
@@ -25,25 +26,20 @@ interface AccountProps {
 
 export default function Account({ data, refetchData }: AccountProps) {
   const { user } = useAuth();
+  const edition = getEditionData(data) ?? {};
 
   const [openModalComitard, setOpenModalComitard] = useState(false);
   const [modalComitardData, setModalComitardData] = useState<any | null>(null);
-  console.log("now: ", new Date().getTime());
-  console.log("stop: ", data?.data().stop.toDate().getTime());
-  console.log(
-    "test: ",
-    new Date().getTime() < data?.data().stop.toDate().getTime()
-  );
 
   function getNbComitard(): [boolean, number, boolean, any] {
     // it return [did the function work (error?), number of comitard left, can the user add a comitard]
     if (user) {
       try {
-        const cercleData = data?.data().cercles;
+        const cercleData = edition.cercles;
         const nbComitard = Object.keys(
           cercleData[user?.uid]["comitards"]
         ).length;
-        const maxComitards = data?.data().nbComitard;
+        const maxComitards = edition.nbComitard;
         const nbComitardsLeft = maxComitards - nbComitard;
         if (nbComitardsLeft <= 0) {
           return [true, 0, false, ""];
@@ -60,15 +56,15 @@ export default function Account({ data, refetchData }: AccountProps) {
   }
 
   function element() {
-    if (new Date().getTime() < data?.data().stop.toDate().getTime()) {
+    if (new Date().getTime() < edition.stop.toDate().getTime()) {
       if (getNbComitard()[0] && getNbComitard()[2]) {
         //function is ok and comitards left
-        if (new Date().getTime() < data?.data().start.toDate().getTime()) {
+        if (new Date().getTime() < edition.start.toDate().getTime()) {
           return (
             <>
               <Alert severity="info" sx={{ mb: 4 }}>
                 Créez votre comitard avant le début des enchères{" "}
-                {data?.data().start.toDate().toLocaleString()}
+                {edition.start.toDate().toLocaleString()}
                 <br />
                 il vous reste jusqu'a {getNbComitard()[1]} comitards à créer
               </Alert>
@@ -86,7 +82,7 @@ export default function Account({ data, refetchData }: AccountProps) {
                 {" "}
                 Vous pouvez toujours créer un comitard mais les enchères ont
                 déja commencées depuis le{" "}
-                {data?.data().start.toDate().toLocaleString()}
+                {edition.start.toDate().toLocaleString()}
                 <br />
                 il vous reste jusqu'a {getNbComitard()[1]} comitards à créer
               </Alert>
