@@ -2,7 +2,6 @@ import {
   AppBar,
   Box,
   Button,
-  Chip,
   IconButton,
   Toolbar,
   Typography,
@@ -10,16 +9,12 @@ import {
 import { NAV, HEADER } from "./config-layout";
 import AccountPopover from "./common/account-popover";
 import { useAuth } from "../../auth/AuthProvider";
-import { useData } from "../../data/DataProvider";
-import { getEditionData } from "../../data/edition-data";
 import RouterLink from "../../routes/components/router-link";
 import ClubIcon from "../../components/club-icon/club-icon";
 import Logo from "../../components/logo/logo";
 
-export default function Header({ onOpenNav }: any) {
+export default function Header({ onOpenNav }: { onOpenNav: () => void }) {
   const { user } = useAuth();
-  const { data } = useData();
-  const edition = getEditionData(data)?.edition;
   return (
     <AppBar
       sx={{
@@ -57,19 +52,6 @@ export default function Header({ onOpenNav }: any) {
           </Box>
         </Typography>
         <Box sx={{ flexGrow: 1 }} />
-        {edition != null && (
-          <Chip
-            label={`Édition ${edition}`}
-            size="small"
-            variant="outlined"
-            sx={{
-              display: { xs: "none", md: "flex" },
-              fontSize: 12,
-              borderColor: "divider",
-              mr: 1,
-            }}
-          />
-        )}
         {user ? (
           <AccountPopover />
         ) : (

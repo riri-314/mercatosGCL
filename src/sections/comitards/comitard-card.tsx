@@ -147,9 +147,6 @@ function ComitardCardInner({
         cercleId,
         cerclesData,
         auction,
-        renderStatus,
-        renderPrice,
-        renderWinner,
       }),
     [
       open,
@@ -158,9 +155,6 @@ function ComitardCardInner({
       cercleId,
       cerclesData,
       auction,
-      renderStatus,
-      renderPrice,
-      renderWinner,
     ],
   );
 

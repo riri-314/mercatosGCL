@@ -4,6 +4,7 @@ import { Outlet, Navigate, useRoutes } from 'react-router-dom';
 import DashboardLayout from '../layouts/dashboard';
 import { useAuth } from '../auth/AuthProvider';
 import WipPage from "../pages/work-in-progress.tsx";
+import Loading from '../sections/loading/loading';
 
 export const AccountPage = lazy(() => import('../pages/account'));
 export const AdminAccountPage = lazy(() => import('../pages/admin-account'));
@@ -23,7 +24,7 @@ export default function Router() {
     {
       element: (
         <DashboardLayout>
-          <Suspense>
+          <Suspense fallback={<Loading />}>
             <Outlet />
           </Suspense>
         </DashboardLayout>

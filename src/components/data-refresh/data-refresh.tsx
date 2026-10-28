@@ -44,24 +44,41 @@ export default function DataRefresh() {
       <span>
         <Button
           size="small"
+          variant="outlined"
+          color="inherit"
           disabled={refreshing}
           aria-label="Actualiser les enchères"
+          aria-busy={refreshing}
           onClick={() => {
             setRefreshing(true);
             refetchData();
             timeout.current = setTimeout(() => setRefreshing(false), 1000);
           }}
           startIcon={
-            <ClubIcon name="refresh" sx={{ fontSize: "15px !important" }} />
+            <ClubIcon name="refresh" sx={{
+              fontSize: "18px !important",
+              animation: refreshing ? "refresh-spin 900ms linear infinite" : "none",
+              "@keyframes refresh-spin": { to: { transform: "rotate(360deg)" } },
+            }} />
           }
           sx={{
-            fontSize: 10,
+            minWidth: 44,
+            minHeight: 44,
+            flexShrink: 0,
+            fontSize: 12,
+            fontWeight: 500,
             color: "text.secondary",
-            p: 0.75,
+            borderColor: "divider",
+            bgcolor: "background.paper",
+            px: { xs: 1, sm: 1.5 },
             whiteSpace: "nowrap",
+            "& .MuiButton-startIcon": { mx: { xs: 0, sm: undefined }, mr: { sm: 0.75 } },
+            "&:hover": { borderColor: "text.disabled", bgcolor: "background.neutral" },
           }}
         >
-          {refreshing ? "Actualisation…" : "Actualiser"}
+          <Box component="span" sx={{ display: { xs: "none", sm: "inline" } }}>
+            Actualiser
+          </Box>
         </Button>
       </span>
     </Tooltip>

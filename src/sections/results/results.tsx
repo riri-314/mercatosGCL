@@ -13,6 +13,8 @@ import {
   Typography,
 } from "@mui/material";
 import { useData } from "../../data/DataProvider";
+import { getEditionData } from "../../data/edition-data";
+import { useAuth } from "../../auth/AuthProvider";
 import { useComitardResults } from "./results-helper";
 import { ComitardResultCard } from "./results-card";
 import ClubIcon from "../../components/club-icon/club-icon";
@@ -22,10 +24,15 @@ import { normalizeSearch } from "../../utils/search";
 
 export default function ResultsPage() {
   const { data } = useData();
+  const { user } = useAuth();
   const { running, closed } = useComitardResults(data);
+  const circleName = user?.uid && getEditionData(data)?.cercles?.[user.uid]?.name;
   const [tab, setTab] = useState("running");
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("time");
+  const hasAuctions = running.length + closed.length > 0;
+  const allFinished = running.length === 0 && closed.length > 0;
+  const showFilters = (tab === "running" ? running : closed).length > 0;
   const profiles = useMemo(() => {
     const query = normalizeSearch(search);
     const list = (tab === "running" ? running : closed).filter((profile) =>
@@ -46,15 +53,25 @@ export default function ResultsPage() {
       <Box
         sx={{
           display: "flex",
-          alignItems: "center",
+          alignItems: "flex-start",
           justifyContent: "space-between",
           gap: 2,
-          mb: 2,
+          mb: 3,
         }}
       >
-        <Typography component="h1" variant="h4">
-          Résultats
-        </Typography>
+        <Box>
+          {circleName && (
+            <Typography sx={{ fontSize: 12, color: "text.secondary", mb: 0.5 }}>
+              Bonjour, {circleName}.
+            </Typography>
+          )}
+          <Typography component="h1" variant="h4" sx={{ fontSize: { xs: 26, sm: 28 } }}>
+            Résultats
+          </Typography>
+          <Typography sx={{ fontSize: 13, color: "text.secondary", mt: 0.75 }}>
+            Suivez les enchères et les transferts entre cercles.
+          </Typography>
+        </Box>
         <DataRefresh />
       </Box>
       <Box
@@ -63,9 +80,6 @@ export default function ResultsPage() {
           alignItems: { xs: "stretch", md: "center" },
           flexDirection: { xs: "column", md: "row" },
           gap: { xs: 1.5, md: 2 },
-          borderBottom: "1px solid",
-          borderColor: "divider",
-          pb: 1.5,
           mb: 2.5,
         }}
       >
@@ -74,13 +88,17 @@ export default function ResultsPage() {
           onChange={(_, value) => setTab(value)}
           aria-label="État des enchères"
           sx={{
-            minHeight: 44,
+            minHeight: 52,
             flexShrink: 0,
+            width: { xs: "100%", md: "auto" },
+            borderBottom: "1px solid",
+            borderColor: "divider",
             "& .MuiTab-root": {
-              minHeight: 44,
-              px: { xs: 1, sm: 1.5 },
+              minHeight: 52,
+              flex: { xs: 1, md: "initial" },
+              px: { xs: 1.5, md: 2 },
               minWidth: 0,
-              fontSize: { xs: 11, sm: 12 },
+              fontSize: 13,
             },
           }}
         >
@@ -107,10 +125,10 @@ export default function ResultsPage() {
                   label={running.length}
                   size="small"
                   sx={{
-                    height: 20,
-                    fontSize: 10,
-                    bgcolor: "primary.lighter",
-                    color: "primary.dark",
+                    height: 22,
+                    fontSize: 11,
+                    bgcolor: tab === "running" ? "primary.lighter" : "background.neutral",
+                    color: tab === "running" ? "primary.dark" : "text.secondary",
                   }}
                 />
               </Box>
@@ -138,78 +156,87 @@ export default function ResultsPage() {
                 <Chip
                   label={closed.length}
                   size="small"
-                  sx={{ height: 20, fontSize: 10 }}
+                  sx={{
+                    height: 22,
+                    fontSize: 11,
+                    bgcolor: tab === "closed" ? "primary.lighter" : "background.neutral",
+                    color: tab === "closed" ? "primary.dark" : "text.secondary",
+                  }}
                 />
               </Box>
             }
           />
         </Tabs>
         <Box sx={{ flexGrow: 1, display: { xs: "none", md: "block" } }} />
-        <TextField
-          size="small"
-          placeholder="Un nom, un cercle…"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          inputProps={{ "aria-label": "Rechercher une enchère" }}
-          sx={{
-            width: { xs: "100%", md: 205 },
-            "& input": { fontSize: { xs: 16, sm: 13 }, minHeight: 24 },
-          }}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <ClubIcon
-                  name="search"
-                  sx={{ fontSize: 17, color: "text.secondary" }}
-                />
-              </InputAdornment>
-            ),
-            endAdornment: search ? (
-              <InputAdornment position="end">
-                <IconButton
-                  size="small"
-                  aria-label="Effacer la recherche"
-                  onClick={() => setSearch("")}
-                >
-                  <ClubIcon name="close" sx={{ fontSize: 15 }} />
-                </IconButton>
-              </InputAdornment>
-            ) : null,
-          }}
-        />
+        {showFilters && (
+          <TextField
+            size="small"
+            placeholder="Un nom, un cercle…"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            inputProps={{ "aria-label": "Rechercher une enchère" }}
+            sx={{
+              width: { xs: "100%", md: 205 },
+              "& input": { fontSize: { xs: 16, sm: 13 }, minHeight: 24 },
+            }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <ClubIcon
+                    name="search"
+                    sx={{ fontSize: 17, color: "text.secondary" }}
+                  />
+                </InputAdornment>
+              ),
+              endAdornment: search ? (
+                <InputAdornment position="end">
+                  <IconButton
+                    size="small"
+                    aria-label="Effacer la recherche"
+                    onClick={() => setSearch("")}
+                  >
+                    <ClubIcon name="close" sx={{ fontSize: 15 }} />
+                  </IconButton>
+                </InputAdornment>
+              ) : null,
+            }}
+          />
+        )}
       </Box>
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          mb: 2,
-          gap: 2,
-        }}
-      >
-        <Typography sx={{ fontSize: 11, color: "text.secondary" }}>
-          {profiles.length} enchère{profiles.length !== 1 ? "s" : ""}
-          {tab === "running"
-            ? " en cours"
-            : " remportée" + (profiles.length !== 1 ? "s" : "")}
-        </Typography>
-        <TextField
-          select
-          size="small"
-          value={sort}
-          onChange={(event) => setSort(event.target.value)}
-          SelectProps={{ inputProps: { "aria-label": "Trier les enchères" } }}
+      {showFilters && (
+        <Box
           sx={{
-            "& .MuiInputBase-root": { fontSize: 11, bgcolor: "transparent" },
-            "& fieldset": { border: 0 },
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            mb: 2,
+            gap: 2,
           }}
         >
-          <MenuItem value="time">
-            {tab === "running" ? "Se terminent bientôt" : "Les plus récentes"}
-          </MenuItem>
-          <MenuItem value="bid">Enchères les plus élevées</MenuItem>
-        </TextField>
-      </Box>
+          <Typography sx={{ fontSize: 12, color: "text.secondary" }}>
+            {profiles.length} enchère{profiles.length !== 1 ? "s" : ""}
+            {tab === "running"
+              ? " en cours"
+              : " remportée" + (profiles.length !== 1 ? "s" : "")}
+          </Typography>
+          <TextField
+            select
+            size="small"
+            value={sort}
+            onChange={(event) => setSort(event.target.value)}
+            SelectProps={{ inputProps: { "aria-label": "Trier les enchères" } }}
+            sx={{
+              "& .MuiInputBase-root": { fontSize: 11, bgcolor: "transparent" },
+              "& fieldset": { border: 0 },
+            }}
+          >
+            <MenuItem value="time">
+              {tab === "running" ? "Se terminent bientôt" : "Les plus récentes"}
+            </MenuItem>
+            <MenuItem value="bid">Enchères les plus élevées</MenuItem>
+          </TextField>
+        </Box>
+      )}
       <Box
         id="auction-results"
         role="tabpanel"
@@ -259,17 +286,17 @@ export default function ResultsPage() {
           <Box
             sx={{
               textAlign: "center",
-              py: 7,
-              px: 2,
+              py: { xs: 5, sm: 7 },
+              px: 3,
               bgcolor: "background.paper",
-              border: "1px dashed",
+              border: "1px solid",
               borderColor: "divider",
-              borderRadius: 3,
+              borderRadius: 2,
             }}
           >
             <ClubIcon
-              name={search ? "search" : "cup"}
-              sx={{ fontSize: 32, color: "primary.main", mb: 1.5 }}
+              name={search ? "search" : allFinished ? "cup" : "clock"}
+              sx={{ fontSize: 28, color: "text.secondary", mb: 2 }}
             />
             <Typography
               component="h3"
@@ -277,25 +304,42 @@ export default function ResultsPage() {
             >
               {search
                 ? "Aucune enchère trouvée"
-                : tab === "running"
-                  ? "Aucune enchère en cours"
-                  : "Aucune enchère remportée"}
+                : !hasAuctions
+                  ? "Pas encore d’enchères"
+                  : tab === "running"
+                    ? "Toutes les enchères sont terminées"
+                    : "Aucune enchère remportée"}
             </Typography>
-            <Typography sx={{ fontSize: 13, color: "text.secondary", mb: 2 }}>
+            <Typography sx={{ fontSize: 13, color: "text.secondary", mb: 2.5, maxWidth: 340, mx: "auto" }}>
               {search
                 ? "Essayez un autre nom ou un autre cercle."
-                : tab === "running"
-                  ? "Les prochaines enchères apparaîtront ici."
-                  : "Les résultats apparaîtront à la fin des enchères."}
+                : !hasAuctions
+                  ? "Retrouvez les comitards et lancez la première enchère depuis leur fiche."
+                  : tab === "running"
+                    ? "Retrouvez les comitards remportés et le résultat de chaque enchère."
+                    : "Les enchères sont encore en cours. Les comitards remportés apparaîtront ici."}
             </Typography>
             {search ? (
               <Button onClick={() => setSearch("")}>
                 Effacer la recherche
               </Button>
+            ) : tab === "running" && allFinished ? (
+              <Button
+                variant="outlined"
+                onClick={() => setTab("closed")}
+                endIcon={<ClubIcon name="arrow" />}
+              >
+                Voir les enchères remportées
+              </Button>
+            ) : tab === "closed" && hasAuctions ? (
+              <Button variant="outlined" onClick={() => setTab("running")}>
+                Voir les enchères en cours
+              </Button>
             ) : (
               <Button
                 component={RouterLink}
                 href="/comitards"
+                variant="outlined"
                 endIcon={<ClubIcon name="arrow" />}
               >
                 Voir les comitards

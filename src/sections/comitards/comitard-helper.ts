@@ -6,7 +6,6 @@ import { functions } from "../../firebase_functions";
 import { useAuth } from "../../auth/AuthProvider";
 import { requireMutationSuccess } from "../../utils/callable-result";
 
-import type React from "react";
 import type { CerclesData, ComitardModalProps } from "./comitard-modal";
 
 export type Enchere = {
@@ -273,10 +272,6 @@ export interface BuildComitardModalPropsArgs {
   cerclesData: CerclesData;
 
   auction: UseComitardAuctionResult;
-
-  renderStatus: React.ReactNode;
-  renderPrice: React.ReactNode;
-  renderWinner: React.ReactNode;
 }
 
 export function buildComitardModalProps({
@@ -286,9 +281,6 @@ export function buildComitardModalProps({
   cercleId,
   cerclesData,
   auction,
-  renderStatus,
-  renderPrice,
-  renderWinner,
 }: BuildComitardModalPropsArgs): ComitardModalProps {
   return {
     open,
@@ -299,9 +291,6 @@ export function buildComitardModalProps({
     cerclesData,
 
     timeLeft: auction.timeLeft,
-    renderStatus,
-    renderPrice,
-    renderWinner,
 
     displayVote: auction.displayVote,
     minEnchere: auction.minEnchereComputed,

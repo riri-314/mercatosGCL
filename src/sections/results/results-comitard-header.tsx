@@ -1,10 +1,9 @@
 import { lazy, Suspense, useState } from "react";
 import ProfileAvatar from "../../components/profile-avatar/profile-avatar";
-import Box from "@mui/material/Box";
 import ButtonBase from "@mui/material/ButtonBase";
 import CardHeader from "@mui/material/CardHeader";
 import type { ComitardWithMeta } from "../../types/results.types";
-import { ComitardStatusChips } from "./results-comitard-status-ship";
+import { useBoundaryTime } from "../../hooks/use-boundary-time";
 
 const ComitardModal = lazy(() => import("../comitards/comitard-modal"));
 
@@ -12,17 +11,14 @@ type Props = { comitard: ComitardWithMeta };
 
 export function ComitardHeader({ comitard }: Props) {
   const [open, setOpen] = useState(false);
-  const timeLeft = Math.max(0, (comitard.enchereStop?.toMillis() ?? 0) - Date.now());
+  const stop = comitard.enchereStop?.toMillis() ?? null;
+  const now = useBoundaryTime(null, stop);
+  const timeLeft = Math.max(0, (stop ?? 0) - now);
 
   // Results already use circle names for both the profile and bid senders.
   const cerclesData = open ? Object.fromEntries(
     [comitard.cercle, ...comitard.encheres.map((bid) => bid.sender)].map((name) => [name, { name }])
   ) : {};
-  const renderStatus = (
-    <Box sx={{ position: "absolute", top: 16, left: 16, right: 16, zIndex: 9 }}>
-      <ComitardStatusChips comitard={comitard} isClosed={timeLeft === 0} />
-    </Box>
-  );
 
   return (
     <>
@@ -64,9 +60,6 @@ export function ComitardHeader({ comitard }: Props) {
             cercleId={comitard.cercle}
             cerclesData={cerclesData}
             timeLeft={timeLeft}
-            renderStatus={renderStatus}
-            renderPrice={null}
-            renderWinner={renderStatus}
             displayVote={false}
             minEnchere={0}
             voteMax={0}

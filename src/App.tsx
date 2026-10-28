@@ -1,7 +1,4 @@
-/* eslint-disable perfectionist/sort-imports */
-//import "src/App.css";
-
-
+import { Suspense } from "react";
 import { AuthProvider, useAuth } from "./auth/AuthProvider";
 import Router from "./routes/sections";
 import { useScrollToTop } from "./hooks/use-scroll-to-top";
@@ -19,21 +16,23 @@ export default function App() {
     const { loading } = useAuth();
 
     if (loading) {
-      return <Loading />;
+      return <Loading fullScreen />;
     }
 
     return (
       <DataProvider>
-        <ThemeProvider>
+        <Suspense fallback={<Loading fullScreen />}>
           <Router />
-        </ThemeProvider>
+        </Suspense>
       </DataProvider>
     );
   };
 
   return (
     <AuthProvider>
-      <AppContent />
+      <ThemeProvider>
+        <AppContent />
+      </ThemeProvider>
     </AuthProvider>
   );
 }
