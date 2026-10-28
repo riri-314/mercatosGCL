@@ -26,7 +26,7 @@ const app = initializeApp({ projectId });
   const db = getFirestore(app);
   await db.doc("admin/admin").set({ admins: { "demo-admin@example.test": "demo-admin" } });
   await db.doc("editions/demo-edition").set({
-    edition: 1, active: true, rules: "Édition de démonstration", jobs: 0,
+    edition: 13, active: true, rules: "Édition de démonstration", jobs: 0,
     start: Timestamp.fromMillis(Date.now() - 3600000),
     stop: Timestamp.fromMillis(Date.now() + 7 * 86400000),
     duration: 1, nbFut: 100, nbComitard: 3, enchereMin: 1, enchereMax: 100,
@@ -43,5 +43,15 @@ const app = initializeApp({ projectId });
       } },
     },
   });
+  const archives = db.batch();
+  for (let edition = 1; edition <= 12; edition++) {
+    archives.set(db.doc(`editions/demo-archive-${edition}`), {
+      edition, active: false, rules: `Archive ${edition}`, jobs: 0, cercles: {},
+      start: Timestamp.fromMillis(Date.now() - 2 * 86400000),
+      stop: Timestamp.fromMillis(Date.now() - 86400000),
+      duration: 1, nbFut: 100, nbComitard: 3, enchereMin: 1, enchereMax: 100,
+    });
+  }
+  await archives.commit();
   console.log("Synthetic fixtures ready. Accounts: demo-{admin,buyer,seller}@example.test; password: EmulatorOnly123!");
 })().catch(error => { console.error(error); process.exitCode = 1; }).finally(() => deleteApp(app));

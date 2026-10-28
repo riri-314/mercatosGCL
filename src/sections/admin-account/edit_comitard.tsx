@@ -1,3 +1,4 @@
+import { uploadProfilePictures } from "../../utils/upload-profile-pictures";
 import { getEditionData } from "../../data/edition-data";
 import LoadingButton from "@mui/lab/LoadingButton";
 import {
@@ -18,9 +19,6 @@ import { useState } from "react";
 import PictureInput from "../../components/inputs/pictureInput";
 import { ImageListType } from "react-images-uploading";
 import { functions } from "../../firebase_functions";
-import { storage } from "../../firebase_storage";
-import { getDownloadURL, ref, uploadBytesResumable } from "firebase/storage";
-import { v4 as uuidv4 } from "uuid";
 import { DocumentData } from "firebase/firestore";
 import { useAuth } from "../../auth/AuthProvider";
 import { httpsCallable } from "firebase/functions";
@@ -223,147 +221,38 @@ export default function EditComitard({
         setError("Cercle non trouvé pour ce comitard.");
         return;
       }
+      let pictures: { picture: string; pictureThumbnail?: string } = {
+        picture,
+        ...(ComitardData.pictureThumbnail ? { pictureThumbnail: ComitardData.pictureThumbnail } : {}),
+      };
       if (pictureUpdated) {
-        const storageRef = ref(
-          storage,
-          `${activeData.id}/${cercleId}/${uuidv4()}`
-        );
-
-        const uploadTask = uploadBytesResumable(
-          storageRef,
-          picture[0].file as File
-        );
-        uploadTask.on(
-          "state_changed",
-          (snapshot) => {
-            // Observe state change events such as progress, pause, and resume
-            // Get task progress, including the number of bytes uploaded and the total number of bytes to be uploaded
-            const progress =
-              (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-            console.log("Upload is " + progress + "% done");
-            setPictureUpload(progress);
-            switch (snapshot.state) {
-              case "paused":
-                console.log("Upload is paused");
-                break;
-              case "running":
-                console.log("Upload is running");
-                break;
-            }
-          },
-          (error) => {
-            // Handle unsuccessful uploads
-            console.log("error uploading file: ", error);
-            setPictureUpload(undefined);
-            setErrorSeverity("error");
-            setError("Une erreur est survenue lors de l'upload de l'image.");
-            setLoading(false);
-
-            return;
-          },
-          () => {
-            getDownloadURL(uploadTask.snapshot.ref)
-              .then((downloadURL) => {
-                console.log("File available at", downloadURL);
-                const data1 = {
-                  editionId: activeData.id,
-                  comitardId: ComitardData.id,
-                  name: name,
-                  firstname: firstname,
-                  nickname: nickname,
-                  post: post,
-                  cercleId,
-                  cercle: cercle ? cercle : null,
-                  teneurTaule: teneurTaule,
-                  etatCivil: etatCivil,
-                  age: age,
-                  nbEtoiles: nbEtoiles,
-                  pointFort: pointFort,
-                  pointFaible: pointFaible,
-                  estLeSeul: estLeSeul,
-                  campus: campus,
-                  picture: downloadURL,
-                };
-                // call another cloud function to update the doc
-                const addMessage = httpsCallable(functions, "editcomitard");
-                addMessage(data1)
-                  .then((result) => {
-                    requireMutationSuccess(result.data);
-                    const ComitardData: any = result.data;
-                    // reload ComitardData
-                    refetchData();
-                    console.log("ComitardData:", ComitardData);
-                    setPictureUpload(undefined);
-                    setErrorSeverity("success");
-                    setError("Comitard mis à jour avec succès");
-                    setLoading(false);
-                  })
-                  .catch((error) => {
-                    console.log("error:", error);
-                    setPictureUpload(undefined);
-                    setErrorSeverity("error");
-                    setError(
-                      "Une erreur est survenue lors de la mise à jour du comitard. serveur error."
-                    );
-                    setLoading(false);
-                  });
-                // call cloud function with all arguments and wait for response
-              })
-              .catch((error) => {
-                console.log("error uploading file: ", error);
-                setPictureUpload(undefined);
-                setErrorSeverity("error");
-                setError(
-                  "Une erreur est survenue lors de l'upload de l'image."
-                );
-                setLoading(false);
-              });
-          }
-        );
-      } else {
-        console.log("do not change the picture");
-        const data1 = {
-          editionId: activeData.id,
-          comitardId: ComitardData.id,
-          name: name,
-          firstname: firstname,
-          nickname: nickname,
-          post: post,
-          cercleId,
-          cercle: cercle ? cercle : null,
-          teneurTaule: teneurTaule,
-          etatCivil: etatCivil,
-          age: age,
-          nbEtoiles: nbEtoiles,
-          pointFort: pointFort,
-          pointFaible: pointFaible,
-          estLeSeul: estLeSeul,
-          campus: campus,
-          picture: picture,
-        };
-        // call another cloud function to update the doc
-        const addMessage = httpsCallable(functions, "editcomitard");
-        addMessage(data1)
-          .then((result) => {
-            requireMutationSuccess(result.data);
-            const ComitardData: any = result.data;
-            // reload ComitardData
-            refetchData();
-            console.log("ComitardData:", ComitardData);
-            setPictureUpload(undefined);
-            setErrorSeverity("success");
-            setError("Comitard mis à jour avec succès");
-            setLoading(false);
-          })
-          .catch((error) => {
-            console.log("error:", error);
-            setPictureUpload(undefined);
-            setErrorSeverity("error");
-            setError(
-              "Une erreur est survenue lors de la mise à jour du comitard. serveur error."
-            );
-            setLoading(false);
-          });
+        try {
+          pictures = await uploadProfilePictures(picture[0], activeData.id, cercleId, setPictureUpload);
+        } catch (cause) {
+          setErrorSeverity("error");
+          setError("Une erreur est survenue lors de l'upload de l'image. " + String(cause));
+          setPictureUpload(undefined);
+          setLoading(false);
+          return;
+        }
+      }
+      try {
+        const result = await httpsCallable(functions, "editcomitard")({
+          editionId: activeData.id, comitardId: ComitardData.id,
+          name, firstname, nickname, post, cercleId, cercle: cercle || null,
+          teneurTaule, etatCivil, age, nbEtoiles, pointFort, pointFaible, estLeSeul, campus,
+          ...pictures,
+        });
+        requireMutationSuccess(result.data);
+        refetchData();
+        setErrorSeverity("success");
+        setError("Comitard mis à jour avec succès");
+      } catch (cause) {
+        setErrorSeverity("error");
+        setError("Une erreur est survenue lors de la mise à jour du comitard. " + String(cause));
+      } finally {
+        setPictureUpload(undefined);
+        setLoading(false);
       }
     } else {
       setLoading(false);

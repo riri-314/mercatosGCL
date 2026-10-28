@@ -22,6 +22,7 @@ export interface Comitard {
   post: string;
   teneurTaule: number;
   picture: string;
+  pictureThumbnail?: string;
   cercle: string;
   encheres: Enchere[] | Record<string, Enchere>; // in DB it may be an object; we normalize in hook
 }

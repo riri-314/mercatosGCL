@@ -3,7 +3,7 @@ import { HttpsError } from "firebase-functions/v2/https";
 const textLimits = {
   name: 30, firstname: 30, nickname: 30, post: 30,
   etatCivil: 150, pointFort: 150, pointFaible: 150, estLeSeul: 150,
-  picture: 2048,
+  picture: 2048, pictureThumbnail: 2048,
 };
 const numberLimits = { teneurTaule: 10, age: 99, nbEtoiles: 15, campus: 4 };
 const profileFields = [...Object.keys(textLimits), ...Object.keys(numberLimits)];
@@ -51,10 +51,10 @@ export function parseProfile(value: unknown, editing: boolean) {
 
   const profile: Record<string, string | number> = {};
   for (const [key, limit] of Object.entries(textLimits)) {
-    if (editing && !Object.prototype.hasOwnProperty.call(data, key)) continue;
+    if ((editing || key === "pictureThumbnail") && !Object.prototype.hasOwnProperty.call(data, key)) continue;
     const value = data[key];
     if (typeof value !== "string" || !value.trim() || value.length > limit) invalid(key);
-    if (key === "picture") {
+    if (key === "picture" || key === "pictureThumbnail") {
       try {
         const url = new URL(value, "https://profile.invalid");
         if (!["https:", "http:"].includes(url.protocol) ||

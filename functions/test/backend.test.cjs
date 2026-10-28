@@ -264,6 +264,7 @@ test("profile creation and editing reject malformed fields without storing them"
     { age: -1000 }, { age: 100 }, { age: "20" }, { age: null }, { age: 1.5 },
     { teneurTaule: -1 }, { teneurTaule: 11 }, { nbEtoiles: 16 }, { nbEtoiles: NaN },
     { campus: 0 }, { campus: 5 }, { campus: "1" },
+    { pictureThumbnail: {} }, { pictureThumbnail: "javascript:alert(1)" }, { pictureThumbnail: "x".repeat(2049) },
     { picture: {} }, { picture: "javascript:alert(1)" }, { picture: "x".repeat(2049) },
     { nbFut: 999 }, { encheres: {} },
   ];
@@ -295,6 +296,26 @@ test("valid profiles persist and partial edits can save numeric zero", async () 
   assert.equal(updated.teneurTaule, 0);
   assert.equal(updated.nbEtoiles, 0);
   assert.equal(updated.name, "Test");
+});
+
+test("thumbnail URLs persist and legacy picture replacement cannot retain a stale thumbnail", async () => {
+  await seedUnstartedAuctions();
+  await handlers.addcomitard.run({ auth: { uid: "buyer" }, data: profileData({
+    pictureThumbnail: "https://example.test/thumbnail.webp",
+  }) });
+  const profiles = (await editionRef.get()).data().cercles.buyer.comitards;
+  const id = Object.keys(profiles)[0];
+  assert.equal(profiles[id].pictureThumbnail, "https://example.test/thumbnail.webp");
+  await handlers.editcomitard.run({ auth: { uid: "buyer" }, data: {
+    editionId: editionRef.id, comitardId: id, name: "Updated",
+  } });
+  assert.equal((await editionRef.get()).data().cercles.buyer.comitards[id].pictureThumbnail,
+    "https://example.test/thumbnail.webp");
+  await handlers.editcomitard.run({ auth: { uid: "buyer" }, data: {
+    editionId: editionRef.id, comitardId: id, picture: "https://example.test/replacement.jpg",
+  } });
+  assert.equal((await editionRef.get()).data().cercles.buyer.comitards[id].pictureThumbnail,
+    "https://example.test/replacement.jpg");
 });
 
 test("profile validation preserves server-side ownership and admin selection", async () => {

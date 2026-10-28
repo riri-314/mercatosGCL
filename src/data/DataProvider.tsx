@@ -20,6 +20,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
   const [fetchedTime, setFetchedTime] = useState(0);
   const { user } = useAuth();
   const request = useRef(0);
+  const cancelPending = useCallback(() => { request.current++; }, []);
 
   const fetchVisitorData = useCallback(async () => {
     const version = ++request.current;
@@ -39,11 +40,11 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
         setData(snapshot.docs[0] ?? null);
         if (!snapshot.empty) setFetchedTime(Date.now());
       });
-      return () => { unsubscribe(); request.current++; };
+      return () => { unsubscribe(); cancelPending(); };
     }
     void fetchVisitorData();
-    return () => { request.current++; };
-  }, [user, fetchVisitorData]);
+    return cancelPending;
+  }, [user, fetchVisitorData, cancelPending]);
 
   const refetchData = useCallback(() => {
     if (!user) void fetchVisitorData();

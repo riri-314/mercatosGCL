@@ -1,6 +1,6 @@
 import { Button, FormHelperText } from "@mui/material";
 import imageCompression from "browser-image-compression";
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import ImageUploadingImport, {
   ImageListType,
   ImageType,
@@ -22,6 +22,11 @@ interface PictureInputProps {
 export default function PictureInput({ change, error, upload }: PictureInputProps) {
   const [images, setImages] = useState<ImageType[]>([]);
   const [progress, setProgress] = useState(0);
+  useEffect(() => () => {
+    images.forEach(image => {
+      if (image.dataURL?.startsWith("blob:")) URL.revokeObjectURL?.(image.dataURL);
+    });
+  }, [images]);
   const maxNumber = 1;
   const maxFileSize = 5500000; // Bytes
   const maxFileSizeCompressed = 0.1; // MBytes
@@ -45,11 +50,15 @@ export default function PictureInput({ change, error, upload }: PictureInputProp
         try {
           if (image.file) {
             const compressedFile = await imageCompression(image.file, options);
-            // Rest of the code...
+            const thumbnailFile = await imageCompression(compressedFile, {
+              maxSizeMB: 0.015, maxWidthOrHeight: 160, useWebWorker: true,
+              fileType: "image/webp", initialQuality: 0.8,
+            }).catch(() => undefined);
             return {
               ...image,
               dataURL: URL.createObjectURL(compressedFile),
               file: compressedFile,
+              thumbnailFile,
             };
           }
         } catch (error) {

@@ -12,6 +12,7 @@ export function useEditionHistory() {
   const [error, setError] = useState("");
   const cursors = useRef<(QueryDocumentSnapshot | undefined)[]>([]);
   const request = useRef(0);
+  const cancelPending = useCallback(() => { request.current++; }, []);
 
   const refresh = useCallback(async () => {
     const version = ++request.current;
@@ -36,8 +37,8 @@ export function useEditionHistory() {
 
   useEffect(() => {
     void refresh();
-    return () => { request.current++; };
-  }, [refresh]);
+    return cancelPending;
+  }, [refresh, cancelPending]);
 
   return { rows, page, hasNext, loading, error, refresh,
     next: () => { if (!loading && hasNext) setPage(value => value + 1); },

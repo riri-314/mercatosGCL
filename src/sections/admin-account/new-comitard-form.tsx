@@ -1,3 +1,4 @@
+import { uploadProfilePictures } from "../../utils/upload-profile-pictures";
 import { getEditionData } from "../../data/edition-data";
 import LoadingButton from "@mui/lab/LoadingButton";
 import {
@@ -13,9 +14,6 @@ import { useState } from "react";
 import PictureInput from "../../components/inputs/pictureInput";
 import { ImageListType } from "react-images-uploading";
 import { functions } from "../../firebase_functions";
-import { storage } from "../../firebase_storage";
-import { getDownloadURL, ref, uploadBytesResumable } from "firebase/storage";
-import { v4 as uuidv4 } from "uuid";
 import { DocumentData } from "firebase/firestore";
 import { useAuth } from "../../auth/AuthProvider";
 import { httpsCallable } from "firebase/functions";
@@ -184,112 +182,33 @@ export default function NewComitard({
     }
 
     if (!error) {
-      console.log("Check user input ok");
-      const storageRef = ref(storage, `${data.id}/${user?.uid}/${uuidv4()}`);
-
-      const uploadTask = uploadBytesResumable(
-        storageRef,
-        picture[0].file as File
-      );
-      uploadTask.on(
-        "state_changed",
-        (snapshot) => {
-          // Observe state change events such as progress, pause, and resume
-          // Get task progress, including the number of bytes uploaded and the total number of bytes to be uploaded
-          const progress =
-            (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          console.log("Upload is " + progress + "% done");
-          setPictureUpload(progress);
-          switch (snapshot.state) {
-            case "paused":
-              console.log("Upload is paused");
-              break;
-            case "running":
-              console.log("Upload is running");
-              break;
-          }
-        },
-        (error) => {
-          // Handle unsuccessful uploads
-          console.log("error uploading file: ", error);
-          setPictureUpload(undefined);
+      try {
+        const pictures = await uploadProfilePictures(picture[0], data.id, user!.uid, setPictureUpload);
+        try {
+          const result = await httpsCallable(functions, "addcomitard")({
+            editionId: data.id, name, firstname, nickname, post, cercle: cercle || null,
+            teneurTaule, etatCivil, age, campus, nbEtoiles, pointFort, pointFaible, estLeSeul,
+            ...pictures,
+          });
+          requireMutationSuccess(result.data);
+          refetchData();
+          setErrorSeverity("success");
+          setError("Comitard créé avec succès");
+          setName(""); setFirstname(""); setNickname(""); setPost(""); setCercle(null);
+          setTeneurTaule(null); setEtatCivil(""); setAge(null); setNbEtoiles(null);
+          setPointFort(""); setPointFaible(""); setEstLeSeul(""); setPicture([]); setCampus(null);
+          setFormVersion(version => version + 1);
+        } catch (cause) {
           setErrorSeverity("error");
-          setError("Une erreur est survenue lors de l'upload de l'image." + String(error));
-          setLoading(false);
-
-          return;
-        },
-        () => {
-          getDownloadURL(uploadTask.snapshot.ref)
-            .then((downloadURL) => {
-              console.log("File available at", downloadURL);
-              const data1 = {
-                editionId: data.id,
-                name: name,
-                firstname: firstname,
-                nickname: nickname,
-                post: post,
-                cercle: cercle ? cercle : null,
-                teneurTaule: teneurTaule,
-                etatCivil: etatCivil,
-                age: age,
-                campus: campus,
-                nbEtoiles: nbEtoiles,
-                pointFort: pointFort,
-                pointFaible: pointFaible,
-                estLeSeul: estLeSeul,
-                picture: downloadURL,
-              };
-              const addMessage = httpsCallable(functions, "addcomitard");
-              addMessage(data1)
-                .then((result) => {
-                  requireMutationSuccess(result.data);
-                  const data: any = result.data;
-                  // reload data
-                  refetchData();
-                  console.log("data:", data);
-                  setPictureUpload(undefined);
-                  setErrorSeverity("success");
-                  setError("Comitard créé avec succès");
-                  // empty fields
-                  setName("");
-                  setFirstname("");
-                  setNickname("");
-                  setPost("");
-                  setCercle(null);
-                  setTeneurTaule(null);
-                  setEtatCivil("");
-                  setAge(null);
-                  setNbEtoiles(null);
-                  setPointFort("");
-                  setPointFaible("");
-                  setEstLeSeul("");
-                  setPicture([]);
-                  setCampus(null);
-                  // Remount inputs that keep their own number, selection, or photo state.
-                  setFormVersion((version) => version + 1);
-                  setLoading(false);
-                })
-                .catch((error) => {
-                  console.log("error:", error);
-                  setPictureUpload(undefined);
-                  setErrorSeverity("error");
-                  setError(
-                    "Une erreur est survenue lors de la création du comitard. serveur error." + String(error)
-                  );
-                  setLoading(false);
-                });
-              // call cloud function with all arguments and wait for response
-            })
-            .catch((error) => {
-              console.log("error uploading file: ", error);
-              setPictureUpload(undefined);
-              setErrorSeverity("error");
-              setError("Une erreur est survenue lors de l'upload de l'image." + String(error));
-              setLoading(false);
-            });
+          setError("Une erreur est survenue lors de la création du comitard. " + String(cause));
         }
-      );
+      } catch (cause) {
+        setErrorSeverity("error");
+        setError("Une erreur est survenue lors de l'upload de l'image. " + String(cause));
+      } finally {
+        setPictureUpload(undefined);
+        setLoading(false);
+      }
     } else {
       setLoading(false);
       setErrorSeverity("error");
@@ -299,303 +218,303 @@ export default function NewComitard({
 
   return (
     <>
-              <Grid container spacing={2} key={formVersion}>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    error={nameError}
-                    label="Nom"
-                    value={name}
-                    fullWidth
-                    onChange={(e) => {
-                      let value = e.target.value;
-                      if (value.length <= txtlenght1) {
-                        setName(value);
-                      }
-                      if (value.length == 0) {
-                        setNameError(true);
-                      } else {
-                        setNameError(false);
-                      }
-                    }}
-                  />
-                  <FormHelperText>
-                    Nom civil du comitard. Max {txtlenght1} caractères.{" "}
-                    {name.length}/{txtlenght1}
-                  </FormHelperText>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    label="Prénom"
-                    error={firstnameError}
-                    fullWidth
-                    value={firstname}
-                    onChange={(e) => {
-                      let value = e.target.value;
-                      if (value.length <= txtlenght1) {
-                        setFirstname(value);
-                      }
-                      if (value.length == 0) {
-                        setFirstnameError(true);
-                      } else {
-                        setFirstnameError(false);
-                      }
-                    }}
-                  />
-                  <FormHelperText>
-                    Prénom civil du comitard. Max {txtlenght1} caractères.{" "}
-                    {firstname.length}/{txtlenght1}
-                  </FormHelperText>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    label="Surnom"
-                    error={nicknameError}
-                    fullWidth
-                    value={nickname}
-                    onChange={(e) => {
-                      let value = e.target.value;
-                      if (value.length <= txtlenght1) {
-                        setNickname(value);
-                      }
-                      if (value.length == 0) {
-                        setNicknameError(true);
-                      } else {
-                        setNicknameError(false);
-                      }
-                    }}
-                  />
-                  <FormHelperText>
-                    Surnom du comitard. Max {txtlenght1} caractères.{" "}
-                    {nickname.length}/{txtlenght1}
-                  </FormHelperText>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    label="Poste"
-                    error={postError}
-                    fullWidth
-                    value={post}
-                    onChange={(e) => {
-                      let value = e.target.value;
-                      if (value.length <= txtlenght1) {
-                        setPost(value);
-                      }
-                      if (value.length == 0) {
-                        setPostError(true);
-                      } else {
-                        setPostError(false);
-                      }
-                    }}
-                  />
-                  <FormHelperText>
-                    Poste du comitard. Max {txtlenght1} caractères.{" "}
-                    {post.length}/{txtlenght1}
-                  </FormHelperText>
-                </Grid>
-                {admin && (
-                  <Grid item xs={12} sm={6}>
-                    <UnstyledSelectIntroduction
-                      isError={cercleError}
-                      option={cerclesOption()}
-                      helpText={"Cercle du comitard"}
-                      change={(_event: any, val: any) => {
-                        setCercle(val);
-                        setCercleError(false);
-                      }}
-                    />
-                  </Grid>
-                )}
-                <Grid item xs={12} sm={6}>
-                  <QuantityInput
-                    title="Teneur en taule du comitard"
-                    min={0}
-                    max={10}
-                    error={teneurTauleError}
-                    helpText={`Teneur en taule du comitard de 0 à 10`}
-                    change={(_event: any, val: any) => {
-                      setTeneurTaule(val);
-                      if (val == undefined) {
-                        setTeneurTauleError(true);
-                      } else {
-                        setTeneurTauleError(false);
-                      }
-                    }}
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    label="État civil"
-                    fullWidth
-                    value={etatCivil}
-                    error={etatCivilError}
-                    onChange={(e) => {
-                      let value = e.target.value;
-                      if (value.length <= txtlenght2) {
-                        setEtatCivil(value);
-                      }
-                      if (value.length == 0) {
-                        setEtatCivilError(true);
-                      } else {
-                        setEtatCivilError(false);
-                      }
-                    }}
-                  />
-                  <FormHelperText>
-                    État civil du comitard. Max {txtlenght2} caractères.{" "}
-                    {etatCivil.length}/{txtlenght2}
-                  </FormHelperText>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <QuantityInput
-                    title="Age du comitard"
-                    min={0}
-                    max={99}
-                    error={ageError}
-                    helpText={`Age du comitard de 0 à 99`}
-                    change={(_event: any, val: any) => {
-                      setAge(val);
-                      if (val == undefined) {
-                        setAgeError(true);
-                      } else {
-                        setAgeError(false);
-                      }
-                    }}
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <QuantityInput
-                    title="Nombre d'étoiles du comitard"
-                    min={0}
-                    max={10}
-                    error={nbEtoilesError}
-                    helpText={`Nombre d'étoiles du comitard de 0 à 10 (plus que 10 étoiles faut décrocher)`}
-                    change={(_event: any, val: any) => {
-                      setNbEtoiles(val);
-                      if (val == undefined) {
-                        setNbEtoilesError(true);
-                      } else {
-                        setNbEtoilesError(false);
-                      }
-                    }}
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    label="Point fort"
-                    fullWidth
-                    multiline
-                    maxRows={4}
-                    error={pointFortError}
-                    value={pointFort}
-                    onChange={(e) => {
-                      let value = e.target.value;
-                      if (value.length <= txtlenght2) {
-                        setPointFort(value);
-                      }
-                      if (value.length == 0) {
-                        setPointFortError(true);
-                      } else {
-                        setPointFortError(false);
-                      }
-                    }}
-                  />
-                  <FormHelperText>
-                    Point fort du comitard. Max {txtlenght2} caractères.{" "}
-                    {pointFort.length}/{txtlenght2}
-                  </FormHelperText>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    label="Point faible"
-                    fullWidth
-                    multiline
-                    maxRows={4}
-                    error={pointFaibleError}
-                    value={pointFaible}
-                    onChange={(e) => {
-                      let value = e.target.value;
-                      if (value.length <= txtlenght2) {
-                        setPointFaible(value);
-                      }
-                      if (value.length == 0) {
-                        setPointFaibleError(true);
-                      } else {
-                        setPointFaibleError(false);
-                      }
-                    }}
-                  />
-                  <FormHelperText>
-                    Point faible du comitard. Max {txtlenght2} caractères.{" "}
-                    {pointFaible.length}/{txtlenght2}
-                  </FormHelperText>
-                </Grid>
-                <Grid item xs={12} sm={admin ? 6 : 12}>
-                  <TextField
-                    label="Est le seul"
-                    fullWidth
-                    multiline
-                    maxRows={4}
-                    error={estLeSeulError}
-                    value={estLeSeul}
-                    onChange={(e) => {
-                      let value = e.target.value;
-                      if (value.length <= txtlenght2) {
-                        setEstLeSeul(value);
-                      }
-                      if (value.length == 0) {
-                        setEstLeSeulError(true);
-                      } else {
-                        setEstLeSeulError(false);
-                      }
-                    }}
-                  />
-                  <FormHelperText>
-                    Max {txtlenght2} caractères. {estLeSeul.length}/{txtlenght2}
-                  </FormHelperText>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <UnstyledSelectIntroduction
-                    isError={campusError}
-                    option={changerCampus}
-                    helpText={"Chaud changer de campus?"}
-                    change={(_event: any, val: any) => {
-                      setCampus(val);
-                      setCampusError(false);
-                    }}
-                  />
-                </Grid>
-                <Grid item xs={12} sm={12}>
-                  <PictureInput
-                    change={(images: ImageListType) => {
-                      setPicture(images);
-                      if (images.length > 0) {
-                        setPictureError(false);
-                      } else {
-                        setPictureError(true);
-                      }
-                    }}
-                    error={pictureError}
-                    upload={pictureUpload}
-                  />
-                </Grid>
+    <Grid container spacing={2} key={formVersion}>
+      <Grid item xs={12} sm={6}>
+        <TextField
+          error={nameError}
+          label="Nom"
+          value={name}
+          fullWidth
+          onChange={(e) => {
+            let value = e.target.value;
+            if (value.length <= txtlenght1) {
+              setName(value);
+            }
+            if (value.length == 0) {
+              setNameError(true);
+            } else {
+              setNameError(false);
+            }
+          }}
+        />
+        <FormHelperText>
+          Nom civil du comitard. Max {txtlenght1} caractères.{" "}
+          {name.length}/{txtlenght1}
+        </FormHelperText>
+      </Grid>
+      <Grid item xs={12} sm={6}>
+        <TextField
+          label="Prénom"
+          error={firstnameError}
+          fullWidth
+          value={firstname}
+          onChange={(e) => {
+            let value = e.target.value;
+            if (value.length <= txtlenght1) {
+              setFirstname(value);
+            }
+            if (value.length == 0) {
+              setFirstnameError(true);
+            } else {
+              setFirstnameError(false);
+            }
+          }}
+        />
+        <FormHelperText>
+          Prénom civil du comitard. Max {txtlenght1} caractères.{" "}
+          {firstname.length}/{txtlenght1}
+        </FormHelperText>
+      </Grid>
+      <Grid item xs={12} sm={6}>
+        <TextField
+          label="Surnom"
+          error={nicknameError}
+          fullWidth
+          value={nickname}
+          onChange={(e) => {
+            let value = e.target.value;
+            if (value.length <= txtlenght1) {
+              setNickname(value);
+            }
+            if (value.length == 0) {
+              setNicknameError(true);
+            } else {
+              setNicknameError(false);
+            }
+          }}
+        />
+        <FormHelperText>
+          Surnom du comitard. Max {txtlenght1} caractères.{" "}
+          {nickname.length}/{txtlenght1}
+        </FormHelperText>
+      </Grid>
+      <Grid item xs={12} sm={6}>
+        <TextField
+          label="Poste"
+          error={postError}
+          fullWidth
+          value={post}
+          onChange={(e) => {
+            let value = e.target.value;
+            if (value.length <= txtlenght1) {
+              setPost(value);
+            }
+            if (value.length == 0) {
+              setPostError(true);
+            } else {
+              setPostError(false);
+            }
+          }}
+        />
+        <FormHelperText>
+          Poste du comitard. Max {txtlenght1} caractères.{" "}
+          {post.length}/{txtlenght1}
+        </FormHelperText>
+      </Grid>
+      {admin && (
+        <Grid item xs={12} sm={6}>
+          <UnstyledSelectIntroduction
+            isError={cercleError}
+            option={cerclesOption()}
+            helpText={"Cercle du comitard"}
+            change={(_event: any, val: any) => {
+              setCercle(val);
+              setCercleError(false);
+            }}
+          />
+        </Grid>
+      )}
+      <Grid item xs={12} sm={6}>
+        <QuantityInput
+          title="Teneur en taule du comitard"
+          min={0}
+          max={10}
+          error={teneurTauleError}
+          helpText={`Teneur en taule du comitard de 0 à 10`}
+          change={(_event: any, val: any) => {
+            setTeneurTaule(val);
+            if (val == undefined) {
+              setTeneurTauleError(true);
+            } else {
+              setTeneurTauleError(false);
+            }
+          }}
+        />
+      </Grid>
+      <Grid item xs={12} sm={6}>
+        <TextField
+          label="État civil"
+          fullWidth
+          value={etatCivil}
+          error={etatCivilError}
+          onChange={(e) => {
+            let value = e.target.value;
+            if (value.length <= txtlenght2) {
+              setEtatCivil(value);
+            }
+            if (value.length == 0) {
+              setEtatCivilError(true);
+            } else {
+              setEtatCivilError(false);
+            }
+          }}
+        />
+        <FormHelperText>
+          État civil du comitard. Max {txtlenght2} caractères.{" "}
+          {etatCivil.length}/{txtlenght2}
+        </FormHelperText>
+      </Grid>
+      <Grid item xs={12} sm={6}>
+        <QuantityInput
+          title="Age du comitard"
+          min={0}
+          max={99}
+          error={ageError}
+          helpText={`Age du comitard de 0 à 99`}
+          change={(_event: any, val: any) => {
+            setAge(val);
+            if (val == undefined) {
+              setAgeError(true);
+            } else {
+              setAgeError(false);
+            }
+          }}
+        />
+      </Grid>
+      <Grid item xs={12} sm={6}>
+        <QuantityInput
+          title="Nombre d'étoiles du comitard"
+          min={0}
+          max={10}
+          error={nbEtoilesError}
+          helpText={`Nombre d'étoiles du comitard de 0 à 10 (plus que 10 étoiles faut décrocher)`}
+          change={(_event: any, val: any) => {
+            setNbEtoiles(val);
+            if (val == undefined) {
+              setNbEtoilesError(true);
+            } else {
+              setNbEtoilesError(false);
+            }
+          }}
+        />
+      </Grid>
+      <Grid item xs={12} sm={6}>
+        <TextField
+          label="Point fort"
+          fullWidth
+          multiline
+          maxRows={4}
+          error={pointFortError}
+          value={pointFort}
+          onChange={(e) => {
+            let value = e.target.value;
+            if (value.length <= txtlenght2) {
+              setPointFort(value);
+            }
+            if (value.length == 0) {
+              setPointFortError(true);
+            } else {
+              setPointFortError(false);
+            }
+          }}
+        />
+        <FormHelperText>
+          Point fort du comitard. Max {txtlenght2} caractères.{" "}
+          {pointFort.length}/{txtlenght2}
+        </FormHelperText>
+      </Grid>
+      <Grid item xs={12} sm={6}>
+        <TextField
+          label="Point faible"
+          fullWidth
+          multiline
+          maxRows={4}
+          error={pointFaibleError}
+          value={pointFaible}
+          onChange={(e) => {
+            let value = e.target.value;
+            if (value.length <= txtlenght2) {
+              setPointFaible(value);
+            }
+            if (value.length == 0) {
+              setPointFaibleError(true);
+            } else {
+              setPointFaibleError(false);
+            }
+          }}
+        />
+        <FormHelperText>
+          Point faible du comitard. Max {txtlenght2} caractères.{" "}
+          {pointFaible.length}/{txtlenght2}
+        </FormHelperText>
+      </Grid>
+      <Grid item xs={12} sm={admin ? 6 : 12}>
+        <TextField
+          label="Est le seul"
+          fullWidth
+          multiline
+          maxRows={4}
+          error={estLeSeulError}
+          value={estLeSeul}
+          onChange={(e) => {
+            let value = e.target.value;
+            if (value.length <= txtlenght2) {
+              setEstLeSeul(value);
+            }
+            if (value.length == 0) {
+              setEstLeSeulError(true);
+            } else {
+              setEstLeSeulError(false);
+            }
+          }}
+        />
+        <FormHelperText>
+          Max {txtlenght2} caractères. {estLeSeul.length}/{txtlenght2}
+        </FormHelperText>
+      </Grid>
+      <Grid item xs={12} sm={6}>
+        <UnstyledSelectIntroduction
+          isError={campusError}
+          option={changerCampus}
+          helpText={"Chaud changer de campus?"}
+          change={(_event: any, val: any) => {
+            setCampus(val);
+            setCampusError(false);
+          }}
+        />
+      </Grid>
+      <Grid item xs={12} sm={12}>
+        <PictureInput
+          change={(images: ImageListType) => {
+            setPicture(images);
+            if (images.length > 0) {
+              setPictureError(false);
+            } else {
+              setPictureError(true);
+            }
+          }}
+          error={pictureError}
+          upload={pictureUpload}
+        />
+      </Grid>
 
-                <Grid item xs={12} sm={12}>
-                  <LoadingButton
-                    size="large"
-                    variant="contained"
-                    fullWidth
-                    onClick={handleNewComitard}
-                    loading={loading}
-                  >
-                    Créer comitard
-                  </LoadingButton>
-                </Grid>
-              </Grid>
-              {error && (
-                <Alert sx={{ mt: 3 }} severity={errorSeverity}>
-                  {error}
-                </Alert>
-              )}
+      <Grid item xs={12} sm={12}>
+        <LoadingButton
+          size="large"
+          variant="contained"
+          fullWidth
+          onClick={handleNewComitard}
+          loading={loading}
+        >
+          Créer comitard
+        </LoadingButton>
+      </Grid>
+    </Grid>
+    {error && (
+      <Alert sx={{ mt: 3 }} severity={errorSeverity}>
+        {error}
+      </Alert>
+    )}
     </>
   );
 }

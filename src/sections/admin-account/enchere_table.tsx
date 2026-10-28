@@ -13,7 +13,7 @@ import { DocumentData } from "firebase/firestore";
 import { LoadingButton } from "@mui/lab";
 import { useMemo, useState } from "react";
 import WarningModal from "../../components/modal/warning_modal";
-import { Avatar } from "@mui/material";
+import ProfileAvatar from "../../components/profile-avatar/profile-avatar";
 import { useAuth } from "../../auth/AuthProvider";
 import { deleteEnchereWithStates } from "../../utils/admin-tools";
 
@@ -49,7 +49,7 @@ export default function EncheresTable({
             senderName: cercles[enchere.sender]?.name,
             receiver: comitardId,
             receiverName: `${comitard.firstname} ${comitard.nickname} ${comitard.name}`,
-            receiverPicture: comitard.picture,
+            receiverPicture: comitard.picture, receiverThumbnail: comitard.pictureThumbnail,
             receiverCercle: cercle.name, amount: enchere.vote,
           });
         }
@@ -103,7 +103,7 @@ export default function EncheresTable({
       renderCell: (params) => {
         return (
           <>
-            <Avatar src={params.row.receiverPicture} />
+            <ProfileAvatar picture={params.row.receiverPicture} thumbnail={params.row.receiverThumbnail} />
           </>
         );
       },

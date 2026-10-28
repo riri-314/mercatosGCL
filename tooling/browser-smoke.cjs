@@ -1,12 +1,16 @@
 const assert = require('node:assert/strict');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE_PATH || 'playwright-core');
 let browser;
+let activePage;
+let activeErrors;
 (async () => {
  browser = await chromium.launch({ executablePath:process.env.CHROMIUM_PATH || '/usr/bin/chromium-browser',headless:true,args:['--no-sandbox'] });
  for (const role of ['buyer','admin']) {
   const context = await browser.newContext();
   const page = await context.newPage();
   const errors=[];
+  activePage=page;
+  activeErrors=errors;
   page.on('pageerror',e=>errors.push(e.message));
   await page.route('**/*',route=>['127.0.0.1','localhost'].includes(new URL(route.request().url()).hostname)?route.continue():route.abort());
   await page.goto('http://127.0.0.1:5175/comitards');
@@ -25,10 +29,31 @@ let browser;
     console.log('BROWSERERRORS',errors);
     throw error;
   }
+  await page.getByRole('button',{name:'Créer nouveau comitard',exact:true}).click();
+  await page.getByRole('textbox',{name:'Nom',exact:true}).waitFor();
+  await page.locator('input[type="file"]').setInputFiles({
+    name:'demo.png',mimeType:'image/png',
+    buffer:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jFzQAAAAASUVORK5CYII=','base64'),
+  });
+  await page.getByRole('button',{name:'Supprimer image',exact:true}).waitFor();
+  if(role==='admin') {
+    await page.getByRole('button',{name:'Créer une nouvelle édition',exact:true}).click();
+    await page.locator('[contenteditable="true"]').waitFor();
+    await page.getByText('Page 1',{exact:true}).waitFor();
+    await page.getByRole('button',{name:'Suivant',exact:true}).click();
+    await page.locator('[role="row"][data-id="1"]').waitFor();
+    await page.getByText('Page 2',{exact:true}).waitFor();
+    await page.getByRole('button',{name:'Précédent',exact:true}).click();
+    await page.locator('[role="row"][data-id="13"]').waitFor();
+  }
   await page.waitForTimeout(500);
   assert.deepEqual(errors,[]);
-  console.log(`PASS: ${role} login, edition data and account route; no browser exceptions`);
+  console.log(`PASS: ${role} login, edition data, deferred forms and picture compression; no browser exceptions`);
   await context.close();
  }
  await browser.close();
-})().catch(e=>{console.error(e);process.exitCode=1}).finally(()=>browser?.close());
+})().catch(async e=>{
+ console.error(e);
+ if(activePage && !activePage.isClosed()) console.error('BROWSERSTATE',activePage.url(),await activePage.locator('body').innerText(),'BROWSERERRORS',activeErrors);
+ process.exitCode=1;
+}).finally(()=>browser?.close());

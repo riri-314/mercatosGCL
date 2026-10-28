@@ -14,10 +14,11 @@ import { LoadingButton } from "@mui/lab";
 import Box from "@mui/material/Box";
 
 import { lazy, Suspense, useState } from "react";
-const EditComitard = lazy(() => import("../admin-account/edit_comitard"));
 import { httpsCallable } from "firebase/functions";
 import { functions } from "../../firebase_functions";
 import EncheresTable from "../admin-account/enchere_table.tsx";
+
+const EditComitard = lazy(() => import("../admin-account/edit_comitard"));
 
 interface AccountProps {
   data: DocumentData;

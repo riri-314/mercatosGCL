@@ -34,6 +34,7 @@ function subscribe(listener: () => void) {
 
 export default function Countdown({ stop, format }: { stop: number; format: (ms: number) => string }) {
   const { ref, visible } = useInViewport<HTMLSpanElement>();
-  const current = useSyncExternalStore(visible && stop > Date.now() ? subscribe : idle, snapshot, snapshot);
-  return <span ref={ref}>{format(Math.max(0, stop - (visible ? current : Date.now())))}</span>;
+  const active = visible && stop > Date.now();
+  const current = useSyncExternalStore(active ? subscribe : idle, snapshot, snapshot);
+  return <span ref={ref}>{format(Math.max(0, stop - (active ? current : Date.now())))}</span>;
 }

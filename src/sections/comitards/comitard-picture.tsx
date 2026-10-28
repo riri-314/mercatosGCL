@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { Box, SxProps, Theme } from "@mui/material";
-import LazyLoad from "react-lazy-load";
 
 interface FadeImageProps {
   src?: string;
@@ -27,7 +26,6 @@ export default function FadeImage({
   }, [src]);
 
   return (
-    <LazyLoad>
       <Box
         sx={{
           position: absolute ? "absolute" : "relative",
@@ -61,6 +59,7 @@ export default function FadeImage({
           src={src}
           alt={alt}
           loading="lazy"
+          decoding="async"
           onLoad={() => setLoaded(true)}
           onError={() => setLoaded(true)}
           sx={{
@@ -71,7 +70,6 @@ export default function FadeImage({
             objectFit,
             opacity: loaded ? 1 : 0,
             transition: "opacity 220ms ease-out",
-            willChange: "opacity",
           }}
         />
 
@@ -87,6 +85,5 @@ export default function FadeImage({
           />
         )}
       </Box>
-    </LazyLoad>
   );
 }

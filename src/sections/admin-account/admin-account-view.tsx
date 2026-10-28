@@ -14,7 +14,6 @@ import { getAuth, sendPasswordResetEmail } from "firebase/auth";
 import { httpsCallable } from "firebase/functions";
 import NewCerle from "./new_cercle";
 import { functions } from "../../firebase_functions";
-const NewEdition = lazy(() => import("./new_edition"));
 import NewComitard from "./new_comitard";
 import { DocumentData } from "firebase/firestore";
 import { lazy, Suspense, useState } from "react";
@@ -22,15 +21,17 @@ import Box from "@mui/material/Box";
 import DeferredPanel from "../../components/deferred-panel/deferred-panel";
 import QuickFilteringGrid from "./edition_table";
 import CercleTable from "./cercle_table";
-const EditCerle = lazy(() => import("./edit_cercle"));
 import ComitardTable from "./comitard_table";
-const EditComitard = lazy(() => import("./edit_comitard"));
 import EncheresTable from "./enchere_table.tsx";
-const EditEnchere = lazy(() => import("./edit_enchere.tsx"));
-const EditMDP = lazy(() => import("./edit_mdp.tsx"));
 import { lockAllPastEditions, resetEditionPasswords } from "../../utils/admin-tools";
 
 import EditionOperationStatus from "./edition-operation-status";
+
+const NewEdition = lazy(() => import("./new_edition"));
+const EditCerle = lazy(() => import("./edit_cercle"));
+const EditComitard = lazy(() => import("./edit_comitard"));
+const EditEnchere = lazy(() => import("./edit_enchere.tsx"));
+const EditMDP = lazy(() => import("./edit_mdp.tsx"));
 
 interface AdminAccountProps {
   history: ReturnType<typeof useEditionHistory>;

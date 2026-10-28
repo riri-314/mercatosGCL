@@ -123,8 +123,8 @@ async function fillNewForm(user: User, options: { admin?: boolean; omit?: 'circl
 }
 
 async function completeUpload() {
-  const complete = observeUpload.mock.calls.at(-1)![3] as () => void;
-  await act(async () => complete());
+  const completions = observeUpload.mock.calls.slice(-2).map(call => call[3] as () => void);
+  await act(async () => completions.forEach(complete => complete()));
 }
 
 async function prepareForm(mode: Mode, replacement = false) {
@@ -138,6 +138,16 @@ async function prepareForm(mode: Mode, replacement = false) {
 }
 
 describe('profile creation', formTests, () => {
+  it('keeps the compressed photo usable if thumbnail generation fails', async () => {
+    vi.mocked(imageCompression).mockResolvedValueOnce(compressedFile).mockRejectedValueOnce(new Error('Thumbnail unavailable'));
+    const { user, submit } = await renderForm('create');
+    await fillNewForm(user);
+    await user.click(submit());
+    expect(uploadBytesResumable).toHaveBeenCalledExactlyOnceWith(uploadedRef, compressedFile);
+    await completeUpload();
+    expect(save).toHaveBeenCalledWith(expect.objectContaining({ picture: uploadedPicture, pictureThumbnail: uploadedPicture }));
+    expect(screen.getByRole('alert')).toHaveTextContent('Comitard créé avec succès');
+  });
   it('validates required fields before uploading or saving', async () => {
     const { user, submit, refetchData } = await renderForm('create');
     await user.click(submit());
@@ -161,7 +171,7 @@ describe('profile creation', formTests, () => {
     expect(save).not.toHaveBeenCalled();
     await completeUpload();
     expect(httpsCallable).toHaveBeenCalledWith(functions, 'addcomitard');
-    expect(save).toHaveBeenCalledExactlyOnceWith({ ...fields, editionId: 'edition', cercle: 'member', picture: uploadedPicture });
+    expect(save).toHaveBeenCalledExactlyOnceWith({ ...fields, editionId: 'edition', cercle: 'member', picture: uploadedPicture, pictureThumbnail: uploadedPicture });
     expect(refetchData).not.toHaveBeenCalled();
     expect(screen.queryByText('Comitard créé avec succès')).not.toBeInTheDocument();
     expect(screen.getByLabelText('Nom')).toHaveValue(profile.name);
@@ -345,7 +355,7 @@ describe.each(['create', 'edit'] as const)('%s validation and upload recovery', 
     expect(refetchData).not.toHaveBeenCalled();
     await user.click(submit());
     await completeUpload();
-    expect(uploadBytesResumable).toHaveBeenCalledTimes(2);
+    expect(uploadBytesResumable).toHaveBeenCalledTimes(4);
     expect(save).toHaveBeenCalledOnce();
     expect(save).toHaveBeenCalledWith(expect.objectContaining({ name: 'À conserver' }));
     expect(refetchData).toHaveBeenCalledOnce();

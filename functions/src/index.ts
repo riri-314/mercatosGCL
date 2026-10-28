@@ -314,7 +314,12 @@ exports.editcomitard = onCall(async (request) => {
     }
     assertMemberEdition(edition, isAdmin);
     const path = `cercles.${cercleId}.comitards.${data.comitardId}`;
-    tx.update(editionRef, Object.fromEntries(Object.entries(data.profile)
+    const fields = { ...data.profile };
+    // Legacy clients replacing a picture must not retain the previous thumbnail.
+    if (fields.picture && !fields.pictureThumbnail && fields.picture !== profiles[data.comitardId!].picture) {
+      fields.pictureThumbnail = fields.picture;
+    }
+    tx.update(editionRef, Object.fromEntries(Object.entries(fields)
       .map(([field, value]) => [`${path}.${field}`, value])));
   });
   return { success: true, message: "Comitard updated in edition map" };

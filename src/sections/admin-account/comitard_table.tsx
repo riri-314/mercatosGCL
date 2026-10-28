@@ -14,7 +14,7 @@ import { LoadingButton } from "@mui/lab";
 import { useMemo, useState } from "react";
 import { db } from "../../firebase_config";
 import WarningModal from "../../components/modal/warning_modal";
-import { Avatar } from "@mui/material";
+import ProfileAvatar from "../../components/profile-avatar/profile-avatar";
 import { useAuth } from "../../auth/AuthProvider";
 
 interface ComitardTableProps {
@@ -81,8 +81,7 @@ export default function ComitardTable({
       renderCell: (params) => {
         return (
           <>
-            <Avatar src={params.row.picture} />
-            {params.value.name}
+            <ProfileAvatar picture={params.row.picture} thumbnail={params.row.pictureThumbnail} />
           </>
         );
       },

@@ -56,7 +56,7 @@ export default function ComitardsView() {
     const stop = raw?.stop;
     if (!start || !stop) return false;
     const t = now;
-    return t > start.toMillis() && t < stop.toMillis();
+    return t >= start.toMillis() && t < stop.toMillis();
   }, [raw?.start, raw?.stop, now]);
 
   // Precompute sorted structure once per data change

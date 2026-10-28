@@ -1,5 +1,64 @@
 # Performance measurements
 
+## Further frontend improvements (2026-10-28)
+
+The follow-up pass shares decoded edition data through a WeakMap keyed by the
+immutable snapshot. Consumers reuse the same object; table rows are memoized and
+profile rows copy their metadata instead of mutating shared data. Old snapshots
+can be garbage-collected normally.
+
+Creation panels mount on first expansion and retain drafts after collapsing.
+Edit forms load when their modal opens. The rich-text editor, date pickers,
+image compressor and Storage SDK stay outside the initial account route graph.
+The report uses each route's static imports, excluding lazy form imports:
+
+| Metric | Before | After |
+| --- | ---: | ---: |
+| Additional admin JavaScript, gzip | ~470 KB | ~145 KB |
+| Additional member JavaScript, gzip | ~196 KB | ~139 KB |
+| Shared entry JavaScript, gzip | ~305 KB | ~307 KB |
+| Shared logo SVG, raw | 235,368 bytes | 120,410 bytes |
+| Shared logo SVG, gzip (Node default) | 92,149 bytes | 49,228 bytes |
+
+These are build sizes, not measured production latency improvements. The shared
+entry grows slightly to support the new hooks; the logo's gzip reduction more
+than offsets that increase on dashboard routes. The logo was optimized with
+SVGO 4, one decimal place and multiple passes. An 800-pixel raster comparison
+had a mean absolute channel difference of 0.15 out of 255.
+
+Countdown badges share one clock and subscribe only while visible. The clock
+pauses when the document is hidden. Cards and grids update at auction boundaries
+instead of every second; results also move to the closed tab at expiry without
+requiring a new snapshot. Collapsed mobile groups mount on first expansion.
+Tests check countdown updates without parent renders, offscreen suspension and
+start/stop behavior.
+
+The administrator edition table queries ten editions at a time, plus one lookahead
+document to determine whether another page exists. Refreshes query the current
+page; active edition controls use the existing live subscription. Filtering and
+column sorting apply to the displayed page. The browser fixture includes thirteen
+editions to exercise forward and backward cursor navigation.
+
+New and replacement photos produce a WebP thumbnail, at most 160 pixels on the
+longest edge with a 15 KB compression target. Both images upload before the profile
+is saved. Failed thumbnail compression falls back to the compressed original;
+existing profiles without thumbnails remain supported. Avatars use a native lazy image inside MUI's
+frame, avoiding Avatar's eager JavaScript image preload. Full card images also use
+native lazy loading and asynchronous decoding. Upload preview URLs are revoked
+when replaced or unmounted. Original photos and thumbnails share the edition's
+Storage prefix, so edition locking continues to revoke both.
+
+Deploy the Functions changes before or together with Hosting: profile validation
+now accepts the optional `pictureThumbnail` field. No production backfill is
+performed; older photos get thumbnails when replaced.
+
+`npm run test:bundle` now also caps each account route's additional JavaScript at
+200 KB gzip and rejects eagerly loaded form dependencies. `npm run analyze:bundle`
+prints those route measurements. The emulator browser smoke check opens both
+profile forms, selects a picture, loads the edition editor and navigates archives.
+
+## Earlier startup improvements
+
 The initial route now uses automatic bundler splitting. The former vendor groups
 made the chart chunk an eager dependency because shared React code ended up in it.
 Storage and callable Functions initialization live in route-only modules. Analytics
