@@ -9,23 +9,26 @@ import {
     GridToolbar,
 } from "@mui/x-data-grid";
 import Iconify from "../../components/iconify/iconify";
-import {DocumentData} from "firebase/firestore";
+import type { useEditionHistory } from "../../data/use-edition-history";
+import Stack from "@mui/material/Stack";
+import Button from "@mui/material/Button";
+import Alert from "@mui/material/Alert";
 import {setActiveEdition} from "../../utils/admin-tools";
 import {LoadingButton} from "@mui/lab";
 import {useMemo, useState} from "react";
 
 interface EditionTableProps {
-    data: DocumentData[];
+    history: ReturnType<typeof useEditionHistory>;
     refetchData: () => void;
     error: (error: string) => void;
     handleOpenModalEdition: (id: number) => void;
 }
 
 export default function QuickFilteringGrid({
-                                               data, refetchData, error, handleOpenModalEdition,
+                                               history, refetchData, error, handleOpenModalEdition,
                                            }: EditionTableProps) {
     const [loading, setLoading] = useState<boolean>(false);
-    const rows = useMemo(() => data.map((snapshot) => getEditionData(snapshot) ?? {}), [data]);
+    const rows = useMemo(() => history.rows.map((snapshot) => getEditionData(snapshot) ?? {}), [history.rows]);
 
     const columns: GridColDef[] = [{field: "edition", headerName: "ID", width: 90}, {
         field: "rules", headerName: "Règles", width: 150, editable: false,
@@ -160,9 +163,13 @@ export default function QuickFilteringGrid({
             </LoadingButton>),
     },];
 
-    return (<Box sx={{height: 400, width: 1}}>
+    return (<>
+        {history.error && <Alert severity="error" action={<Button onClick={history.refresh}>Réessayer</Button>}>{history.error}</Alert>}
+        <Box sx={{height: 400, width: 1}}>
             <DataGrid
                 rows={rows}
+                loading={history.loading}
+                hideFooter
                 disableColumnFilter
                 disableColumnSelector
                 disableDensitySelector
@@ -171,10 +178,17 @@ export default function QuickFilteringGrid({
                 slotProps={{
                     toolbar: {
                         showQuickFilter: true,
+                        quickFilterProps: { placeholder: "Filtrer cette page" },
                     },
                 }}
                 getRowId={(row: any) => row.edition}
             />
 
-        </Box>);
+        </Box>
+        <Stack direction="row" alignItems="center" justifyContent="flex-end" spacing={2} sx={{ mt: 1 }}>
+            <Button disabled={history.loading || history.page === 0} onClick={history.previous}>Précédent</Button>
+            <span>Page {history.page + 1}</span>
+            <Button disabled={history.loading || !history.hasNext} onClick={history.next}>Suivant</Button>
+        </Stack>
+    </>);
 }

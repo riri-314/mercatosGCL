@@ -13,8 +13,8 @@ import { getAuth, sendPasswordResetEmail } from "firebase/auth";
 import { LoadingButton } from "@mui/lab";
 import Box from "@mui/material/Box";
 
-import { useState } from "react";
-import EditComitard from "../admin-account/edit_comitard";
+import { lazy, Suspense, useState } from "react";
+const EditComitard = lazy(() => import("../admin-account/edit_comitard"));
 import { httpsCallable } from "firebase/functions";
 import { functions } from "../../firebase_functions";
 import EncheresTable from "../admin-account/enchere_table.tsx";
@@ -182,6 +182,7 @@ export default function Account({ data, refetchData }: AccountProps) {
           mr: "auto",
         }}
       >
+        <Box tabIndex={-1}>{openModalComitard && <Suspense fallback={<div role="status">Chargement…</div>}>
         <EditComitard
           refetchData={refetchData}
           ComitardData={modalComitardData}
@@ -189,6 +190,7 @@ export default function Account({ data, refetchData }: AccountProps) {
           close={() => setOpenModalComitard(false)}
           admin={false}
         />
+        </Suspense>}</Box>
       </Modal>
 
       <Card sx={{ width: "100%", mb: 4, p: 2 }}>

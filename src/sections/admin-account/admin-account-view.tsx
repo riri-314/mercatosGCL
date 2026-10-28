@@ -1,15 +1,12 @@
+import type { useEditionHistory } from "../../data/use-edition-history";
 import { getEditionData } from "../../data/edition-data";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import Card from "@mui/material/Card";
 import {
-  Accordion,
-  AccordionDetails,
-  AccordionSummary,
   Alert,
   CardContent,
   Modal,
-  Theme,
 } from "@mui/material";
 import { useAuth } from "../../auth/AuthProvider";
 import { LoadingButton } from "@mui/lab";
@@ -17,31 +14,32 @@ import { getAuth, sendPasswordResetEmail } from "firebase/auth";
 import { httpsCallable } from "firebase/functions";
 import NewCerle from "./new_cercle";
 import { functions } from "../../firebase_functions";
-import NewEdition from "./new_edition";
+const NewEdition = lazy(() => import("./new_edition"));
 import NewComitard from "./new_comitard";
 import { DocumentData } from "firebase/firestore";
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
+import Box from "@mui/material/Box";
+import DeferredPanel from "../../components/deferred-panel/deferred-panel";
 import QuickFilteringGrid from "./edition_table";
 import CercleTable from "./cercle_table";
-import EditCerle from "./edit_cercle";
+const EditCerle = lazy(() => import("./edit_cercle"));
 import ComitardTable from "./comitard_table";
-import EditComitard from "./edit_comitard";
-import Iconify from "../../components/iconify/iconify.tsx";
+const EditComitard = lazy(() => import("./edit_comitard"));
 import EncheresTable from "./enchere_table.tsx";
-import EditEnchere from "./edit_enchere.tsx";
-import EditMDP from "./edit_mdp.tsx";
+const EditEnchere = lazy(() => import("./edit_enchere.tsx"));
+const EditMDP = lazy(() => import("./edit_mdp.tsx"));
 import { lockAllPastEditions, resetEditionPasswords } from "../../utils/admin-tools";
 
 import EditionOperationStatus from "./edition-operation-status";
 
 interface AdminAccountProps {
-  data: DocumentData[];
+  history: ReturnType<typeof useEditionHistory>;
   refetchData: () => void;
   activeData: DocumentData;
 }
 
 export default function AdminAccount({
-  data,
+  history,
   refetchData,
   activeData,
 }: AdminAccountProps) {
@@ -82,29 +80,9 @@ export default function AdminAccount({
       </Stack>
 
       <EditionOperationStatus refetchData={refetchData} />
-      <Card sx={{ width: "100%", mb: 4 }}>
-        <CardContent>
-          <Accordion>
-            <AccordionSummary
-              expandIcon={
-                <Iconify
-                  width={40}
-                  icon="solar:double-alt-arrow-down-bold-duotone"
-                  sx={{
-                    color: (theme: Theme) => `${theme.palette.primary.main}`,
-                  }}
-                  fallback={<span>↓</span>}
-                />
-              }
-            >
-              <Typography variant="h5">Créer une nouvelle édition</Typography>
-            </AccordionSummary>
-            <AccordionDetails>
-              <NewEdition data={(getEditionData(activeData) ?? {})} refetchData={refetchData} />
-            </AccordionDetails>
-          </Accordion>
-        </CardContent>
-      </Card>
+      <DeferredPanel title="Créer une nouvelle édition">
+        <NewEdition data={getEditionData(activeData) ?? {}} refetchData={refetchData} />
+      </DeferredPanel>
 
       <Card sx={{ width: "100%", mb: 4, p: 2 }}>
         <CardContent>
@@ -112,7 +90,7 @@ export default function AdminAccount({
             Éditer édition
           </Typography>
           <QuickFilteringGrid
-            data={data}
+            history={history}
             refetchData={refetchData}
             error={(error) => setErrorEditionEdit(error)}
             handleOpenModalEdition={(data: any) => {
@@ -169,6 +147,8 @@ export default function AdminAccount({
           mr: "auto",
         }}
       >
+        <Box tabIndex={-1}>{openModalEdition && <Suspense fallback={<div role="status">Chargement…</div>}>
+
         <Card sx={{ width: "100%", mb: 4 }}>
           <CardContent>
             <Typography variant="h5">Éditer l'édition</Typography>
@@ -180,6 +160,7 @@ export default function AdminAccount({
             />
           </CardContent>
         </Card>
+        </Suspense>}</Box>
       </Modal>
 
       <NewCerle refetchData={refetchData} editionId={activeData.id} />
@@ -217,6 +198,8 @@ export default function AdminAccount({
           mr: "auto",
         }}
       >
+        <Box tabIndex={-1}>{openModalMDP && <Suspense fallback={<div role="status">Chargement…</div>}>
+
         <Card sx={{ width: "100%", mb: 4 }}>
           <CardContent>
             <Typography variant="h5" sx={{ mb: 1 }}>
@@ -230,6 +213,7 @@ export default function AdminAccount({
             />
           </CardContent>
         </Card>
+        </Suspense>}</Box>
       </Modal>
 
       <Modal
@@ -245,6 +229,8 @@ export default function AdminAccount({
           mr: "auto",
         }}
       >
+        <Box tabIndex={-1}>{openModalCercle && <Suspense fallback={<div role="status">Chargement…</div>}>
+
         <Card sx={{ width: "100%", mb: 4 }}>
           <CardContent>
             <Typography variant="h5" sx={{ mb: 1 }}>
@@ -258,6 +244,7 @@ export default function AdminAccount({
             />
           </CardContent>
         </Card>
+        </Suspense>}</Box>
       </Modal>
 
       <NewComitard data={activeData} admin={true} refetchData={refetchData} />
@@ -293,6 +280,8 @@ export default function AdminAccount({
           mr: "auto",
         }}
       >
+        <Box tabIndex={-1}>{openModalComitard && <Suspense fallback={<div role="status">Chargement…</div>}>
+
         <EditComitard
           refetchData={refetchData}
           ComitardData={modalComitardData}
@@ -300,6 +289,7 @@ export default function AdminAccount({
           close={() => setOpenModalComitard(false)}
           admin={true}
         />
+        </Suspense>}</Box>
       </Modal>
 
       <Card sx={{ width: "100%", mb: 4, p: 2 }}>
@@ -332,12 +322,15 @@ export default function AdminAccount({
           mr: "auto",
         }}
       >
+        <Box tabIndex={-1}>{openModalEnchere && <Suspense fallback={<div role="status">Chargement…</div>}>
+
         <EditEnchere
           data={activeData}
           enchereData={modalEnchereData}
           refetchData={refetchData}
           close={() => setOpenModalEnchere(false)}
         />
+        </Suspense>}</Box>
       </Modal>
 
       <Card sx={{ width: "100%", mb: 4, p: 2 }}>

@@ -88,6 +88,7 @@ async function renderForm(mode: Mode, options: { admin?: boolean; values?: Parti
           admin={admin} refetchData={refetchData} close={close} />}
   </ThemeProvider>);
   if (mode === 'create') await user.click(screen.getByRole('button', { name: 'Créer nouveau comitard' }));
+  await screen.findByLabelText('Nom');
   const submit = () => screen.getByRole('button', { name: mode === 'create' ? 'Créer comitard' : 'Mettre à jour comitard' });
   return { user, refetchData, close, submit };
 }
