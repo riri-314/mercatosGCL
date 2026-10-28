@@ -1,3 +1,4 @@
+import Countdown from "../../components/countdown/countdown";
 import React, { useCallback, useMemo, useState } from "react";
 
 import { Box, Card, Stack, Typography, LinearProgress, Alert } from "@mui/material";
@@ -24,7 +25,6 @@ interface ComitardCardProps {
   enchereMin: number;
   enchereMax: number;
   isInTimeFrame: boolean;
-  now: number;
   refetchData: () => void;
   cerclesData: CerclesData;
 }
@@ -38,7 +38,6 @@ function ComitardCardInner({
   enchereMin,
   enchereMax,
   isInTimeFrame,
-  now,
   refetchData,
   cerclesData,
 }: ComitardCardProps) {
@@ -56,8 +55,7 @@ function ComitardCardInner({
     enchereMin,
     enchereMax,
     isInTimeFrame,
-    now,
-    refetchData,
+      refetchData,
   });
 
   const renderStatus = useMemo(
@@ -74,10 +72,10 @@ function ComitardCardInner({
           boxShadow: (t: any) => t.shadows[4],
         }}
       >
-        {formatTimeLeft(auction.timeLeft)} <Iconify icon="jam:chronometer" />
+        <Countdown stop={auction.enchereStopMs ?? 0} format={formatTimeLeft} /> <Iconify icon="jam:chronometer" />
       </Label>
     ),
-    [auction.timeLeft]
+    [auction.enchereStopMs]
   );
 
   const renderPrice = useMemo(() => {
@@ -201,29 +199,4 @@ function ComitardCardInner({
   );
 }
 
-export default React.memo(
-  ComitardCardInner,
-  (prev, next) => {
-    // rerender if server data changed (reference changed)
-    if (prev.product !== next.product) return false;
-
-    // rerender if constraints changed
-    if (prev.nbFutsLeft !== next.nbFutsLeft) return false;
-    if (prev.enchereMin !== next.enchereMin) return false;
-    if (prev.enchereMax !== next.enchereMax) return false;
-    if (prev.isInTimeFrame !== next.isInTimeFrame) return false;
-    if (prev.cerclesData !== next.cerclesData) return false;
-    if (prev.user !== next.user) return false;
-
-    // Ignore now unless auction is active (so only “live” cards tick)
-    const ps = prev.product?.enchereStart?.toMillis?.() ?? null;
-    const pe = prev.product?.enchereStop?.toMillis?.() ?? null;
-    if (ps && pe) {
-      const prevActive = prev.now >= ps && prev.now <= pe;
-      const nextActive = next.now >= ps && next.now <= pe;
-      if (prevActive || nextActive) return false;
-    }
-
-    return true;
-  }
-);
+export default React.memo(ComitardCardInner);

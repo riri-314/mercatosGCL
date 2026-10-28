@@ -48,6 +48,16 @@ beforeEach(() => {
 });
 
 describe('auction availability and limits', () => {
+  it('opens and closes voting at time boundaries without a page clock', () => {
+    const product = { enchereStart: timestamp(now + 1000), enchereStop: timestamp(now + 3000) };
+    const { result } = renderHook(() => useComitardAuction(args({ product, now: undefined })));
+    expect(result.current.displayVote).toBe(false);
+    act(() => vi.advanceTimersByTime(1000));
+    expect(result.current.displayVote).toBe(true);
+    act(() => vi.advanceTimersByTime(2000));
+    expect(result.current.displayVote).toBe(false);
+    expect(result.current.timeLeft).toBe(0);
+  });
   it('allows members to start an auction within their balance', () => {
     const { result } = renderHook(() => useComitardAuction(args()));
     expect(result.current).toMatchObject({

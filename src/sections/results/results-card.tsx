@@ -1,7 +1,8 @@
+import { useBoundaryTime } from "../../hooks/use-boundary-time";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
 import Box from "@mui/material/Box";
-import { lazy, memo, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, memo, Suspense, useEffect, useRef, useState } from "react";
 import { useTheme } from "@mui/material/styles";
 import type { ComitardWithMeta } from "../../types/results.types";
 import { ComitardHeader } from "./results-comitard-header";
@@ -29,10 +30,9 @@ function ComitardResultCardBase({ comitard }: ComitardResultCardProps) {
     observer.observe(chartRef.current);
     return () => observer.disconnect();
   }, [chartVisible]);
-  const isClosed = useMemo(
-    () => (comitard.enchereStop?.toMillis() ?? Number.POSITIVE_INFINITY) < Date.now(),
-    [comitard.enchereStop]
-  );
+  const stop = comitard.enchereStop?.toMillis() ?? null;
+  const now = useBoundaryTime(null, stop);
+  const isClosed = stop != null && now >= stop;
 
   return (
     <Card>

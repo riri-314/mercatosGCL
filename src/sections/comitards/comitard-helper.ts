@@ -1,3 +1,4 @@
+import { useBoundaryTime } from "../../hooks/use-boundary-time";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { httpsCallable } from "firebase/functions";
 
@@ -60,7 +61,7 @@ export interface UseComitardAuctionArgs {
   enchereMin: number;
   enchereMax: number;
   isInTimeFrame: boolean;
-  now: number;
+  now?: number;
 
   refetchData: () => void;
 }
@@ -104,6 +105,8 @@ export function useComitardAuction({
   refetchData,
 }: UseComitardAuctionArgs): UseComitardAuctionResult {
   const { user, isAdmin } = useAuth();
+  const boundaryNow = useBoundaryTime(toMillis(product?.enchereStart), toMillis(product?.enchereStop));
+  const currentTime = now ?? boundaryNow;
 
   const [vote, setVote] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -123,14 +126,14 @@ export function useComitardAuction({
 
   const isAuctionActive = useMemo(() => {
     if (!enchereStartMs || !enchereStopMs) return false;
-    return now >= enchereStartMs && now <= enchereStopMs;
-  }, [now, enchereStartMs, enchereStopMs]);
+    return currentTime >= enchereStartMs && currentTime < enchereStopMs;
+  }, [currentTime, enchereStartMs, enchereStopMs]);
 
   const timeLeft = useMemo(() => {
     if (!enchereStartMs || !enchereStopMs) return 0;
-    if (now >= enchereStartMs && now <= enchereStopMs) return enchereStopMs - now;
+    if (currentTime >= enchereStartMs && currentTime < enchereStopMs) return enchereStopMs - currentTime;
     return 0;
-  }, [now, enchereStartMs, enchereStopMs]);
+  }, [currentTime, enchereStartMs, enchereStopMs]);
 
   const encheresArray = useMemo(() => normalizeEncheres(product?.encheres), [product?.encheres]);
 

@@ -1,3 +1,4 @@
+import { useBoundaryTime } from "../../hooks/use-boundary-time";
 import { getEditionData } from "../../data/edition-data";
 import { useMemo } from "react";
 import type { ResultsSplit, Cercle, Comitard, Enchere, ComitardWithMeta } from "../../types/results.types";
@@ -35,6 +36,16 @@ function normalizeEncheres(
 }
 
 export function useComitardResults(rawDoc: any): ResultsSplit {
+  const cercles = getEditionData(rawDoc)?.cercles ?? {};
+  const current = Date.now();
+  let nextExpiry: number | null = null;
+  for (const cercle of Object.values<any>(cercles)) {
+    for (const comitard of Object.values<any>(cercle.comitards ?? {})) {
+      const stop = comitard?.enchereStop?.toMillis();
+      if (stop > current && (nextExpiry == null || stop < nextExpiry)) nextExpiry = stop;
+    }
+  }
+  const boundaryNow = useBoundaryTime(null, nextExpiry);
   return useMemo(() => {
     const running: ComitardWithMeta[] = [];
     const closed: ComitardWithMeta[] = [];
@@ -60,7 +71,7 @@ export function useComitardResults(rawDoc: any): ResultsSplit {
       cercles.push(cercle);
     }
 
-    const now = Date.now();
+    const now = boundaryNow;
 
     for (const cercle of cercles) {
       for (const comitard of cercle.comitards) {
@@ -87,7 +98,7 @@ export function useComitardResults(rawDoc: any): ResultsSplit {
     );
 
     return { running, closed };
-  }, [rawDoc]);
+  }, [rawDoc, boundaryNow]);
 }
 
 export function formatTimeLeft(ms: number): string {

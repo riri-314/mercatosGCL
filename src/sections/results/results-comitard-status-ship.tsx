@@ -1,5 +1,6 @@
+import Countdown from "../../components/countdown/countdown";
 import Box from "@mui/material/Box";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import Iconify from "../../components/iconify/iconify";
 import Label from "../../components/label/label";
 import { formatTimeLeft } from "./results-helper";
@@ -15,10 +16,6 @@ export function ComitardStatusChips({ comitard, isClosed }: Props) {
 
   const lastEnchere = comitard.encheres.at(-1);
 
-  const timeLeft = useMemo(() => {
-    if (!comitard.enchereStop) return null;
-    return comitard.enchereStop.toMillis() - Date.now();
-  }, [comitard.enchereStop]);
 
   return (
     <Box sx={{ display: "flex", justifyContent: "space-between" }}>
@@ -42,7 +39,7 @@ export function ComitardStatusChips({ comitard, isClosed }: Props) {
           <Iconify icon={timeOrDate ? "jam:clock" : "jam:calendar"} sx={{ mr: "0.3rem" }} />
           <Box component="span">
             {timeOrDate ? (
-              <span>{timeLeft == null ? "N/A" : formatTimeLeft(timeLeft)}</span>
+              <span>{comitard.enchereStop ? <Countdown stop={comitard.enchereStop.toMillis()} format={formatTimeLeft} /> : "N/A"}</span>
             ) : (
               <Box
                 sx={{

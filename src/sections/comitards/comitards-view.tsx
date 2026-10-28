@@ -1,5 +1,6 @@
+import { useBoundaryTime } from "../../hooks/use-boundary-time";
 import { getEditionData } from "../../data/edition-data";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import Container from "@mui/material/Container";
 import Grid from "@mui/material/Grid";
 import Typography from "@mui/material/Typography";
@@ -29,14 +30,8 @@ export default function ComitardsView() {
   const theme: Theme = useTheme();
   const isSmallScreen = useMediaQuery(theme.breakpoints.down("sm"));
 
-  // Single global clock tick (instead of intervals in every card)
-  const [now, setNow] = useState<number>(() => Date.now());
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, []);
-
-  const raw = useMemo(() => getEditionData(data), [data]);
+  const raw = getEditionData(data);
+  const now = useBoundaryTime(raw?.start?.toMillis() ?? null, raw?.stop?.toMillis() ?? null);
 
   const cerclesData: CerclesData = useMemo(() => {
     const cercles = raw?.cercles;
@@ -120,7 +115,6 @@ export default function ComitardsView() {
                         enchereMin={enchereMin}
                         enchereMax={enchereMax}
                         isInTimeFrame={isInTimeFrame}
-                        now={now}
                         refetchData={refetchData}
                         cerclesData={cerclesData}
                       />
@@ -133,7 +127,7 @@ export default function ComitardsView() {
           return (
             <div key={cercleId} style={{ marginBottom: "20px" }}>
               {isSmallScreen ? (
-                <Accordion>
+                <Accordion slotProps={{ transition: { mountOnEnter: true } }}>
                   <AccordionSummary
                     expandIcon={
                       <Iconify
