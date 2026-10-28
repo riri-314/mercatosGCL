@@ -368,7 +368,7 @@ export default function NewEdition({
               "0%": 0,
             }}
             helpText="Part remboursée au cercle vendeur."
-            change={(_event: any, val: any) => setRemboursementVendeur(val)}
+            change={(_event, val) => { if (val !== null) setRemboursementVendeur(val); }}
           />
         </Grid>
         <Grid item xs={12} sm={6}>
@@ -383,7 +383,7 @@ export default function NewEdition({
               "0%": 0,
             }}
             helpText="Part remboursée au cercle perdant."
-            change={(_event: any, val: any) => setRemboursementPerdant(val)}
+            change={(_event, val) => { if (val !== null) setRemboursementPerdant(val); }}
           />
         </Grid>
         <Grid item xs={12} sm={6}>
@@ -398,7 +398,7 @@ export default function NewEdition({
               "0%": 0,
             }}
             helpText="Part remboursée au cercle gagnant."
-            change={(_event: any, val: any) => setRemboursementGagnant(val)}
+            change={(_event, val) => { if (val !== null) setRemboursementGagnant(val); }}
           />
         </Grid>
         <FormSection title="Règlement" />

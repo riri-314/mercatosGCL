@@ -1,5 +1,6 @@
 const assert = require('node:assert/strict');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE_PATH || 'playwright-core');
+const base = process.env.PREVIEW_BASE_URL || 'http://127.0.0.1:5175';
 let browser;
 let activePage;
 let activeErrors;
@@ -13,14 +14,14 @@ let activeErrors;
   activeErrors=errors;
   page.on('pageerror',e=>errors.push(e.message));
   await page.route('**/*',route=>['127.0.0.1','localhost'].includes(new URL(route.request().url()).hostname)?route.continue():route.abort());
-  await page.goto('http://127.0.0.1:5175/comitards');
-  await page.getByText('Cercle Beta',{exact:true}).waitFor({timeout:20000});
-  await page.goto('http://127.0.0.1:5175/login');
+  await page.goto(base + '/comitards');
+  await page.getByRole('tab',{name:'Cercle Beta',exact:true}).waitFor({timeout:20000});
+  await page.goto(base + '/login');
   await page.getByLabel('Email',{exact:true}).fill(`demo-${role}@example.test`);
   await page.getByLabel('Mot de passe',{exact:true}).fill('EmulatorOnly123!');
   await page.getByRole('button',{name:'Connexion',exact:true}).click();
-  await page.waitForURL('http://127.0.0.1:5175/');
-  await page.goto('http://127.0.0.1:5175/account');
+  await page.waitForURL(base + '/');
+  await page.goto(base + '/account');
   try {
     if(role==='buyer') await page.getByRole('heading',{name:'Mon cercle',exact:true}).waitFor({timeout:15000});
     else await page.getByRole('heading',{name:'Administration',exact:true}).waitFor({timeout:15000});
@@ -29,6 +30,7 @@ let activeErrors;
     console.log('BROWSERERRORS',errors);
     throw error;
   }
+  assert.equal(await page.getByRole('button',{name:'DEBUG VOTE',exact:true}).count(),0);
   await page.getByRole('button',{name:'Créer nouveau comitard',exact:true}).click();
   await page.getByRole('textbox',{name:'Nom',exact:true}).waitFor();
   await page.locator('input[type="file"]').setInputFiles({

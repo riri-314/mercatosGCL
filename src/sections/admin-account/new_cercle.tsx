@@ -62,7 +62,7 @@ export default function NewCerle({ refetchData, editionId }: NewCerleProps) {
       })
         .then((result) => {
           requireMutationSuccess(result.data);
-          const data: any = result.data;
+          const data: unknown = result.data;
           //const sanitizedMessage = data.text;
           refetchData();
           setCercleErrorSeverity("success");

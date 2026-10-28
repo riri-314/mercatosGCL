@@ -10,12 +10,10 @@ import {
 } from "@mui/material";
 import { LoadingButton } from "@mui/lab";
 import { getAuth, sendPasswordResetEmail } from "firebase/auth";
-import { httpsCallable } from "firebase/functions";
 import type { DocumentData } from "firebase/firestore";
 import { getEditionData } from "../../data/edition-data";
-import { useAuth } from "../../auth/AuthProvider";
+import { useAuth } from "../../auth/auth-context";
 import { useBoundaryTime } from "../../hooks/use-boundary-time";
-import { functions } from "../../firebase_functions";
 import AccountTabs from "../../components/account/account-tabs";
 import FormDialog from "../../components/account/form-dialog";
 import NewComitard from "../admin-account/new_comitard";
@@ -150,31 +148,6 @@ export default function Account({ data, refetchData }: AccountProps) {
                     {passwordResult && (
                       <Alert severity="info">{passwordResult}</Alert>
                     )}
-                    <Box component="details">
-                      <Box
-                        component="summary"
-                        sx={{
-                          cursor: "pointer",
-                          fontSize: 13,
-                          color: "text.secondary",
-                          py: 1.5,
-                        }}
-                      >
-                        Outils avancés
-                      </Box>
-                      <LoadingButton
-                        variant="outlined"
-                        fullWidth
-                        onClick={() => {
-                          void httpsCallable(
-                            functions,
-                            "votebis",
-                          )({ clientTime: new Date().toISOString() });
-                        }}
-                      >
-                        DEBUG VOTE
-                      </LoadingButton>
-                    </Box>
                   </Stack>
                 </CardContent>
               </Card>

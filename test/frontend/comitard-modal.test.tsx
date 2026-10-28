@@ -3,6 +3,8 @@ import userEvent from "@testing-library/user-event";
 import { Timestamp } from "firebase/firestore";
 import { expect, it, vi } from "vitest";
 import ComitardModal, { type ComitardModalProps } from "../../src/sections/comitards/comitard-modal";
+import { ComitardStatusChips } from "../../src/sections/results/results-comitard-status-ship";
+import type { ComitardWithMeta } from "../../src/types/results.types";
 
 function props(overrides: Partial<ComitardModalProps> = {}): ComitardModalProps {
   const now = Date.now();
@@ -70,4 +72,37 @@ it("keeps one close button and preserves bid submission", async () => {
   expect(options.handleVote).toHaveBeenCalledOnce();
   await user.click(screen.getByRole("button", { name: "Fermer la fiche" }));
   expect(options.onClose).toHaveBeenCalledOnce();
+});
+
+
+it("announces the highest corrected bid and marks its chronological history row as the winner", () => {
+  const options = props({ timeLeft: 0, won: true });
+  options.product.encheres = {
+    highest: { sender: "alpha", vote: 40, date: new Timestamp(1, 0) },
+    latest: { sender: "beta", vote: 20, date: new Timestamp(2, 0) },
+  };
+  render(<ComitardModal {...options} />);
+  const header = within(screen.getByRole("dialog").querySelector("header")!);
+  expect(header.getByText("Cercle Alpha")).toBeInTheDocument();
+  expect(header.getByText("40")).toBeInTheDocument();
+  expect(header.getByText("Enchère gagnante")).toBeInTheDocument();
+  const rows = within(screen.getByRole("table")).getAllByRole("row");
+  expect(rows[1]).toHaveTextContent("Cercle Beta");
+  expect(within(rows[1]).queryByText("Remportée")).not.toBeInTheDocument();
+  expect(rows[2]).toHaveTextContent("Cercle Alpha");
+  expect(within(rows[2]).getByText("Remportée")).toBeInTheDocument();
+});
+
+it("shows the actual winning amount and circle on a closed results card", () => {
+  const comitard = {
+    ...props().product,
+    encheres: [
+      { sender: "Cercle Alpha", vote: 40, date: new Timestamp(1, 0) },
+      { sender: "Cercle Beta", vote: 20, date: new Timestamp(2, 0) },
+    ],
+  } as ComitardWithMeta;
+  render(<ComitardStatusChips comitard={comitard} isClosed />);
+  expect(screen.getByText("40")).toBeInTheDocument();
+  expect(screen.getByText("Cercle Alpha")).toBeInTheDocument();
+  expect(screen.queryByText("Cercle Beta")).not.toBeInTheDocument();
 });

@@ -2,14 +2,14 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, afterEach, expect, it, vi } from "vitest";
 import { updateDoc } from "firebase/firestore";
-import { useAuth } from "../../src/auth/AuthProvider";
+import { useAuth } from "../../src/auth/auth-context";
 import AccountTabs from "../../src/components/account/account-tabs";
 import MobileRecordList from "../../src/components/account/mobile-record-list";
 import RecordCard from "../../src/components/account/record-card";
 import FormDialog from "../../src/components/account/form-dialog";
 import ComitardTable from "../../src/sections/admin-account/comitard_table";
 
-vi.mock("../../src/auth/AuthProvider", () => ({ useAuth: vi.fn() }));
+vi.mock("../../src/auth/auth-context", () => ({ useAuth: vi.fn() }));
 vi.mock("firebase/firestore", async (importOriginal) => ({
   ...(await importOriginal<typeof import("firebase/firestore")>()),
   doc: vi.fn(() => "edition-reference"),

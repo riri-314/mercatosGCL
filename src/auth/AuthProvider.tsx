@@ -1,16 +1,9 @@
 import { onIdTokenChanged, signOut, type User } from "firebase/auth";
-import React, { useContext, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { collection, doc, getDoc } from "firebase/firestore";
 import { auth, db } from "../firebase_config";
 
-interface AuthContextValue {
-  user: User | null;
-  loading: boolean;
-  isAdmin: () => boolean;
-  cercleSession?: { name: string } | null;
-}
-
-export const AuthContext = React.createContext<AuthContextValue | null>(null);
+import { AuthContext } from "./auth-context";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -68,5 +61,3 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     </AuthContext.Provider>
   );
 }
-
-export const useAuth = () => useContext(AuthContext) as AuthContextValue;

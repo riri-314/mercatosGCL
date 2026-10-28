@@ -2,7 +2,7 @@ import {Helmet} from "react-helmet-async";
 import Container from "@mui/material/Container";
 import Loading from "../sections/loading/loading";
 import Account from "../sections/account/account-view";
-import {useData} from "../data/DataProvider";
+import { useData } from "../data/data-context";
 
 // --------------------------------------
 export default function AccountPage() {

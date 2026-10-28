@@ -3,7 +3,7 @@ import Typography from "@mui/material/Typography";
 import Card from "@mui/material/Card";
 import { CardContent } from "@mui/material";
 import Loading from "../loading/loading.tsx";
-import { useData } from "../../data/DataProvider.tsx";
+import { useData } from "../../data/data-context";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
@@ -50,7 +50,7 @@ export default function Rules() {
                 }}
               >
                 <Iconify
-                  sx={{ color: (theme: any) => theme.palette.primary.main }}
+                  sx={{ color: (theme) => theme.palette.primary.main }}
                   icon="solar:playback-speed-bold-duotone"
                 />
                 <Typography variant="h5">Contexte initial</Typography>
@@ -75,7 +75,7 @@ export default function Rules() {
                 }}
               >
                 <Iconify
-                  sx={{ color: (theme: any) => theme.palette.primary.main }}
+                  sx={{ color: (theme) => theme.palette.primary.main }}
                   icon="solar:clock-circle-line-duotone"
                 />
                 <Typography variant="h5">Durée des enchères</Typography>
@@ -101,7 +101,7 @@ export default function Rules() {
                 }}
               >
                 <Iconify
-                  sx={{ color: (theme: any) => theme.palette.primary.main }}
+                  sx={{ color: (theme) => theme.palette.primary.main }}
                   icon="solar:user-hand-up-bold-duotone"
                 />
                 <Typography variant="h5">Enchères</Typography>
@@ -131,7 +131,7 @@ export default function Rules() {
                 }}
               >
                 <Iconify
-                  sx={{ color: (theme: any) => theme.palette.primary.main }}
+                  sx={{ color: (theme) => theme.palette.primary.main }}
                   icon="solar:chart-2-bold-duotone"
                 />
                 <Typography variant="h5">

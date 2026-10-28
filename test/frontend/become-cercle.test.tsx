@@ -6,7 +6,7 @@ import { httpsCallable } from "firebase/functions";
 import { beforeEach, afterEach, expect, it, vi } from "vitest";
 import { auth } from "../../src/firebase_config";
 import { becomeCercle } from "../../src/auth/become-cercle";
-import { AuthContext } from "../../src/auth/AuthProvider";
+import { AuthContext } from "../../src/auth/auth-context";
 import CercleSessionBanner from "../../src/auth/cercle-session-banner";
 import CercleTable from "../../src/sections/admin-account/cercle_table";
 
@@ -82,7 +82,7 @@ it("shows a persistent named warning and logs out to the normal login page", asy
   expect(banner).toHaveTextContent("Toutes vos actions sont effectuées avec ce compte cercle.");
   await user.click(within(banner).getByRole("button", { name: "Se déconnecter" }));
   expect(signOut).toHaveBeenCalledOnce();
-  expect(screen.getByRole("heading", { name: "Connexion" })).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { name: "Connexion" })).toBeInTheDocument();
   view.unmount();
   expect(document.documentElement.style.getPropertyValue("--cercle-session-banner-height")).toBe("");
 });

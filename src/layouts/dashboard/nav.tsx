@@ -12,15 +12,15 @@ import {
 import { alpha, useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import { NAV } from "./config-layout";
-import { useAuth } from "../../auth/AuthProvider";
-import { useData } from "../../data/DataProvider";
+import { useAuth } from "../../auth/auth-context";
+import { useData } from "../../data/data-context";
 import { getEditionData } from "../../data/edition-data";
 import { usePathname } from "../../routes/hooks/use-pathname";
 import RouterLink from "../../routes/components/router-link";
 import Logo from "../../components/logo/logo";
 import ClubIcon from "../../components/club-icon/club-icon";
 
-export default function Nav({ openNav, onCloseNav }: any) {
+export default function Nav({ openNav, onCloseNav }: { openNav: boolean; onCloseNav: () => void }) {
   const pathname = usePathname();
   const { user, isAdmin } = useAuth();
   const { data } = useData();

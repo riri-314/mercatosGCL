@@ -20,14 +20,14 @@ import PictureInput from "../../components/inputs/pictureInput";
 import { ImageListType } from "react-images-uploading";
 import { functions } from "../../firebase_functions";
 import { DocumentData } from "firebase/firestore";
-import { useAuth } from "../../auth/AuthProvider";
+import { useAuth } from "../../auth/auth-context";
 import { httpsCallable } from "firebase/functions";
 import { requireMutationSuccess } from "../../utils/callable-result";
 
 interface EditComitardProps {
   ComitardData: DocumentData;
   activeData: DocumentData;
-  admin: Boolean;
+  admin: boolean;
   close: () => void;
   refetchData: () => void;
 }
@@ -36,10 +36,10 @@ function getCercleIdByComitardId(
   activeData: DocumentData,
   comitardId: string,
 ): string | undefined {
-  for (const [cercleId, cercle] of Object.entries(
-    (getEditionData(activeData) ?? {}).cercles,
+  for (const [cercleId, cercle] of Object.entries<DocumentData>(
+    (getEditionData(activeData) ?? {}).cercles ?? {},
   )) {
-    if ((cercle as any).comitards && comitardId in (cercle as any).comitards) {
+    if (cercle.comitards && comitardId in cercle.comitards) {
       return cercleId;
     }
   }
@@ -309,7 +309,7 @@ export default function EditComitard({
                 value={name}
                 fullWidth
                 onChange={(e) => {
-                  let value = e.target.value;
+                  const value = e.target.value;
                   if (value.length <= txtlenght1) {
                     setName(value);
                   }
@@ -332,7 +332,7 @@ export default function EditComitard({
                 fullWidth
                 value={firstname}
                 onChange={(e) => {
-                  let value = e.target.value;
+                  const value = e.target.value;
                   if (value.length <= txtlenght1) {
                     setFirstname(value);
                   }
@@ -355,7 +355,7 @@ export default function EditComitard({
                 fullWidth
                 value={nickname}
                 onChange={(e) => {
-                  let value = e.target.value;
+                  const value = e.target.value;
                   if (value.length <= txtlenght1) {
                     setNickname(value);
                   }
@@ -378,7 +378,7 @@ export default function EditComitard({
                 fullWidth
                 value={post}
                 onChange={(e) => {
-                  let value = e.target.value;
+                  const value = e.target.value;
                   if (value.length <= txtlenght1) {
                     setPost(value);
                   }
@@ -401,7 +401,7 @@ export default function EditComitard({
                   defaultValue={cercle}
                   option={cerclesOption()}
                   helpText={"Cercle du comitard"}
-                  change={(_event: any, val: any) => {
+                  change={(_event, val) => {
                     setCercle(val);
                     setCercleError(false);
                   }}
@@ -417,7 +417,7 @@ export default function EditComitard({
                 error={teneurTauleError}
                 defaultValue={teneurTaule}
                 helpText={`Teneur en taule du comitard de 0 à 10`}
-                change={(_event: any, val: any) => {
+                change={(_event, val) => {
                   setTeneurTaule(val);
                   if (val == undefined) {
                     setTeneurTauleError(true);
@@ -434,7 +434,7 @@ export default function EditComitard({
                 value={etatCivil}
                 error={etatCivilError}
                 onChange={(e) => {
-                  let value = e.target.value;
+                  const value = e.target.value;
                   if (value.length <= txtlenght2) {
                     setEtatCivil(value);
                   }
@@ -458,7 +458,7 @@ export default function EditComitard({
                 error={ageError}
                 defaultValue={age}
                 helpText={`Age du comitard de 0 à 99`}
-                change={(_event: any, val: any) => {
+                change={(_event, val) => {
                   setAge(val);
                   if (val == undefined) {
                     setAgeError(true);
@@ -476,7 +476,7 @@ export default function EditComitard({
                 error={nbEtoilesError}
                 defaultValue={nbEtoiles}
                 helpText={`Nombre d'étoiles du comitard de 0 à 10 (plus que 10 étoiles faut décrocher)`}
-                change={(_event: any, val: any) => {
+                change={(_event, val) => {
                   setNbEtoiles(val);
                   if (val == undefined) {
                     setNbEtoilesError(true);
@@ -495,7 +495,7 @@ export default function EditComitard({
                 error={pointFortError}
                 value={pointFort}
                 onChange={(e) => {
-                  let value = e.target.value;
+                  const value = e.target.value;
                   if (value.length <= txtlenght2) {
                     setPointFort(value);
                   }
@@ -520,7 +520,7 @@ export default function EditComitard({
                 error={pointFaibleError}
                 value={pointFaible}
                 onChange={(e) => {
-                  let value = e.target.value;
+                  const value = e.target.value;
                   if (value.length <= txtlenght2) {
                     setPointFaible(value);
                   }
@@ -545,7 +545,7 @@ export default function EditComitard({
                 error={estLeSeulError}
                 value={estLeSeul}
                 onChange={(e) => {
-                  let value = e.target.value;
+                  const value = e.target.value;
                   if (value.length <= txtlenght2) {
                     setEstLeSeul(value);
                   }
@@ -567,7 +567,7 @@ export default function EditComitard({
                 isError={campusError}
                 option={changerCampus}
                 helpText={"Chaud changer de campus?"}
-                change={(_event: any, val: any) => {
+                change={(_event, val) => {
                   console.log("campus changed to ", val);
                   setCampus(val);
                   setCampusError(false);

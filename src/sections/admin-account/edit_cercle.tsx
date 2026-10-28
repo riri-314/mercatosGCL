@@ -1,3 +1,4 @@
+import type { DocumentData } from "firebase/firestore";
 import FormActions from "../../components/account/form-actions";
 import {
   AlertColor,
@@ -19,7 +20,7 @@ interface NewCerleProps {
   /**
    * Data of the table.
    */
-  data: Record<string, any>;
+  data: DocumentData;
 
   editionId: string;
 

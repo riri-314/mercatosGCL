@@ -1,5 +1,6 @@
 import { Suspense } from "react";
-import { AuthProvider, useAuth } from "./auth/AuthProvider";
+import { AuthProvider } from "./auth/AuthProvider";
+import { useAuth } from "./auth/auth-context";
 import Router from "./routes/sections";
 import { useScrollToTop } from "./hooks/use-scroll-to-top";
 import ThemeProvider from "./theme";
@@ -11,29 +12,29 @@ import "./App.css";
 
 // ----------------------------------------------------------------------
 
+function AppContent() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return <Loading fullScreen />;
+  }
+
+  return (
+    <>
+      <CercleSessionBanner />
+      <Box sx={{ pt: "var(--cercle-session-banner-height, 0px)" }}>
+        <DataProvider key={user?.uid ?? "visitor"}>
+          <Suspense fallback={<Loading fullScreen />}>
+            <Router />
+          </Suspense>
+        </DataProvider>
+      </Box>
+    </>
+  );
+}
+
 export default function App() {
   useScrollToTop();
-
-  const AppContent = () => {
-    const { user, loading } = useAuth();
-
-    if (loading) {
-      return <Loading fullScreen />;
-    }
-
-    return (
-      <>
-        <CercleSessionBanner />
-        <Box sx={{ pt: "var(--cercle-session-banner-height, 0px)" }}>
-          <DataProvider key={user?.uid ?? "visitor"}>
-            <Suspense fallback={<Loading fullScreen />}>
-              <Router />
-            </Suspense>
-          </DataProvider>
-        </Box>
-      </>
-    );
-  };
 
   return (
     <AuthProvider>

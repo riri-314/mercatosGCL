@@ -1,10 +1,11 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { getDocs, limit, onSnapshot, orderBy, where } from 'firebase/firestore';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { useAuth } from '../../src/auth/AuthProvider';
-import { DataProvider, useData } from '../../src/data/DataProvider';
+import { useAuth } from '../../src/auth/auth-context';
+import { DataProvider } from '../../src/data/DataProvider';
+import { useData } from '../../src/data/data-context';
 
-vi.mock('../../src/auth/AuthProvider', () => ({ useAuth: vi.fn() }));
+vi.mock('../../src/auth/auth-context', () => ({ useAuth: vi.fn() }));
 vi.mock('firebase/firestore', () => ({
   collection: vi.fn(), query: vi.fn(), where: vi.fn(), orderBy: vi.fn(), limit: vi.fn(),
   getDocs: vi.fn(), onSnapshot: vi.fn(),

@@ -20,6 +20,7 @@ import { campusLabel, formatTimeLeft } from "./comitard-helper";
 import ClubIcon from "../../components/club-icon/club-icon";
 import Countdown from "../../components/countdown/countdown";
 import type { Comitard, Enchere } from "../../types/results.types";
+import { getLeadingBid } from "../../utils/auction";
 
 export interface CerclesData {
   [key: string]: { name: string };
@@ -77,6 +78,8 @@ export default function ComitardModal({
     [product?.encheres],
   );
   const latest = encheres[0];
+  const leader = getLeadingBid(encheres);
+  const displayedBid = won ? leader : latest;
   const details = [
     { label: "Poste", value: product?.post },
     { label: "Maison", value: cerclesData[cercleId]?.name },
@@ -126,14 +129,14 @@ export default function ComitardModal({
         >
           <Box sx={{ flexGrow: 1, minWidth: 0 }}>
             <Typography sx={{ fontSize: 11, color: "text.secondary", mb: 0.25 }}>
-              Dernière enchère
+              {won ? "Enchère gagnante" : "Dernière enchère"}
             </Typography>
-            <Typography sx={{ fontSize: latest ? 24 : 14, fontWeight: 700, lineHeight: 1.3 }}>
-              {latest ? (
+            <Typography sx={{ fontSize: displayedBid ? 24 : 14, fontWeight: 700, lineHeight: 1.3 }}>
+              {displayedBid ? (
                 <>
-                  {latest.vote}{" "}
+                  {displayedBid.vote}{" "}
                   <Box component="span" sx={{ fontSize: 12, fontWeight: 400, color: "text.secondary" }}>
-                    {latest.vote === 1 ? "fût" : "fûts"}
+                    {displayedBid.vote === 1 ? "fût" : "fûts"}
                   </Box>
                 </>
               ) : "Aucune enchère"}
@@ -156,7 +159,7 @@ export default function ComitardModal({
                 <Countdown stop={product?.enchereStop?.toMillis() ?? 0} format={formatTimeLeft} /> restantes
               </Typography>
             </Box>
-          ) : won && latest ? (
+          ) : won && leader ? (
             <Box sx={{ maxWidth: "40%", minWidth: 0, textAlign: "right" }}>
               <Typography sx={{ fontSize: 11, color: "text.secondary", mb: 0.25 }}>
                 Remportée par
@@ -167,7 +170,7 @@ export default function ComitardModal({
                 color: "success.dark",
                 overflowWrap: "anywhere",
               }}>
-                {cerclesData[latest.sender]?.name || latest.sender || "—"}
+                {cerclesData[leader.sender]?.name || leader.sender || "—"}
               </Typography>
             </Box>
           ) : null}
@@ -240,7 +243,7 @@ export default function ComitardModal({
                   max={voteMax}
                   error={false}
                   helpText=""
-                  change={(_event, value: number | null) => setVote(value ?? 0)}
+                  change={(_event, value) => setVote(value ?? 0)}
                 />
                 <LoadingButton
                   onClick={handleVote}

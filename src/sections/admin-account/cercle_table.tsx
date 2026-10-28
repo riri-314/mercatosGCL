@@ -2,7 +2,7 @@ import { ResponsiveRecords } from "../../components/account/mobile-record-list";
 import RecordCard from "../../components/account/record-card";
 import { Alert, Button, Chip, Typography } from "@mui/material";
 import { getEditionData } from "../../data/edition-data";
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
 import Box from "@mui/material/Box";
 import {
   DataGrid,
@@ -46,7 +46,7 @@ export default function CercleTable({
   const navigate = useNavigate();
   const [loading, setLoading] = useState<boolean>(false);
   const [openModal, setOpenModal] = useState<boolean>(false);
-  const [modalData, setModalData] = useState<any | null>([]);
+  const [modalData, setModalData] = useState<[string, string, string]>(["", "", ""]);
   const [loadingStatus, setLoadingStatus] = useState<boolean>(true);
   const [statusDict, setStatusDict] = useState<StatusDict>({});
   const [error, setError] = useState<string | null>(null);
@@ -81,13 +81,13 @@ export default function CercleTable({
     </LoadingButton>
   );
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoadingStatus(true);
       // fetch getdisabledstatus
-      const addMessage = httpsCallable(functions, "getdisabledstatus");
+      const addMessage = httpsCallable<{ editionId: string }, { status: StatusDict }>(functions, "getdisabledstatus");
       await addMessage({ editionId: data.id }).then((result) => {
-        const data: any = result.data;
+        const data = result.data;
         if (data && data.status) {
           console.log("Data fetched disbaled status:", data);
           setStatusDict(data.status);
@@ -100,11 +100,11 @@ export default function CercleTable({
     } finally {
       setLoadingStatus(false);
     }
-  };
+  }, [data.id]);
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    void fetchData();
+  }, [fetchData]);
 
   function isDisabled(id: string) {
     // return true if the cercle is disabled and loading status is false
@@ -208,7 +208,7 @@ export default function CercleTable({
       headerName: "Desactiver",
       minWidth: 150,
       editable: false,
-      renderCell: (params: GridRenderCellParams<any, string>) => (
+      renderCell: (params: GridRenderCellParams<DocumentData, string>) => (
         <LoadingButton
           disabled={loadingStatus}
           color="secondary"
@@ -239,7 +239,7 @@ export default function CercleTable({
       headerName: "Supprimer",
       minWidth: 150,
       editable: false,
-      renderCell: (params: GridRenderCellParams<any, string>) => (
+      renderCell: (params: GridRenderCellParams<DocumentData, string>) => (
         <LoadingButton
           disabled={params.row.active}
           color="error"
@@ -402,7 +402,7 @@ export default function CercleTable({
                 showQuickFilter: true,
               },
             }}
-            getRowId={(row: any) => row.id}
+            getRowId={(row: DocumentData) => row.id}
           />
         </Box>
       </ResponsiveRecords>

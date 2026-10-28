@@ -4,11 +4,12 @@ import Countdown from "../../components/countdown/countdown";
 import ClubIcon from "../../components/club-icon/club-icon";
 import { formatTimeLeft } from "./results-helper";
 import type { ComitardWithMeta } from "../../types/results.types";
+import { getLeadingBid } from "../../utils/auction";
 
 type Props = { comitard: ComitardWithMeta; isClosed: boolean };
 export function ComitardStatusChips({ comitard, isClosed }: Props) {
   const [timeOrDate, setTimeOrDate] = useState(true);
-  const last = comitard.encheres.at(-1);
+  const leader = getLeadingBid(comitard.encheres);
   return (
     <Box
       sx={{
@@ -30,7 +31,7 @@ export function ComitardStatusChips({ comitard, isClosed }: Props) {
             mb: 0.5,
           }}
         >
-          DERNIÈRE ENCHÈRE
+          {isClosed ? "ENCHÈRE GAGNANTE" : "MEILLEURE ENCHÈRE"}
         </Typography>
         <Typography
           sx={{
@@ -40,7 +41,7 @@ export function ComitardStatusChips({ comitard, isClosed }: Props) {
             lineHeight: 1.1,
           }}
         >
-          {last?.vote ?? 0}{" "}
+          {leader?.vote ?? 0}{" "}
           <Box
             component="span"
             sx={{
@@ -50,7 +51,7 @@ export function ComitardStatusChips({ comitard, isClosed }: Props) {
               letterSpacing: 0,
             }}
           >
-            {last?.vote === 1 ? "fût" : "fûts"}
+            {leader?.vote === 1 ? "fût" : "fûts"}
           </Box>
         </Typography>
       </Box>
@@ -75,7 +76,7 @@ export function ComitardStatusChips({ comitard, isClosed }: Props) {
             component="span"
             sx={{ overflow: "hidden", textOverflow: "ellipsis" }}
           >
-            {last?.sender || "Terminée"}
+            {leader?.sender || "Terminée"}
           </Box>
         </Box>
       ) : (

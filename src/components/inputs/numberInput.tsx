@@ -96,7 +96,7 @@ interface QuantityInputProps {
       | React.FocusEvent<HTMLInputElement>
       | React.PointerEvent
       | React.KeyboardEvent,
-    val: any,
+    val: number | undefined,
   ) => void;
 }
 
@@ -119,7 +119,7 @@ export default function UseNumberInputWithTitle({
         error={error}
         helpText={helpText}
         defaultValue={defaultValue}
-        onChange={change}
+        onChange={(event, value) => change(event, value ?? undefined)}
       />
     </>
   );

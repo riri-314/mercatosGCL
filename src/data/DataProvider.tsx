@@ -1,15 +1,10 @@
-import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { db } from "../firebase_config";
-import { collection, DocumentData, getDocs, limit, onSnapshot, orderBy, query, where } from "firebase/firestore";
-import { useAuth } from "../auth/AuthProvider";
+import { collection, getDocs, limit, onSnapshot, orderBy, query, where } from "firebase/firestore";
+import { useAuth } from "../auth/auth-context";
 
-interface DataContextValue {
-  data: DocumentData | null;
-  refetchData: () => void;
-  fetchedTime: number;
-}
-
-export const DataContext = React.createContext<DataContextValue | null>(null);
+import { DataContext } from "./data-context";
+import type { DocumentData } from "firebase/firestore";
 
 function activeEditionQuery() {
   return query(collection(db, "editions"), where("active", "==", true), orderBy("edition", "desc"), limit(1));
@@ -53,5 +48,3 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 };
-
-export const useData = () => useContext(DataContext) as DataContextValue;

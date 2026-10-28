@@ -1,9 +1,9 @@
-import { alpha } from "@mui/material/styles";
+import { alpha, type Theme } from "@mui/material/styles";
 import { outlinedInputClasses } from "@mui/material/OutlinedInput";
 import { TypographyProps } from "@mui/material/Typography";
 // ----------------------------------------------------------------------
 
-export function overrides(theme: any) {
+export function overrides(theme: Theme): NonNullable<Theme['components']> {
   return {
     MuiCssBaseline: {
       styleOverrides: {
@@ -84,7 +84,7 @@ export function overrides(theme: any) {
           boxShadow: "0 3px 12px rgba(23, 44, 66, 0.025)",
           border: `1px solid ${theme.palette.divider}`,
           borderRadius: 18,
-          position: "relative" as any,
+          position: "relative",
           zIndex: 0, // Fix Safari overflow: hidden with border radius
         },
       },

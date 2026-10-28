@@ -6,7 +6,7 @@ import imageCompression from 'browser-image-compression';
 import { httpsCallable } from 'firebase/functions';
 import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
 import type { StorageError, UploadTaskSnapshot } from 'firebase/storage';
-import { useAuth } from '../../src/auth/AuthProvider';
+import { useAuth } from '../../src/auth/auth-context';
 import { functions } from "../../src/firebase_functions";
 import { storage } from "../../src/firebase_storage";
 import NewComitard from '../../src/sections/admin-account/new_comitard';
@@ -14,7 +14,7 @@ import EditComitard from '../../src/sections/admin-account/edit_comitard';
 
 vi.mock('firebase/functions', () => ({ httpsCallable: vi.fn() }));
 vi.mock('firebase/storage', () => ({ ref: vi.fn(), uploadBytesResumable: vi.fn(), getDownloadURL: vi.fn() }));
-vi.mock('../../src/auth/AuthProvider', () => ({ useAuth: vi.fn() }));
+vi.mock('../../src/auth/auth-context', () => ({ useAuth: vi.fn() }));
 vi.mock('browser-image-compression', () => ({ default: vi.fn() }));
 // Icons fetch definitions over the network; keep the form controls real.
 vi.mock('../../src/components/iconify/iconify', () => ({ default: () => null }));

@@ -20,8 +20,8 @@ import {
 import useMediaQuery from "@mui/material/useMediaQuery";
 import { useTheme } from "@mui/material/styles";
 
-import { useAuth } from "../../auth/AuthProvider";
-import { useData } from "../../data/DataProvider";
+import { useAuth } from "../../auth/auth-context";
+import { useData } from "../../data/data-context";
 import Loading from "../loading/loading";
 import ComitardCard from "./comitard-card.tsx";
 import DataRefresh from "../../components/data-refresh/data-refresh.tsx";

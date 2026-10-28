@@ -18,7 +18,7 @@ import { LoadingButton } from "@mui/lab";
 import { useMemo, useState } from "react";
 import WarningModal from "../../components/modal/warning_modal";
 import ProfileAvatar from "../../components/profile-avatar/profile-avatar";
-import { useAuth } from "../../auth/AuthProvider";
+import { useAuth } from "../../auth/auth-context";
 import { deleteEnchereWithStates } from "../../utils/admin-tools";
 
 interface enchereTableProps {
@@ -36,7 +36,7 @@ export default function EncheresTable({
 }: enchereTableProps) {
   const [loading, setLoading] = useState<boolean>(false);
   const [openModal, setOpenModal] = useState<boolean>(false);
-  const [modalData, setModalData] = useState<any | null>(null);
+  const [modalData, setModalData] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<boolean>(false);
   const { user } = useAuth();
@@ -102,7 +102,7 @@ export default function EncheresTable({
     } catch (errorMessage) {
       setLoading(false);
       setError(`Error while deleting enchere. See console for more info.`);
-      console.error("Error deleting enchere:", error);
+      console.error("Error deleting enchere:", errorMessage);
     }
   }
 
@@ -214,7 +214,7 @@ export default function EncheresTable({
         headerName: "Supprimer",
         minWidth: 150,
         editable: false,
-        renderCell: (params: GridRenderCellParams<any, string>) => (
+        renderCell: (params: GridRenderCellParams<DocumentData, string>) => (
           <LoadingButton
             disabled={false}
             color="error"
@@ -328,7 +328,7 @@ export default function EncheresTable({
                 showQuickFilter: true,
               },
             }}
-            getRowId={(row: any) => row.id}
+            getRowId={(row: DocumentData) => row.id}
           />
         </Box>
       </ResponsiveRecords>

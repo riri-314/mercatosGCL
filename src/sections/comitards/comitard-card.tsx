@@ -26,9 +26,10 @@ import {
 import type { AlertColor } from "@mui/material";
 import type { CerclesData } from "./comitard-modal";
 import FadeImage from "./comitard-picture";
+import type { DocumentData } from "firebase/firestore";
 
 interface ComitardCardProps {
-  product: any;
+  product: DocumentData;
   user: string | undefined; // kept for compatibility, not used (auth comes from hook via useAuth)
   cercleId: string;
   editionId: string;
@@ -81,7 +82,7 @@ function ComitardCardInner({
           right: 16,
           position: "absolute",
           textTransform: "uppercase",
-          boxShadow: (t: any) => t.shadows[4],
+          boxShadow: (t) => t.shadows[4],
         }}
       >
         <Countdown stop={auction.enchereStopMs ?? 0} format={formatTimeLeft} />{" "}
@@ -106,7 +107,7 @@ function ComitardCardInner({
           left: 16,
           position: "absolute",
           textTransform: "uppercase",
-          boxShadow: (t: any) => t.shadows[4],
+          boxShadow: (t) => t.shadows[4],
         }}
       >
         <Iconify icon="ic:round-show-chart" />
@@ -129,7 +130,7 @@ function ComitardCardInner({
           left: 16,
           position: "absolute",
           textTransform: "uppercase",
-          boxShadow: (t: any) => t.shadows[4],
+          boxShadow: (t) => t.shadows[4],
         }}
       >
         <Iconify icon="solar:cup-bold" />
@@ -239,7 +240,7 @@ function ComitardCardInner({
                 max={auction.voteMax}
                 error={false}
                 helpText=""
-                change={(_event: any, val: any) => auction.setVote(val)}
+                change={(_event, val) => auction.setVote(val ?? 0)}
               />
 
               <LoadingButton

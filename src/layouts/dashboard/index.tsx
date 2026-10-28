@@ -1,5 +1,6 @@
 import { useState } from "react";
 import PropTypes from "prop-types";
+import type { ReactNode } from "react";
 
 import Box from "@mui/material/Box";
 
@@ -10,7 +11,7 @@ import MobileNav from "./mobile-nav";
 
 // ----------------------------------------------------------------------
 
-export default function DashboardLayout({ children }: any) {
+export default function DashboardLayout({ children }: { children: ReactNode }) {
   const [openNav, setOpenNav] = useState(false);
 
   return (

@@ -1,5 +1,5 @@
 import { getEditionData } from "../../../data/edition-data";
-import { useState } from "react";
+import { useState, type MouseEvent } from "react";
 
 import Box from "@mui/material/Box";
 import Avatar from "@mui/material/Avatar";
@@ -10,14 +10,14 @@ import IconButton from "@mui/material/IconButton";
 import { signOut } from "firebase/auth";
 import LoadingButton from "@mui/lab/LoadingButton";
 import { auth } from "../../../firebase_config";
-import { useAuth } from "../../../auth/AuthProvider";
-import { useData } from "../../../data/DataProvider.tsx";
+import { useAuth } from "../../../auth/auth-context";
+import { useData } from "../../../data/data-context";
 import { Popover } from "@mui/material";
 
 // ----------------------------------------------------------------------
 
 export default function AccountPopover() {
-  const [open, setOpen] = useState(null);
+  const [open, setOpen] = useState<HTMLElement | null>(null);
   const [loading, setLoading] = useState(false);
 
   const { user, isAdmin } = useAuth();
@@ -55,7 +55,7 @@ export default function AccountPopover() {
     return nbFuts ?? 0;
   }
 
-  const handleOpen = (event: any) => {
+  const handleOpen = (event: MouseEvent<HTMLElement>) => {
     setOpen(event.currentTarget);
   };
 

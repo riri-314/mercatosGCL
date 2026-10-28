@@ -12,15 +12,16 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { useData } from "../../data/DataProvider";
+import { useData } from "../../data/data-context";
 import { getEditionData } from "../../data/edition-data";
-import { useAuth } from "../../auth/AuthProvider";
+import { useAuth } from "../../auth/auth-context";
 import { useComitardResults } from "./results-helper";
 import { ComitardResultCard } from "./results-card";
 import ClubIcon from "../../components/club-icon/club-icon";
 import DataRefresh from "../../components/data-refresh/data-refresh";
 import RouterLink from "../../routes/components/router-link";
 import { normalizeSearch } from "../../utils/search";
+import { getLeadingBid } from "../../utils/auction";
 
 export default function ResultsPage() {
   const { data } = useData();
@@ -43,7 +44,7 @@ export default function ResultsPage() {
     return sort === "bid"
       ? [...list].sort(
           (a, b) =>
-            (b.encheres.at(-1)?.vote ?? 0) - (a.encheres.at(-1)?.vote ?? 0),
+            (getLeadingBid(b.encheres)?.vote ?? 0) - (getLeadingBid(a.encheres)?.vote ?? 0),
         )
       : list;
   }, [running, closed, tab, search, sort]);

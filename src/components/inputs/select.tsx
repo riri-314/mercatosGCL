@@ -6,27 +6,27 @@ import {
   SelectRootSlotProps,
 } from "@mui/base/Select";
 import { Option as BaseOption, optionClasses } from "@mui/base/Option";
-import { Popper as BasePopper } from "@mui/base/Popper";
+import { Popper as BasePopper, type PopperProps } from "@mui/base/Popper";
 import { styled } from "@mui/system";
 import FormHelperText from "@mui/material/FormHelperText";
 
-interface OptionProps {
-  defaultValue?: number | string;
+interface OptionProps<T extends number | string> {
+  defaultValue?: T;
   label?: string;
-  option: object;
+  option: Record<string, T>;
   helpText?: string;
   isError?: boolean;
-  change: (event: any, val: any) => void;
+  change: NonNullable<SelectProps<T, false>["onChange"]>;
 }
 
-export default function UnstyledSelectIntroduction({
+export default function UnstyledSelectIntroduction<T extends number | string>({
   defaultValue,
   label,
   option,
   helpText,
   isError,
   change,
-}: OptionProps) {
+}: OptionProps<T>) {
   return (
     <>
       {label && (
@@ -53,7 +53,7 @@ export default function UnstyledSelectIntroduction({
 }
 
 const Select = React.forwardRef(function CustomSelect<
-  TValue extends {},
+  TValue extends NonNullable<unknown>,
   Multiple extends boolean,
 >(
   props: SelectProps<TValue, Multiple>,
@@ -67,7 +67,9 @@ const Select = React.forwardRef(function CustomSelect<
   };
 
   return <BaseSelect {...props} ref={ref} slots={slots} />;
-});
+}) as <TValue extends NonNullable<unknown>, Multiple extends boolean = false>(
+  props: SelectProps<TValue, Multiple> & React.RefAttributes<HTMLButtonElement>,
+) => React.ReactElement;
 
 const blue = {
   100: "#DAECFF",
@@ -93,13 +95,14 @@ const grey = {
 };
 
 const Button = React.forwardRef(function Button<
-  TValue extends {},
+  TValue extends NonNullable<unknown>,
   Multiple extends boolean,
 >(
   props: SelectRootSlotProps<TValue, Multiple>,
   ref: React.ForwardedRef<HTMLButtonElement>,
 ) {
-  const { ownerState, ...other } = props;
+  const other = { ...props };
+  delete (other as Partial<typeof props>).ownerState;
   return (
     <button type="button" {...other} ref={ref}>
       {other.children}
@@ -217,8 +220,8 @@ const Option = styled(BaseOption)(
 );
 
 const PopperRoot = React.forwardRef(function PopperRoot(
-  props: any,
-  ref: React.ForwardedRef<any>,
+  props: PopperProps,
+  ref: React.ForwardedRef<HTMLDivElement>,
 ) {
   return <BasePopper keepMounted disablePortal={false} {...props} ref={ref} />;
 });

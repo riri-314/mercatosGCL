@@ -68,8 +68,8 @@ async function run() {
         await page.route('**/*', route => {
           const url = new URL(route.request().url());
           if (!['127.0.0.1', 'localhost', 'fonts.googleapis.com', 'fonts.gstatic.com'].includes(url.hostname)) return route.abort();
-          if (url.pathname === '/src/data/DataProvider.tsx') return route.fulfill({ contentType: 'application/javascript', body: fixture(state) });
-          if (url.pathname === '/src/auth/AuthProvider.tsx') return route.fulfill({ contentType: 'application/javascript', body: auth });
+          if (['/src/data/DataProvider.tsx', '/src/data/data-context.ts'].includes(url.pathname)) return route.fulfill({ contentType: 'application/javascript', body: fixture(state) });
+          if (['/src/auth/AuthProvider.tsx', '/src/auth/auth-context.ts'].includes(url.pathname)) return route.fulfill({ contentType: 'application/javascript', body: auth });
           return route.continue();
         });
         const screenshot = async (name, fullPage = true) => {
@@ -130,7 +130,7 @@ async function run() {
           const bounds = await dialog.boundingBox();
           assert.ok(bounds.x >= 0 && bounds.x + bounds.width <= width + 1 && bounds.y >= 0 && bounds.y + bounds.height <= 845, 'Modal should fit the viewport');
           const header = dialog.locator('header');
-          assert.match(await header.innerText(), /Dernière enchère\s+17 fûts/);
+          assert.match(await header.innerText(), finished ? /Enchère gagnante\s+17 fûts/ : /Dernière enchère\s+17 fûts/);
           assert.match(await header.innerText(), finished ? /Remportée par/ : /Fin de l’enchère/);
           const close = header.getByRole('button', { name: 'Fermer la fiche', exact: true });
           const closeBounds = await close.boundingBox();
@@ -180,11 +180,11 @@ async function checkLoadingAndRefresh(browser, width) {
   await page.route('**/*', route => {
     const url = new URL(route.request().url());
     if (!['127.0.0.1', 'localhost', 'fonts.googleapis.com', 'fonts.gstatic.com'].includes(url.hostname)) return route.abort();
-    if (url.pathname === '/src/data/DataProvider.tsx') return route.fulfill({
+    if (['/src/data/DataProvider.tsx', '/src/data/data-context.ts'].includes(url.pathname)) return route.fulfill({
       contentType: 'application/javascript',
       body: fixture('running').replace('({ data, fetchedTime: now,', `({ data: ${dataLoading ? 'null' : 'data'}, fetchedTime: now,`),
     });
-    if (url.pathname === '/src/auth/AuthProvider.tsx') return route.fulfill({
+    if (['/src/auth/AuthProvider.tsx', '/src/auth/auth-context.ts'].includes(url.pathname)) return route.fulfill({
       contentType: 'application/javascript',
       body: `export const useAuth=()=>({user:null,loading:${loading},isAdmin:()=>false}); export const AuthProvider=({children})=>children;`,
     });

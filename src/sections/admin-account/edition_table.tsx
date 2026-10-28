@@ -162,7 +162,7 @@ export default function QuickFilteringGrid({
       headerName: "Active",
       width: 110,
       editable: false,
-      renderCell: (params: GridRenderCellParams<any, string>) => (
+      renderCell: (params: GridRenderCellParams<DocumentData, string>) => (
         <span>{params.value ? "✓" : "x"}</span>
       ),
     },
@@ -190,7 +190,7 @@ export default function QuickFilteringGrid({
       headerName: "Set Active",
       width: 150,
       editable: false,
-      renderCell: (params: GridRenderCellParams<any, string>) => (
+      renderCell: (params: GridRenderCellParams<DocumentData, string>) => (
         <LoadingButton
           disabled={params.row.active}
           loading={loading}
@@ -341,7 +341,7 @@ export default function QuickFilteringGrid({
                 quickFilterProps: { placeholder: "Filtrer cette page" },
               },
             }}
-            getRowId={(row: any) => row.edition}
+            getRowId={(row: DocumentData) => row.edition}
           />
         </Box>
       </ResponsiveRecords>

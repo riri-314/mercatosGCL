@@ -57,8 +57,8 @@ export default function LoginView() {
       setError(
         "Un email vous a été envoyé. N'oublie pas de vérifier tes spams !",
       );
-    } catch (error: any) {
-      console.log("Error: ", error?.code);
+    } catch (error: unknown) {
+      console.log("Password recovery failed:", error);
       setError("Erreur de connection");
       setLoading(false);
     }
@@ -77,7 +77,7 @@ export default function LoginView() {
       await signInWithEmailAndPassword(auth, email, password);
       setLoading(false);
       router.push("/");
-    } catch (error: any) {
+    } catch {
       setError("Erreur de connection");
       setLoading(false);
     }

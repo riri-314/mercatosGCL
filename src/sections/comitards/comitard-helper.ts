@@ -1,9 +1,11 @@
 import { useBoundaryTime } from "../../hooks/use-boundary-time";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { httpsCallable } from "firebase/functions";
+import type { DocumentData } from "firebase/firestore";
+import { getLeadingBid } from "../../utils/auction";
 
 import { functions } from "../../firebase_functions";
-import { useAuth } from "../../auth/AuthProvider";
+import { useAuth } from "../../auth/auth-context";
 import { requireMutationSuccess } from "../../utils/callable-result";
 
 import type { CerclesData, ComitardModalProps } from "./comitard-modal";
@@ -11,7 +13,7 @@ import type { CerclesData, ComitardModalProps } from "./comitard-modal";
 export type Enchere = {
   vote: number;
   sender: string;
-  date: { seconds: number };
+  date: { seconds: number; nanoseconds?: number };
 };
 
 export function formatTimeLeft(time: number): string {
@@ -33,25 +35,29 @@ export function campusLabel(cmp: number | undefined): string {
   return "Non renseigné";
 }
 
-function toMillis(ts: any): number | null {
-  const v = ts?.toMillis?.();
+function toMillis(ts: unknown): number | null {
+  if (!ts || typeof ts !== "object" || !("toMillis" in ts) || typeof ts.toMillis !== "function") return null;
+  const v: unknown = ts.toMillis();
   return typeof v === "number" ? v : null;
 }
 
-function normalizeEncheres(encheres: any): Enchere[] {
-  if (!encheres) return [];
-  return (Object.values(encheres) as any[])
-    .filter(Boolean)
+function normalizeEncheres(encheres: unknown): Enchere[] {
+  if (!encheres || typeof encheres !== "object") return [];
+  return Object.values(encheres)
+    .filter((bid): bid is DocumentData => !!bid && typeof bid === "object")
     .map((e) => ({
       vote: Number(e.vote ?? 0),
       sender: String(e.sender ?? ""),
-      date: { seconds: Number(e?.date?.seconds ?? 0) },
+      date: {
+        seconds: Number(e?.date?.seconds ?? 0),
+        ...(e?.date?.nanoseconds != null && { nanoseconds: Number(e.date.nanoseconds) }),
+      },
     }))
     .filter((e) => Number.isFinite(e.vote) && Boolean(e.sender));
 }
 
 export interface UseComitardAuctionArgs {
-  product: any;
+  product: DocumentData;
   cercleId: string;
   comitardId: string;
   editionId: string;
@@ -138,11 +144,7 @@ export function useComitardAuction({
 
   const firstEnchere = useMemo<Enchere | null>(() => {
     if (encheresArray.length === 0) return null;
-    // newest first; tie-break: highest vote
-    return [...encheresArray].sort((a, b) => {
-      if (b.date.seconds !== a.date.seconds) return b.date.seconds - a.date.seconds;
-      return b.vote - a.vote;
-    })[0];
+    return getLeadingBid(encheresArray) ?? null;
   }, [encheresArray]);
 
   const maxEnchere = useMemo(() => {
@@ -267,7 +269,7 @@ export interface BuildComitardModalPropsArgs {
   open: boolean;
   onClose: () => void;
 
-  product: any;
+  product: DocumentData;
   cercleId: string;
   cerclesData: CerclesData;
 

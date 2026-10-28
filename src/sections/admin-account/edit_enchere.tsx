@@ -9,7 +9,7 @@ import { editEnchereAmount } from "../../utils/admin-tools";
 
 interface EditEnchereProps {
   data: DocumentData;
-  enchereData: any;
+  enchereData: DocumentData;
   close: () => void;
   refetchData: () => void;
 }
@@ -44,9 +44,9 @@ export default function EditEnchere({
       }
       setFinished(true);
       refetchData();
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error("Error editing enchere:", e);
-      setError("An error occurred while editing the enchere." + e.message);
+      setError("An error occurred while editing the enchere." + (e instanceof Error ? e.message : ""));
     } finally {
       setLoading(false);
     }
@@ -105,9 +105,9 @@ export default function EditEnchere({
                 max={(getEditionData(data) ?? {}).enchereMax}
                 error={false}
                 helpText={""}
-                change={(_event: any, val: any) => {
+                change={(_event, val) => {
                   console.log(val);
-                  setValue(val);
+                  setValue(val ?? 0);
                 }}
               />
             </Grid>

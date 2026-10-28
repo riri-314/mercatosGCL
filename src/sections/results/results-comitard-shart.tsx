@@ -14,9 +14,9 @@ import type {
   NormalizedEnchere,
 } from "../../types/results.types";
 
-function CustomTooltip({ active, payload }: any) {
+function CustomTooltip({ active, payload }: { active?: boolean; payload?: readonly { payload: NormalizedEnchere }[] }) {
   if (!active || !payload?.length) return null;
-  const row = payload[0].payload as NormalizedEnchere & { sender: string };
+  const row = payload[0].payload;
   return (
     <Box
       sx={{

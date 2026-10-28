@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Box, Button, Tooltip } from "@mui/material";
-import { useData } from "../../data/DataProvider";
-import { useAuth } from "../../auth/AuthProvider";
+import { useData } from "../../data/data-context";
+import { useAuth } from "../../auth/auth-context";
 import ClubIcon from "../club-icon/club-icon";
 
 export default function DataRefresh() {

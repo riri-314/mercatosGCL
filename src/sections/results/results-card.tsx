@@ -8,6 +8,7 @@ import type { ComitardWithMeta } from "../../types/results.types";
 import { ComitardHeader } from "./results-comitard-header";
 import { ComitardStatusChips } from "./results-comitard-status-ship";
 import Typography from "@mui/material/Typography";
+import { getLeadingBid } from "../../utils/auction";
 
 // recharts is ~350 KB; loading it lazily lets the cards paint immediately and
 // streams the charts in afterwards instead of blocking the whole results page.
@@ -94,7 +95,7 @@ function ComitardResultCardBase({ comitard }: ComitardResultCardProps) {
               component="span"
               sx={{ color: "text.primary", fontWeight: 700, ml: 0.4 }}
             >
-              {!isClosed && (comitard.encheres.at(-1)?.sender || "—")}
+              {!isClosed && (getLeadingBid(comitard.encheres)?.sender || "—")}
             </Box>
           </Typography>
           <Typography sx={{ fontSize: 11, color: "text.secondary" }}>

@@ -1,15 +1,13 @@
 import {
   AppBar,
   Box,
-  Button,
   IconButton,
   Toolbar,
   Typography,
 } from "@mui/material";
 import { NAV, HEADER } from "./config-layout";
 import AccountPopover from "./common/account-popover";
-import { useAuth } from "../../auth/AuthProvider";
-import RouterLink from "../../routes/components/router-link";
+import { useAuth } from "../../auth/auth-context";
 import ClubIcon from "../../components/club-icon/club-icon";
 import Logo from "../../components/logo/logo";
 
@@ -53,19 +51,7 @@ export default function Header({ onOpenNav }: { onOpenNav: () => void }) {
           </Box>
         </Typography>
         <Box sx={{ flexGrow: 1 }} />
-        {user ? (
-          <AccountPopover />
-        ) : (
-          <Button
-            component={RouterLink}
-            href="/login"
-            variant="contained"
-            size="small"
-            sx={{ minHeight: 44 }}
-          >
-            Connexion
-          </Button>
-        )}
+        {user && <AccountPopover />}
       </Toolbar>
     </AppBar>
   );

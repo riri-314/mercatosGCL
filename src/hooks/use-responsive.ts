@@ -1,9 +1,9 @@
-import {useTheme} from '@mui/material/styles';
+import {useTheme, type Breakpoint} from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 
 // ----------------------------------------------------------------------
 
-export function useResponsive(start: any, end: any, query?: string) {
+export function useResponsive(start: Breakpoint, end: Breakpoint, query?: string) {
     const theme = useTheme();
 
     const mediaUp = useMediaQuery(theme.breakpoints.up(start));
@@ -30,11 +30,13 @@ export function useResponsive(start: any, end: any, query?: string) {
 
 export function useWidth() {
     const theme = useTheme();
-    const keys = [...theme.breakpoints.keys].reverse();
-
-    const width = keys.find((key) => {
-        return useMediaQuery(theme.breakpoints.up(key));
-    }) || 'xs';
-
-    return width;
+    const keys: Breakpoint[] = ['xl', 'lg', 'md', 'sm', 'xs'];
+    const matches = [
+        useMediaQuery(theme.breakpoints.up('xl')),
+        useMediaQuery(theme.breakpoints.up('lg')),
+        useMediaQuery(theme.breakpoints.up('md')),
+        useMediaQuery(theme.breakpoints.up('sm')),
+        useMediaQuery(theme.breakpoints.up('xs')),
+    ];
+    return keys.find((_, index) => matches[index]) ?? 'xs';
 }

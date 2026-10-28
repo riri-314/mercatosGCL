@@ -1,7 +1,7 @@
-import Box from "@mui/material/Box";
+import Box, { type BoxProps } from "@mui/material/Box";
 import { HEADER, NAV } from "./config-layout";
 
-export default function Main({ children, sx, ...other }: any) {
+export default function Main({ children, sx, ...other }: BoxProps) {
   return (
     <Box
       component="main"

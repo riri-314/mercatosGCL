@@ -3,7 +3,8 @@ import { onIdTokenChanged, signOut } from 'firebase/auth';
 import { getDoc } from 'firebase/firestore';
 import type { IdTokenResult, User } from 'firebase/auth';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { AuthProvider, useAuth } from '../../src/auth/AuthProvider';
+import { AuthProvider } from '../../src/auth/AuthProvider';
+import { useAuth } from '../../src/auth/auth-context';
 
 vi.mock('firebase/auth', () => ({ onIdTokenChanged: vi.fn(), signOut: vi.fn() }));
 vi.mock('firebase/firestore', () => ({

@@ -19,7 +19,7 @@ import { useMemo, useState } from "react";
 import { db } from "../../firebase_config";
 import WarningModal from "../../components/modal/warning_modal";
 import ProfileAvatar from "../../components/profile-avatar/profile-avatar";
-import { useAuth } from "../../auth/AuthProvider";
+import { useAuth } from "../../auth/auth-context";
 
 interface ComitardTableProps {
   data: DocumentData;
@@ -36,7 +36,7 @@ export default function ComitardTable({
 }: ComitardTableProps) {
   const [loading, setLoading] = useState<boolean>(false);
   const [openModal, setOpenModal] = useState<boolean>(false);
-  const [modalData, setModalData] = useState<any | null>([]);
+  const [modalData, setModalData] = useState<[string, string, string]>(["", "", ""]);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<boolean>(false);
   const { user } = useAuth();
@@ -197,7 +197,7 @@ export default function ComitardTable({
       headerName: "Supprimer",
       minWidth: 150,
       editable: false,
-      renderCell: (params: GridRenderCellParams<any, string>) => (
+      renderCell: (params: GridRenderCellParams<DocumentData, string>) => (
         <LoadingButton
           disabled={params.row.active}
           color="error"
@@ -327,7 +327,7 @@ export default function ComitardTable({
                 showQuickFilter: true,
               },
             }}
-            getRowId={(row: any) => `${row.cercleId}/${row.id}`}
+            getRowId={(row: DocumentData) => `${row.cercleId}/${row.id}`}
           />
         </Box>
       </ResponsiveRecords>

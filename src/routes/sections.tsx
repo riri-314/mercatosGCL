@@ -2,7 +2,7 @@ import { lazy, Suspense } from 'react';
 import { Outlet, Navigate, useRoutes } from 'react-router-dom';
 
 import DashboardLayout from '../layouts/dashboard';
-import { useAuth } from '../auth/AuthProvider';
+import { useAuth } from '../auth/auth-context';
 import WipPage from "../pages/work-in-progress.tsx";
 import Loading from '../sections/loading/loading';
 

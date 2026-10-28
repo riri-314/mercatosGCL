@@ -3,7 +3,7 @@ import { signOut } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
 import { Box, Button, GlobalStyles, Typography } from "@mui/material";
 import { auth } from "../firebase_config";
-import { useAuth } from "./AuthProvider";
+import { useAuth } from "./auth-context";
 import ClubIcon from "../components/club-icon/club-icon";
 
 export default function CercleSessionBanner() {

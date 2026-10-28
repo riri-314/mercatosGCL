@@ -13,7 +13,7 @@ import { httpsCallable } from "firebase/functions";
 import type { DocumentData } from "firebase/firestore";
 import type { useEditionHistory } from "../../data/use-edition-history";
 import { getEditionData } from "../../data/edition-data";
-import { useAuth } from "../../auth/AuthProvider";
+import { useAuth } from "../../auth/auth-context";
 import { functions } from "../../firebase_functions";
 import {
   lockAllPastEditions,

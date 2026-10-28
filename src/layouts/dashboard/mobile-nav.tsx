@@ -1,5 +1,5 @@
 import { BottomNavigation, BottomNavigationAction, Box } from "@mui/material";
-import { useAuth } from "../../auth/AuthProvider";
+import { useAuth } from "../../auth/auth-context";
 import { usePathname } from "../../routes/hooks/use-pathname";
 import RouterLink from "../../routes/components/router-link";
 import ClubIcon from "../../components/club-icon/club-icon";

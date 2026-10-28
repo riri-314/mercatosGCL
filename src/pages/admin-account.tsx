@@ -4,7 +4,7 @@ import Container from "@mui/material/Container";
 import type { DocumentData } from "firebase/firestore";
 import AdminAccount from "../sections/admin-account/admin-account-view";
 import Loading from "../sections/loading/loading";
-import { useData } from "../data/DataProvider";
+import { useData } from "../data/data-context";
 import { useEditionHistory } from "../data/use-edition-history";
 
 export default function AdminAccountPage() {

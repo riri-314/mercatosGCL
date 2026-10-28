@@ -1,13 +1,13 @@
-import PropTypes from 'prop-types';
 import { forwardRef, ReactNode, useState } from 'react';
-import { Icon } from '@iconify/react';
+import { Icon, type IconifyIcon } from '@iconify/react';
+import type { SxProps, Theme } from '@mui/material/styles';
 
 import Box from '@mui/material/Box';
 
 interface IconifyProps {
-  icon: any;
+  icon: string | IconifyIcon;
   width?: number;
-  sx?: Record<string, any>;
+  sx?: SxProps<Theme>;
   children?: ReactNode;
   fallback?: ReactNode;
 }
@@ -31,11 +31,5 @@ const Iconify = forwardRef<HTMLDivElement, IconifyProps>(
     );
   }
 );
-
-Iconify.propTypes = {
-  icon: PropTypes.oneOfType([PropTypes.element, PropTypes.string]),
-  sx: PropTypes.object,
-  width: PropTypes.number,
-};
 
 export default Iconify;

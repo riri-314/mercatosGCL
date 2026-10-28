@@ -8,6 +8,7 @@ import TableBody from "@mui/material/TableBody";
 import ClubIcon from "../../components/club-icon/club-icon";
 import type { Enchere } from "../../types/results.types";
 import type { CerclesData } from "./comitard-modal";
+import { getLeadingBid } from "../../utils/auction";
 
 interface EncheresListProps {
   encheres: Enchere[];
@@ -16,6 +17,7 @@ interface EncheresListProps {
 }
 
 export default function EncheresList({ encheres, cerclesData, won }: EncheresListProps) {
+  const leader = getLeadingBid(encheres);
   return (
     <Box component="section" aria-labelledby="bid-history-title">
       <Typography component="h3" id="bid-history-title" sx={{ fontSize: 15, fontWeight: 700, mb: 1.5 }}>
@@ -44,6 +46,7 @@ export default function EncheresList({ encheres, cerclesData, won }: EncheresLis
             </TableHead>
             <TableBody>
               {encheres.map((bid, index) => {
+                const isLeader = bid === leader;
                 const date = bid.date.toDate();
                 const gaps = [encheres[index - 1], encheres[index + 1]]
                   .filter((neighbor) => neighbor != null)
@@ -68,12 +71,12 @@ export default function EncheresList({ encheres, cerclesData, won }: EncheresLis
                   fractionalSecondDigits: 3,
                 });
                 return (
-                  <TableRow key={index} sx={{ bgcolor: index === 0 ? "action.hover" : "transparent" }}>
+                  <TableRow key={index} sx={{ bgcolor: isLeader ? "action.hover" : "transparent" }}>
                     <TableCell component="th" scope="row">
                       <Box sx={{ fontWeight: 600, overflowWrap: "anywhere" }}>
                         {cerclesData[bid.sender]?.name || bid.sender || "—"}
                       </Box>
-                      {index === 0 && (
+                      {isLeader && (
                         <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mt: 0.25, fontSize: 11, color: won ? "success.dark" : "primary.main" }}>
                           {won && <ClubIcon name="cup" sx={{ fontSize: 13 }} />}
                           {won ? "Remportée" : "En tête"}
@@ -86,7 +89,7 @@ export default function EncheresList({ encheres, cerclesData, won }: EncheresLis
                     <TableCell sx={{ display: { xs: "none", sm: "table-cell" }, color: "text.secondary" }}>
                       <time dateTime={date.toISOString()} title={exactDate}>{formattedDate}</time>
                     </TableCell>
-                    <TableCell align="right" sx={{ fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap", fontWeight: index === 0 ? 700 : 500 }}>
+                    <TableCell align="right" sx={{ fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap", fontWeight: isLeader ? 700 : 500 }}>
                       {bid.vote} <Box component="span" sx={{ fontSize: 11, fontWeight: 400, color: "text.secondary" }}>{bid.vote === 1 ? "fût" : "fûts"}</Box>
                     </TableCell>
                   </TableRow>

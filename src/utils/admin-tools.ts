@@ -15,9 +15,7 @@ import { Dayjs } from "dayjs";
 import { httpsCallable } from "firebase/functions";
 import { requireMutationSuccess } from "./callable-result";
 
-type Dict = {
-  [key: string]: any;
-};
+type Dict = DocumentData;
 
 const editionsRef = collection(db, "editions");
 
@@ -109,7 +107,7 @@ export async function editEdition(data: Dict) {
 export async function lockAllPastEditions(): Promise<number> {
   try {
     const fn = httpsCallable(functions, "lockallpasteditions");
-    const res: any = await fn({});
+    const res = await fn({});
     console.log("Locked past editions:", res.data);
     return 1;
   } catch (e) {
@@ -157,7 +155,7 @@ export async function editComitard(id: string, comitardID: string, data: Dict) {
 function getEnchre(data: DocumentData, enchereID: string) {
   const activeEditionCercle = getEditionData(data)?.cercles ?? {};
 
-  let enchereFound: any = null;
+  let enchereFound: DocumentData | null = null;
   let comitardIdFound: string | null = null;
   let cercleIdFound: string | null = null;
   let senderId: string | null = null;

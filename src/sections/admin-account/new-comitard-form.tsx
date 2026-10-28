@@ -11,7 +11,7 @@ import PictureInput from "../../components/inputs/pictureInput";
 import { ImageListType } from "react-images-uploading";
 import { functions } from "../../firebase_functions";
 import { DocumentData } from "firebase/firestore";
-import { useAuth } from "../../auth/AuthProvider";
+import { useAuth } from "../../auth/auth-context";
 import { httpsCallable } from "firebase/functions";
 import { requireMutationSuccess } from "../../utils/callable-result";
 
@@ -41,15 +41,15 @@ export default function NewComitard({
   const [nicknameError, setNicknameError] = useState(false);
   const [post, setPost] = useState("");
   const [postError, setPostError] = useState(false);
-  const [cercle, setCercle] = useState(null);
+  const [cercle, setCercle] = useState<string | null>(null);
   const [cercleError, setCercleError] = useState(false);
-  const [teneurTaule, setTeneurTaule] = useState(null);
+  const [teneurTaule, setTeneurTaule] = useState<number | null>(null);
   const [teneurTauleError, setTeneurTauleError] = useState(false);
   const [etatCivil, setEtatCivil] = useState("");
   const [etatCivilError, setEtatCivilError] = useState(false);
-  const [age, setAge] = useState(null);
+  const [age, setAge] = useState<number | null>(null);
   const [ageError, setAgeError] = useState(false);
-  const [nbEtoiles, setNbEtoiles] = useState(null);
+  const [nbEtoiles, setNbEtoiles] = useState<number | null>(null);
   const [nbEtoilesError, setNbEtoilesError] = useState(false);
   const [pointFort, setPointFort] = useState("");
   const [pointFortError, setPointFortError] = useState(false);
@@ -68,7 +68,7 @@ export default function NewComitard({
   );
   const [loading, setLoading] = useState(false);
   const [formVersion, setFormVersion] = useState(0);
-  const [campus, setCampus] = useState(null);
+  const [campus, setCampus] = useState<number | null>(null);
   const [campusError, setCampusError] = useState(false);
 
   const { user } = useAuth();
@@ -262,7 +262,7 @@ export default function NewComitard({
             value={name}
             fullWidth
             onChange={(e) => {
-              let value = e.target.value;
+              const value = e.target.value;
               if (value.length <= txtlenght1) {
                 setName(value);
               }
@@ -285,7 +285,7 @@ export default function NewComitard({
             fullWidth
             value={firstname}
             onChange={(e) => {
-              let value = e.target.value;
+              const value = e.target.value;
               if (value.length <= txtlenght1) {
                 setFirstname(value);
               }
@@ -308,7 +308,7 @@ export default function NewComitard({
             fullWidth
             value={nickname}
             onChange={(e) => {
-              let value = e.target.value;
+              const value = e.target.value;
               if (value.length <= txtlenght1) {
                 setNickname(value);
               }
@@ -331,7 +331,7 @@ export default function NewComitard({
             fullWidth
             value={post}
             onChange={(e) => {
-              let value = e.target.value;
+              const value = e.target.value;
               if (value.length <= txtlenght1) {
                 setPost(value);
               }
@@ -353,7 +353,7 @@ export default function NewComitard({
               isError={cercleError}
               option={cerclesOption()}
               helpText={"Cercle du comitard"}
-              change={(_event: any, val: any) => {
+              change={(_event, val) => {
                 setCercle(val);
                 setCercleError(false);
               }}
@@ -368,8 +368,8 @@ export default function NewComitard({
             max={10}
             error={teneurTauleError}
             helpText={`Teneur en taule du comitard de 0 à 10`}
-            change={(_event: any, val: any) => {
-              setTeneurTaule(val);
+            change={(_event, val) => {
+              setTeneurTaule(val ?? null);
               if (val == undefined) {
                 setTeneurTauleError(true);
               } else {
@@ -385,7 +385,7 @@ export default function NewComitard({
             value={etatCivil}
             error={etatCivilError}
             onChange={(e) => {
-              let value = e.target.value;
+              const value = e.target.value;
               if (value.length <= txtlenght2) {
                 setEtatCivil(value);
               }
@@ -408,8 +408,8 @@ export default function NewComitard({
             max={99}
             error={ageError}
             helpText={`Age du comitard de 0 à 99`}
-            change={(_event: any, val: any) => {
-              setAge(val);
+            change={(_event, val) => {
+              setAge(val ?? null);
               if (val == undefined) {
                 setAgeError(true);
               } else {
@@ -425,8 +425,8 @@ export default function NewComitard({
             max={10}
             error={nbEtoilesError}
             helpText={`Nombre d'étoiles du comitard de 0 à 10 (plus que 10 étoiles faut décrocher)`}
-            change={(_event: any, val: any) => {
-              setNbEtoiles(val);
+            change={(_event, val) => {
+              setNbEtoiles(val ?? null);
               if (val == undefined) {
                 setNbEtoilesError(true);
               } else {
@@ -444,7 +444,7 @@ export default function NewComitard({
             error={pointFortError}
             value={pointFort}
             onChange={(e) => {
-              let value = e.target.value;
+              const value = e.target.value;
               if (value.length <= txtlenght2) {
                 setPointFort(value);
               }
@@ -469,7 +469,7 @@ export default function NewComitard({
             error={pointFaibleError}
             value={pointFaible}
             onChange={(e) => {
-              let value = e.target.value;
+              const value = e.target.value;
               if (value.length <= txtlenght2) {
                 setPointFaible(value);
               }
@@ -494,7 +494,7 @@ export default function NewComitard({
             error={estLeSeulError}
             value={estLeSeul}
             onChange={(e) => {
-              let value = e.target.value;
+              const value = e.target.value;
               if (value.length <= txtlenght2) {
                 setEstLeSeul(value);
               }
@@ -514,8 +514,8 @@ export default function NewComitard({
             isError={campusError}
             option={changerCampus}
             helpText={"Chaud changer de campus?"}
-            change={(_event: any, val: any) => {
-              setCampus(val);
+            change={(_event, val) => {
+              setCampus(val ?? null);
               setCampusError(false);
             }}
           />

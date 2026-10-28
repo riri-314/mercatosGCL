@@ -3,13 +3,13 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, expect, it, vi } from "vitest";
 import { Timestamp } from "firebase/firestore";
-import { useData } from "../../src/data/DataProvider";
-import { useAuth } from "../../src/auth/AuthProvider";
+import { useData } from "../../src/data/data-context";
+import { useAuth } from "../../src/auth/auth-context";
 import ResultsPage from "../../src/sections/results/results";
 import type { ComitardWithMeta } from "../../src/types/results.types";
 
-vi.mock("../../src/data/DataProvider", () => ({ useData: vi.fn() }));
-vi.mock("../../src/auth/AuthProvider", () => ({ useAuth: vi.fn() }));
+vi.mock("../../src/data/data-context", () => ({ useData: vi.fn() }));
+vi.mock("../../src/auth/auth-context", () => ({ useAuth: vi.fn() }));
 vi.mock("../../src/components/data-refresh/data-refresh", () => ({
   default: () => null,
 }));
@@ -181,4 +181,18 @@ it("orders bids by value when requested and keeps closed auctions in their own t
   await user.click(screen.getByRole("tab", { name: "Enchères remportées" }));
   expect(screen.getAllByRole("article")).toHaveLength(1);
   expect(screen.getByRole("article", { name: "Camille" })).toBeInTheDocument();
+});
+
+
+it("sorts auctions by their highest amount after an earlier bid is corrected", async () => {
+  const current = vi.mocked(useData)();
+  const edition = current.data!.data();
+  edition.cercles.first.comitards.alice.encheres.corrected = {
+    sender: "buyer", vote: 40, date: Timestamp.fromMillis(Date.now() - 2000),
+  };
+  vi.mocked(useData).mockReturnValue({ ...current, data: { data: () => edition } });
+  const user = renderResults();
+  await user.click(screen.getByRole("combobox", { name: "Trier les enchères" }));
+  await user.click(screen.getByRole("option", { name: "Enchères les plus élevées" }));
+  expect(screen.getAllByRole("article")[0]).toHaveAttribute("aria-label", "Élodie");
 });
